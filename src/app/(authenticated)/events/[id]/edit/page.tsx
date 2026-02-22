@@ -14,6 +14,7 @@ export default function EditEventPage() {
   const [title, setTitle] = useState("");
   const [eventType, setEventType] = useState("practice");
   const [date, setDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [location, setLocation] = useState("");
   const [memo, setMemo] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -24,7 +25,7 @@ export default function EditEventPage() {
     (async () => {
       const { data: eventData } = await supabase
         .from("events")
-        .select("title, event_type, date, location, memo")
+        .select("title, event_type, date, end_at, location, memo")
         .eq("id", eventId)
         .single();
 
@@ -32,11 +33,12 @@ export default function EditEventPage() {
         setTitle(eventData.title);
         setEventType(eventData.event_type);
         // Convert ISO date to datetime-local format
-        const d = new Date(eventData.date);
-        const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000)
-          .toISOString()
-          .slice(0, 16);
-        setDate(local);
+        const toLocal = (iso: string) =>
+          new Date(new Date(iso).getTime() - new Date(iso).getTimezoneOffset() * 60000)
+            .toISOString()
+            .slice(0, 16);
+        setDate(toLocal(eventData.date));
+        if (eventData.end_at) setEndDate(toLocal(eventData.end_at));
         setLocation(eventData.location ?? "");
         setMemo(eventData.memo ?? "");
       }
@@ -55,6 +57,7 @@ export default function EditEventPage() {
         title,
         event_type: eventType,
         date: new Date(date).toISOString(),
+        end_at: endDate ? new Date(endDate).toISOString() : null,
         location: location || null,
         memo: memo || null,
       })
@@ -126,13 +129,26 @@ export default function EditEventPage() {
 
         <div className="mb-4">
           <label className="mb-1 block text-sm font-medium text-gray-700">
-            日時 <span className="text-red-500">*</span>
+            開始日時 <span className="text-red-500">*</span>
           </label>
           <input
             type="datetime-local"
             value={date}
             onChange={(e) => setDate(e.target.value)}
             required
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          />
+        </div>
+
+        <div className="mb-4">
+          <label className="mb-1 block text-sm font-medium text-gray-700">
+            終了日時
+          </label>
+          <input
+            type="datetime-local"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            min={date}
             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
         </div>

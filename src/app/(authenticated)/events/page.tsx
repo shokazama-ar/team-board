@@ -9,6 +9,7 @@ type Event = {
   title: string;
   event_type: string;
   date: string;
+  end_at: string | null;
   location: string | null;
   created_by: string;
 };
@@ -60,7 +61,7 @@ export default function EventsPage() {
 
     const { data: eventsData } = await supabase
       .from("events")
-      .select("id, title, event_type, date, location, created_by")
+      .select("id, title, event_type, date, end_at, location, created_by")
       .eq("team_id", membership.team_id)
       .order("date", { ascending: false });
 
@@ -152,6 +153,15 @@ export default function EventsPage() {
                         hour: "2-digit",
                         minute: "2-digit",
                       })}
+                      {event.end_at && (
+                        <span>
+                          {" 〜 "}
+                          {new Date(event.end_at).toLocaleDateString("ja-JP", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                      )}
                     </p>
                     {event.location && (
                       <p className="mt-0.5 text-xs text-gray-400">

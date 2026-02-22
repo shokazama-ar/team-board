@@ -11,6 +11,7 @@ type EventDetail = {
   title: string;
   event_type: string;
   date: string;
+  end_at: string | null;
   location: string | null;
   memo: string | null;
   created_by: string;
@@ -77,7 +78,7 @@ export default function EventDetailPage() {
 
     const { data: eventData } = await supabase
       .from("events")
-      .select("id, team_id, title, event_type, date, location, memo, created_by, created_at")
+      .select("id, team_id, title, event_type, date, end_at, location, memo, created_by, created_at")
       .eq("id", eventId)
       .single();
 
@@ -252,6 +253,15 @@ export default function EventDetailPage() {
                 hour: "2-digit",
                 minute: "2-digit",
               })}
+              {event.end_at && (
+                <span className="text-gray-500">
+                  {" 〜 "}
+                  {new Date(event.end_at).toLocaleDateString("ja-JP", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </span>
+              )}
             </dd>
           </div>
 

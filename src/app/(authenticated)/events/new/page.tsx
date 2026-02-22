@@ -12,6 +12,7 @@ export default function NewEventPage() {
   const [title, setTitle] = useState("");
   const [eventType, setEventType] = useState("practice");
   const [date, setDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [location, setLocation] = useState("");
   const [memo, setMemo] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -47,6 +48,7 @@ export default function NewEventPage() {
       title,
       event_type: eventType,
       date: new Date(date).toISOString(),
+      end_at: endDate ? new Date(endDate).toISOString() : null,
       location: location || null,
       memo: memo || null,
       created_by: userId,
@@ -106,13 +108,26 @@ export default function NewEventPage() {
 
         <div className="mb-4">
           <label className="mb-1 block text-sm font-medium text-gray-700">
-            日時 <span className="text-red-500">*</span>
+            開始日時 <span className="text-red-500">*</span>
           </label>
           <input
             type="datetime-local"
             value={date}
             onChange={(e) => setDate(e.target.value)}
             required
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          />
+        </div>
+
+        <div className="mb-4">
+          <label className="mb-1 block text-sm font-medium text-gray-700">
+            終了日時
+          </label>
+          <input
+            type="datetime-local"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            min={date}
             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
         </div>
