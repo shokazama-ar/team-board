@@ -41,7 +41,6 @@ export default function TeamSetupPage() {
     }
 
     router.push("/");
-    router.refresh();
   };
 
   const handleJoin = async (e: React.FormEvent) => {
@@ -81,7 +80,6 @@ export default function TeamSetupPage() {
     }
 
     router.push("/");
-    router.refresh();
   };
 
   return (

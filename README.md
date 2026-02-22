@@ -1,36 +1,229 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Team Board
 
-## Getting Started
+チームの出欠管理・お知らせ管理ができる Web アプリです。
 
-First, run the development server:
+## 技術スタック
+
+| カテゴリ | 技術 |
+|---|---|
+| フレームワーク | Next.js 16 (App Router) |
+| 言語 | TypeScript |
+| スタイリング | Tailwind CSS v4 |
+| バックエンド | Supabase (PostgreSQL + Auth + Storage) |
+| ランタイム | Node.js v20 |
+
+## ディレクトリ構成
+
+```
+team-board/
+├── src/
+│   ├── app/
+│   │   ├── (auth)/          # 認証画面 (ログイン・サインアップ)
+│   │   ├── (authenticated)/ # 認証後の画面
+│   │   └── auth/callback/   # OAuth コールバック
+│   ├── components/          # 共通コンポーネント
+│   ├── lib/supabase/        # Supabase クライアント設定
+│   └── types/               # TypeScript 型定義
+└── supabase/
+    ├── config.toml          # Supabase ローカル設定
+    └── migrations/          # DB マイグレーションファイル
+```
+
+---
+
+## Linux リモート環境での開発セットアップ
+
+> **対象環境**: クラウド上の Linux サーバー (Amazon Linux 2023 など)
+> Windows + WSL2 / Docker Desktop は不要です。
+
+### 前提条件
+
+- Docker Engine がインストール済み
+- Node.js v20 以上がインストール済み (nvm 推奨)
+- Supabase CLI は `npx` 経由で利用するため個別インストール不要
+
+### 1. リポジトリのクローン
+
+```bash
+git clone https://github.com/shokazama-ar/team-board.git
+cd team-board
+```
+
+### 2. 依存関係のインストール
+
+```bash
+npm install
+```
+
+### 3. Docker の権限設定 (Linux)
+
+Linux では Docker のソケットへのアクセスにグループ権限が必要です。初回のみ実施してください。
+
+```bash
+# 現在のユーザーを docker グループに追加
+sudo usermod -aG docker $USER
+
+# グループ変更を現在のシェルに反映 (再ログインでも可)
+newgrp docker
+
+# 動作確認
+docker info
+```
+
+> `permission denied while trying to connect to the Docker daemon socket` エラーが出る場合はこの手順を実施してください。
+
+### 4. ローカル Supabase の起動
+
+初回は Docker イメージのダウンロードが発生するため数分かかります。
+
+```bash
+npx supabase start
+```
+
+起動に成功すると以下のような出力が表示されます。この値を次の手順で使用します。
+
+```
+Started supabase local development setup.
+
+         API URL: http://127.0.0.1:54321
+          DB URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+      Studio URL: http://127.0.0.1:54323
+        anon key: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+service_role key: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+> 一度起動した後に値を確認したい場合は `npx supabase status` を実行してください。
+
+### 5. 環境変数の設定
+
+プロジェクトルートに `.env.local` を作成し、手順 4 の出力値を設定します。
+
+```bash
+cat > .env.local << 'EOF'
+NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<手順4で表示された anon key>
+EOF
+```
+
+### 6. DB マイグレーションの適用
+
+```bash
+npx supabase db reset
+```
+
+このコマンドにより `supabase/migrations/` 内の SQL ファイルが順番に適用されます。
+
+### 7. 開発サーバーの起動
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+サーバーは `http://localhost:3000` で起動します。
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## リモートサーバーへのアクセス方法
 
-## Learn More
+リモート Linux サーバーで開発している場合、ブラウザからアプリと Supabase Studio にアクセスするために **SSH ポートフォワーディング** を使用します。
 
-To learn more about Next.js, take a look at the following resources:
+### ローカル PC から SSH 接続するとき
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+# Next.js (3000) と Supabase API (54321) を同時にフォワード
+ssh -L 3000:localhost:3000 -L 54321:localhost:54321 <USER>@<SERVER_IP>
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+SSH 接続後、ローカル PC のブラウザで以下にアクセスできます。
 
-## Deploy on Vercel
+| サービス | URL |
+|---|---|
+| アプリ | http://localhost:3000 |
+| Supabase Studio | http://localhost:54323 |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### VS Code Remote SSH を使用している場合
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+VS Code の「ポートの転送」機能でポート `3000` と `54321` を転送設定するだけで自動的にアクセス可能です。
+
+---
+
+## 開発コマンド一覧
+
+### Next.js
+
+```bash
+npm run dev    # 開発サーバーの起動
+npm run build  # プロダクションビルド
+npm run start  # プロダクションサーバーの起動
+npm run lint   # ESLint の実行
+```
+
+### Supabase
+
+```bash
+npx supabase start          # ローカル Supabase の起動
+npx supabase stop           # ローカル Supabase の停止
+npx supabase status         # 起動状態と接続情報の確認
+npx supabase db reset       # DB をリセットしてマイグレーションを再適用
+npx supabase db diff        # スキーマ差分の確認
+npx supabase migration new <name>  # 新しいマイグレーションファイルの作成
+```
+
+---
+
+## トラブルシューティング
+
+### Docker ソケットに接続できない
+
+```
+ERROR: permission denied while trying to connect to the Docker daemon socket
+```
+
+→ [手順 3](#3-docker-の権限設定-linux) の Docker グループ設定を確認してください。`newgrp docker` または再ログイン後に再試行してください。
+
+### `supabase start` が失敗する
+
+Docker が起動していない可能性があります。
+
+```bash
+sudo systemctl start docker
+sudo systemctl enable docker  # OS 起動時に自動起動
+```
+
+### 環境変数が読み込まれない
+
+`.env.local` ファイルがプロジェクトルート直下に存在するか確認してください。
+
+```bash
+ls -la .env.local
+```
+
+存在しない場合は [手順 5](#5-環境変数の設定) を参照して作成してください。
+
+### ポート 3000 が既に使用中
+
+```bash
+# 使用中のプロセスを確認
+lsof -i :3000
+
+# プロセスを終了 (PID は上記コマンドで確認)
+kill -9 <PID>
+```
+
+### `supabase status` でキーを再確認する
+
+```bash
+npx supabase status
+```
+
+---
+
+## GitHub へのプッシュ
+
+詳細は [GIT_PUSH_GUIDE.md](./GIT_PUSH_GUIDE.md) を参照してください。
+
+```bash
+git add .
+git commit -m "変更内容の説明"
+git push
+```

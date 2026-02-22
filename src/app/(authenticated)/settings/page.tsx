@@ -160,7 +160,6 @@ export default function SettingsPage() {
       setTeamMessage("削除に失敗しました");
     } else {
       router.push("/teams/setup");
-      router.refresh();
     }
   };
 
