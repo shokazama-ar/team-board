@@ -2,7 +2,7 @@
 create table public.teams (
   id uuid primary key default gen_random_uuid(),
   name text not null,
-  invite_code text unique not null default encode(gen_random_bytes(4), 'hex'),
+  invite_code text unique not null default left(replace(gen_random_uuid()::text, '-', ''), 8),
   created_by uuid not null references public.profiles(id),
   created_at timestamptz default now() not null,
   updated_at timestamptz default now() not null
@@ -148,7 +148,7 @@ begin
     raise exception 'Only admins can regenerate invite codes';
   end if;
 
-  new_code := encode(gen_random_bytes(4), 'hex');
+  new_code := left(replace(gen_random_uuid()::text, '-', ''), 8);
 
   update public.teams
   set invite_code = new_code
