@@ -2,16 +2,15 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 export default function SignupPage() {
-  const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,9 +38,31 @@ export default function SignupPage() {
       return;
     }
 
-    router.push("/");
-    router.refresh();
+    setSubmitted(true);
   };
+
+  if (submitted) {
+    return (
+      <div className="flex min-h-screen items-center justify-center px-4">
+        <div className="w-full max-w-sm text-center">
+          <h1 className="mb-2 text-2xl font-bold">TeamBoard</h1>
+          <div className="mt-8 rounded-lg bg-green-50 p-6">
+            <p className="text-lg font-medium text-green-800">確認メールを送信しました</p>
+            <p className="mt-2 text-sm text-green-700">
+              <strong>{email}</strong> に確認メールを送りました。<br />
+              メール内のリンクをクリックして登録を完了してください。
+            </p>
+          </div>
+          <p className="mt-6 text-sm text-gray-500">
+            すでに確認済みの方は{" "}
+            <Link href="/login" className="text-blue-600 hover:underline">
+              ログイン
+            </Link>
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4">

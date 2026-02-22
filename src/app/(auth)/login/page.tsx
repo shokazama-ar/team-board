@@ -24,13 +24,16 @@ export default function LoginPage() {
     });
 
     if (error) {
-      setError("メールアドレスまたはパスワードが正しくありません");
+      if (error.message.includes("Email not confirmed")) {
+        setError("メールアドレスの確認が完了していません。届いた確認メールのリンクをクリックしてください。");
+      } else {
+        setError("メールアドレスまたはパスワードが正しくありません");
+      }
       setLoading(false);
       return;
     }
 
     router.push("/");
-    router.refresh();
   };
 
   return (
