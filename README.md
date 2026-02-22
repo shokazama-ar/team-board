@@ -31,6 +31,21 @@ team-board/
 
 ---
 
+## 環境一覧
+
+| | ローカル確認 (EC2) | ステージング |
+|---|---|---|
+| **URL** | `http://13.115.226.216:3000` | `https://team-board-psi.vercel.app` |
+| **フロントエンド** | Next.js dev server (EC2上) | Vercel |
+| **データベース** | ローカル Supabase (Docker) | Supabase クラウド |
+| **Supabase プロジェクト** | `127.0.0.1:54321` | `lgghvqytslnocbpgouhb.supabase.co` |
+| **デプロイ方法** | 手動起動 | `main` ブランチへの push で自動デプロイ |
+| **データ** | ローカル専用（完全分離） | ステージング専用（完全分離） |
+
+> ローカル確認とステージングはデータベースが完全に分離されています。
+
+---
+
 ## Linux リモート環境での開発セットアップ
 
 > **対象環境**: クラウド上の Linux サーバー (Amazon Linux 2023 など)
@@ -96,14 +111,23 @@ service_role key: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 ### 5. 環境変数の設定
 
-プロジェクトルートに `.env.local` を作成し、手順 4 の出力値を設定します。
+プロジェクトルートに `.env.local` を作成します。EC2 サーバーの公開 IP からブラウザでアクセスする場合は以下の形式で設定します。
 
 ```bash
 cat > .env.local << 'EOF'
-NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
+# ブラウザからアクセスする Supabase URL（EC2 の公開 IP を使用）
+NEXT_PUBLIC_SUPABASE_URL=http://<EC2の公開IP>:54321
 NEXT_PUBLIC_SUPABASE_ANON_KEY=<手順4で表示された anon key>
+
+# サーバーサイド（middleware）から内部ネットワーク経由でアクセスする URL
+SUPABASE_INTERNAL_URL=http://127.0.0.1:54321
+
+# ブラウザ・サーバー間で Cookie 名を統一するためのキー
+NEXT_PUBLIC_SUPABASE_STORAGE_KEY=sb-local-auth-token
 EOF
 ```
+
+> **注意**: EC2 はインスタンス内部から公開 IP への自己参照ができないため、サーバーサイドは `SUPABASE_INTERNAL_URL` で内部 URL を指定します。`NEXT_PUBLIC_SUPABASE_STORAGE_KEY` を固定することで、ブラウザとサーバー間の Cookie 名の不一致を防ぎます。
 
 ### 6. DB マイグレーションの適用
 
@@ -116,10 +140,11 @@ npx supabase db reset
 ### 7. 開発サーバーの起動
 
 ```bash
-npm run dev
+# EC2 外部からブラウザでアクセスする場合（0.0.0.0 にバインド）
+node_modules/.bin/next dev --hostname 0.0.0.0 > /tmp/nextjs.log 2>&1 &
 ```
 
-サーバーは `http://localhost:3000` で起動します。
+サーバーは `http://<EC2の公開IP>:3000` でアクセスできます。EC2 のセキュリティグループでポート `3000` と `54321` の開放が必要です。
 
 ---
 
