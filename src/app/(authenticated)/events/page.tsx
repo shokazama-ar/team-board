@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
+import { CalendarView } from "@/components/events/CalendarView";
 
 type Event = {
   id: string;
@@ -40,6 +41,7 @@ export default function EventsPage() {
   const [currentUserRole, setCurrentUserRole] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [summaries, setSummaries] = useState<Record<string, AttendanceSummary>>({});
+  const [view, setView] = useState<"list" | "calendar">("list");
 
   const loadData = useCallback(async () => {
     const {
@@ -109,7 +111,31 @@ export default function EventsPage() {
   return (
     <div className="mx-auto max-w-3xl">
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">イベント</h1>
+        <div className="flex items-center gap-4">
+          <h1 className="text-2xl font-bold">イベント</h1>
+          <div className="flex gap-1 rounded-lg bg-gray-100 p-1">
+            <button
+              onClick={() => setView("list")}
+              className={`rounded-md px-3 py-1 text-sm font-medium transition-colors ${
+                view === "list"
+                  ? "bg-white text-gray-900 shadow-sm"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              一覧
+            </button>
+            <button
+              onClick={() => setView("calendar")}
+              className={`rounded-md px-3 py-1 text-sm font-medium transition-colors ${
+                view === "calendar"
+                  ? "bg-white text-gray-900 shadow-sm"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              カレンダー
+            </button>
+          </div>
+        </div>
         <Link
           href="/events/new"
           className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
@@ -118,7 +144,9 @@ export default function EventsPage() {
         </Link>
       </div>
 
-      {events.length === 0 ? (
+      {view === "calendar" ? (
+        <CalendarView events={events} />
+      ) : events.length === 0 ? (
         <div className="rounded-lg border border-gray-200 bg-white p-6">
           <p className="text-sm text-gray-500">まだイベントがありません</p>
         </div>
