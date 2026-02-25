@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
+import { AlertTriangle, Users, Link as LinkIcon, Calendar, ChevronRight, MapPin } from "lucide-react";
 
 const EVENT_TYPE_LABELS: Record<string, string> = {
   practice: "練習",
@@ -151,12 +152,12 @@ export default async function Dashboard() {
       <div className="mt-6 grid gap-4 md:grid-cols-3">
         <div className="rounded-lg border border-gray-200 bg-white p-6">
           <h2 className="mb-2 text-lg font-semibold">{team.name}</h2>
-          <p className="text-sm text-gray-500">メンバー: {memberCount}人</p>
+          <p className="flex items-center gap-1 text-sm text-gray-500"><Users size={16} strokeWidth={1.5} aria-hidden="true" />メンバー: {memberCount}人</p>
         </div>
 
         <div className="rounded-lg border border-gray-200 bg-white p-6">
           <h2 className="mb-2 text-lg font-semibold">招待コード</h2>
-          <p className="text-sm text-gray-500">メンバーを招待しましょう</p>
+          <p className="flex items-center gap-1 text-sm text-gray-500"><LinkIcon size={16} strokeWidth={1.5} aria-hidden="true" />メンバーを招待しましょう</p>
           <code className="mt-2 inline-block rounded bg-gray-100 px-2 py-1 text-sm font-mono">
             {team.invite_code}
           </code>
@@ -167,7 +168,7 @@ export default async function Dashboard() {
           <p className="text-2xl font-bold text-blue-600">
             {upcomingEvents.length}
           </p>
-          <p className="text-sm text-gray-500">今後の予定</p>
+          <p className="flex items-center gap-1 text-sm text-gray-500"><Calendar size={16} strokeWidth={1.5} aria-hidden="true" />今後の予定</p>
         </div>
       </div>
 
@@ -175,17 +176,7 @@ export default async function Dashboard() {
       {unansweredEvents.length > 0 && (
         <div className="mt-6 rounded-lg border border-yellow-300 bg-yellow-50 p-6">
           <h2 className="mb-3 flex items-center text-lg font-semibold text-yellow-900">
-            <svg
-              className="mr-2 h-5 w-5"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-            >
-              <path
-                fillRule="evenodd"
-                d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                clipRule="evenodd"
-              />
-            </svg>
+            <AlertTriangle size={20} strokeWidth={1.5} className="mr-2" aria-hidden="true" />
             未回答のイベントがあります
           </h2>
           <ul className="space-y-2">
@@ -220,7 +211,7 @@ export default async function Dashboard() {
               href="/events"
               className="text-sm text-blue-600 hover:text-blue-700"
             >
-              すべて見る →
+              すべて見る <ChevronRight size={16} strokeWidth={1.5} className="inline" aria-hidden="true" />
             </Link>
           </div>
           {upcomingEvents.length === 0 ? (
@@ -255,7 +246,8 @@ export default async function Dashboard() {
                           })}
                         </p>
                         {ev.location && (
-                          <p className="mt-0.5 text-xs text-gray-400">
+                          <p className="mt-0.5 flex items-center gap-1 text-xs text-gray-400">
+                            <MapPin size={12} strokeWidth={1.5} aria-hidden="true" />
                             {ev.location}
                           </p>
                         )}
@@ -276,7 +268,7 @@ export default async function Dashboard() {
               href="/announcements"
               className="text-sm text-blue-600 hover:text-blue-700"
             >
-              すべて見る →
+              すべて見る <ChevronRight size={16} strokeWidth={1.5} className="inline" aria-hidden="true" />
             </Link>
           </div>
           {latestAnnouncements.length === 0 ? (

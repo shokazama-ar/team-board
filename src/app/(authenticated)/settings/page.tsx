@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { RefreshCw, Trash2, AlertTriangle } from "lucide-react";
 
 export default function SettingsPage() {
   const supabase = createClient();
@@ -257,8 +258,9 @@ export default function SettingsPage() {
                   type="button"
                   onClick={handleRegenerateCode}
                   disabled={regenerating}
-                  className="shrink-0 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                  className="flex shrink-0 items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50"
                 >
+                  <RefreshCw size={16} strokeWidth={1.5} aria-hidden="true" />
                   {regenerating ? "再生成中..." : "再生成"}
                 </button>
               </div>
@@ -286,7 +288,8 @@ export default function SettingsPage() {
           </form>
 
           <div className="mt-8 rounded-lg border border-red-200 bg-red-50 p-4">
-            <h3 className="mb-2 text-sm font-semibold text-red-700">
+            <h3 className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-red-700">
+              <AlertTriangle size={16} strokeWidth={1.5} aria-hidden="true" />
               危険な操作
             </h3>
             <p className="mb-3 text-xs text-red-600">
@@ -294,8 +297,9 @@ export default function SettingsPage() {
             </p>
             <button
               onClick={handleDeleteTeam}
-              className="rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+              className="flex items-center gap-1.5 rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
             >
+              <Trash2 size={16} strokeWidth={1.5} aria-hidden="true" />
               チームを削除
             </button>
           </div>

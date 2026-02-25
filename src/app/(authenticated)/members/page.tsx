@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { Copy, Check, Shield, Trash2 } from "lucide-react";
 
 type Member = {
   id: string;
@@ -165,8 +166,9 @@ export default function MembersPage() {
               </code>
               <button
                 onClick={copyInviteCode}
-                className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50"
+                className="flex items-center gap-1 rounded border border-gray-300 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50"
               >
+                {copied ? <Check size={14} strokeWidth={1.5} aria-hidden="true" /> : <Copy size={14} strokeWidth={1.5} aria-hidden="true" />}
                 {copied ? "コピー済み" : "コピー"}
               </button>
             </div>
@@ -206,12 +208,13 @@ export default function MembersPage() {
               </div>
               <div className="flex items-center gap-2">
                 <span
-                  className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                  className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
                     member.role === "admin"
                       ? "bg-blue-50 text-blue-700"
                       : "bg-gray-100 text-gray-600"
                   }`}
                 >
+                  {member.role === "admin" && <Shield size={12} strokeWidth={1.5} aria-hidden="true" />}
                   {member.role === "admin" ? "管理者" : "メンバー"}
                 </span>
 
@@ -234,8 +237,9 @@ export default function MembersPage() {
                         )
                       }
                       disabled={actionLoading === member.id}
-                      className="rounded border border-red-300 px-2 py-1 text-xs text-red-600 hover:bg-red-50 disabled:opacity-50"
+                      className="flex items-center gap-1 rounded border border-red-300 px-2 py-1 text-xs text-red-600 hover:bg-red-50 disabled:opacity-50"
                     >
+                      <Trash2 size={12} strokeWidth={1.5} aria-hidden="true" />
                       削除
                     </button>
                   </>

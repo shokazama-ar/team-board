@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { ArrowLeft, Pencil, Trash2, Clock, MapPin, Check, X, HelpCircle } from "lucide-react";
 
 type EventDetail = {
   id: string;
@@ -205,8 +206,9 @@ export default function EventDetailPage() {
   return (
     <div className="mx-auto max-w-3xl">
       <div className="mb-4">
-        <Link href="/events" className="text-sm text-blue-600 hover:underline">
-          &larr; イベント一覧
+        <Link href="/events" className="flex items-center gap-1 text-sm text-blue-600 hover:underline">
+          <ArrowLeft size={16} strokeWidth={1.5} aria-hidden="true" />
+          イベント一覧
         </Link>
       </div>
 
@@ -226,15 +228,17 @@ export default function EventDetailPage() {
             <div className="flex gap-2">
               <Link
                 href={`/events/${event.id}/edit`}
-                className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
               >
+                <Pencil size={16} strokeWidth={1.5} aria-hidden="true" />
                 編集
               </Link>
               <button
                 onClick={handleDelete}
                 disabled={deleting}
-                className="rounded-lg border border-red-300 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
+                className="flex items-center gap-1.5 rounded-lg border border-red-300 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
               >
+                <Trash2 size={16} strokeWidth={1.5} aria-hidden="true" />
                 {deleting ? "削除中..." : "削除"}
               </button>
             </div>
@@ -243,7 +247,7 @@ export default function EventDetailPage() {
 
         <dl className="space-y-3">
           <div>
-            <dt className="text-xs text-gray-500">日時</dt>
+            <dt className="flex items-center gap-1 text-xs text-gray-500"><Clock size={12} strokeWidth={1.5} aria-hidden="true" />日時</dt>
             <dd className="text-sm text-gray-900">
               {new Date(event.date).toLocaleDateString("ja-JP", {
                 year: "numeric",
@@ -267,7 +271,7 @@ export default function EventDetailPage() {
 
           {event.location && (
             <div>
-              <dt className="text-xs text-gray-500">場所</dt>
+              <dt className="flex items-center gap-1 text-xs text-gray-500"><MapPin size={12} strokeWidth={1.5} aria-hidden="true" />場所</dt>
               <dd className="text-sm text-gray-900">{event.location}</dd>
             </div>
           )}
@@ -303,24 +307,28 @@ export default function EventDetailPage() {
         <div className="mb-4">
           <p className="mb-2 text-sm text-gray-600">あなたの回答</p>
           <div className="flex gap-2">
-            {(["present", "absent", "undecided"] as const).map((status) => (
-              <button
-                key={status}
-                onClick={() => handleAttendance(status)}
-                disabled={submitting}
-                className={`rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors disabled:opacity-50 ${
-                  myStatus === status
-                    ? status === "present"
-                      ? "border-green-500 bg-green-500 text-white"
-                      : status === "absent"
-                        ? "border-red-500 bg-red-500 text-white"
-                        : "border-yellow-500 bg-yellow-500 text-white"
-                    : "border-gray-300 text-gray-700 hover:bg-gray-50"
-                }`}
-              >
-                {STATUS_LABELS[status]}
-              </button>
-            ))}
+            {(["present", "absent", "undecided"] as const).map((status) => {
+              const StatusIcon = status === "present" ? Check : status === "absent" ? X : HelpCircle;
+              return (
+                <button
+                  key={status}
+                  onClick={() => handleAttendance(status)}
+                  disabled={submitting}
+                  className={`flex items-center gap-1.5 rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors disabled:opacity-50 ${
+                    myStatus === status
+                      ? status === "present"
+                        ? "border-green-500 bg-green-500 text-white"
+                        : status === "absent"
+                          ? "border-red-500 bg-red-500 text-white"
+                          : "border-yellow-500 bg-yellow-500 text-white"
+                      : "border-gray-300 text-gray-700 hover:bg-gray-50"
+                  }`}
+                >
+                  <StatusIcon size={16} strokeWidth={1.5} aria-hidden="true" />
+                  {STATUS_LABELS[status]}
+                </button>
+              );
+            })}
           </div>
         </div>
 

@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { ArrowLeft, Pencil, Trash2 } from "lucide-react";
 
 type AnnouncementDetail = {
   id: string;
@@ -151,8 +152,9 @@ export default function AnnouncementDetailPage() {
   return (
     <div className="mx-auto max-w-3xl">
       <div className="mb-4">
-        <Link href="/announcements" className="text-sm text-blue-600 hover:underline">
-          &larr; お知らせ一覧
+        <Link href="/announcements" className="flex items-center gap-1 text-sm text-blue-600 hover:underline">
+          <ArrowLeft size={16} strokeWidth={1.5} aria-hidden="true" />
+          お知らせ一覧
         </Link>
       </div>
 
@@ -167,15 +169,17 @@ export default function AnnouncementDetailPage() {
                 <div className="flex gap-2">
                   <button
                     onClick={handleEdit}
-                    className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                    className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
                   >
+                    <Pencil size={16} strokeWidth={1.5} aria-hidden="true" />
                     編集
                   </button>
                   <button
                     onClick={handleDelete}
                     disabled={deleting}
-                    className="rounded-lg border border-red-300 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
+                    className="flex items-center gap-1.5 rounded-lg border border-red-300 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
                   >
+                    <Trash2 size={16} strokeWidth={1.5} aria-hidden="true" />
                     {deleting ? "削除中..." : "削除"}
                   </button>
                 </div>

@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Home, Calendar, Megaphone, Users, Settings, type LucideIcon } from "lucide-react";
 
-const navItems = [
-  { href: "/", label: "ホーム", icon: "🏠" },
-  { href: "/events", label: "イベント", icon: "📅" },
-  { href: "/announcements", label: "お知らせ", icon: "📢" },
-  { href: "/members", label: "メンバー", icon: "👥" },
-  { href: "/settings", label: "設定", icon: "⚙️" },
+const navItems: { href: string; label: string; icon: LucideIcon }[] = [
+  { href: "/", label: "ホーム", icon: Home },
+  { href: "/events", label: "イベント", icon: Calendar },
+  { href: "/announcements", label: "お知らせ", icon: Megaphone },
+  { href: "/members", label: "メンバー", icon: Users },
+  { href: "/settings", label: "設定", icon: Settings },
 ];
 
 export function BottomNav() {
@@ -30,7 +31,7 @@ export function BottomNav() {
                 isActive ? "text-blue-600" : "text-gray-500"
               }`}
             >
-              <span className="text-lg">{item.icon}</span>
+              <item.icon size={20} strokeWidth={1.5} aria-hidden="true" />
               <span>{item.label}</span>
             </Link>
           );
@@ -61,7 +62,7 @@ export function SideNav() {
                     : "text-gray-700 hover:bg-gray-50"
                 }`}
               >
-                <span>{item.icon}</span>
+                <item.icon size={20} strokeWidth={1.5} aria-hidden="true" />
                 <span>{item.label}</span>
               </Link>
             </li>

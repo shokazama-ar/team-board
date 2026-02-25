@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import { CalendarView } from "@/components/events/CalendarView";
+import { List, CalendarDays, Plus, MapPin } from "lucide-react";
 
 type Event = {
   id: string;
@@ -116,30 +117,33 @@ export default function EventsPage() {
           <div className="flex gap-1 rounded-lg bg-gray-100 p-1">
             <button
               onClick={() => setView("list")}
-              className={`rounded-md px-3 py-1 text-sm font-medium transition-colors ${
+              className={`flex items-center gap-1 rounded-md px-3 py-1 text-sm font-medium transition-colors ${
                 view === "list"
                   ? "bg-white text-gray-900 shadow-sm"
                   : "text-gray-500 hover:text-gray-700"
               }`}
             >
+              <List size={16} strokeWidth={1.5} aria-hidden="true" />
               一覧
             </button>
             <button
               onClick={() => setView("calendar")}
-              className={`rounded-md px-3 py-1 text-sm font-medium transition-colors ${
+              className={`flex items-center gap-1 rounded-md px-3 py-1 text-sm font-medium transition-colors ${
                 view === "calendar"
                   ? "bg-white text-gray-900 shadow-sm"
                   : "text-gray-500 hover:text-gray-700"
               }`}
             >
+              <CalendarDays size={16} strokeWidth={1.5} aria-hidden="true" />
               カレンダー
             </button>
           </div>
         </div>
         <Link
           href="/events/new"
-          className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
+          className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
         >
+          <Plus size={16} strokeWidth={1.5} aria-hidden="true" />
           新規作成
         </Link>
       </div>
@@ -192,7 +196,8 @@ export default function EventsPage() {
                       )}
                     </p>
                     {event.location && (
-                      <p className="mt-0.5 text-xs text-gray-400">
+                      <p className="mt-0.5 flex items-center gap-1 text-xs text-gray-400">
+                        <MapPin size={12} strokeWidth={1.5} aria-hidden="true" />
                         {event.location}
                       </p>
                     )}
