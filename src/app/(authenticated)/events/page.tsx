@@ -6,14 +6,22 @@ import Link from "next/link";
 import { CalendarView } from "@/components/events/CalendarView";
 import { List, CalendarDays, Plus, MapPin } from "lucide-react";
 
+type EventType = {
+  id: string;
+  name: string;
+  color: string;
+};
+
 type Event = {
   id: string;
   title: string;
   event_type: string;
+  event_type_id: string | null;
   date: string;
   end_at: string | null;
   location: string | null;
   created_by: string;
+  event_types: EventType | null;
 };
 
 type AttendanceSummary = {
@@ -22,23 +30,10 @@ type AttendanceSummary = {
   undecided: number;
 };
 
-const EVENT_TYPE_LABELS: Record<string, string> = {
-  practice: "練習",
-  game: "試合",
-  other: "その他",
-};
-
-const EVENT_TYPE_STYLES: Record<string, string> = {
-  practice: "bg-green-50 text-green-700",
-  game: "bg-red-50 text-red-700",
-  other: "bg-gray-100 text-gray-600",
-};
-
 export default function EventsPage() {
   const supabase = createClient();
   const [events, setEvents] = useState<Event[]>([]);
   const [teamId, setTeamId] = useState<string>("");
-  const [currentUserId, setCurrentUserId] = useState<string>("");
   const [currentUserRole, setCurrentUserRole] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [summaries, setSummaries] = useState<Record<string, AttendanceSummary>>({});
@@ -49,7 +44,6 @@ export default function EventsPage() {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) return;
-    setCurrentUserId(user.id);
 
     const { data: membership } = await supabase
       .from("team_members")
@@ -64,14 +58,13 @@ export default function EventsPage() {
 
     const { data: eventsData } = await supabase
       .from("events")
-      .select("id, title, event_type, date, end_at, location, created_by")
+      .select("id, title, event_type, event_type_id, date, end_at, location, created_by, event_types(id, name, color)")
       .eq("team_id", membership.team_id)
       .order("date", { ascending: false });
 
     if (eventsData) {
-      setEvents(eventsData);
+      setEvents(eventsData as unknown as Event[]);
 
-      // Load attendance summaries for all events
       const eventIds = eventsData.map((e) => e.id);
       if (eventIds.length > 0) {
         const { data: attendances } = await supabase
@@ -113,7 +106,7 @@ export default function EventsPage() {
     <div className="mx-auto max-w-3xl">
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <h1 className="text-2xl font-bold">イベント</h1>
+          <h1 className="text-2xl font-bold">予定表</h1>
           <div className="flex gap-1 rounded-lg bg-gray-100 p-1">
             <button
               onClick={() => setView("list")}
@@ -139,25 +132,29 @@ export default function EventsPage() {
             </button>
           </div>
         </div>
-        <Link
-          href="/events/new"
-          className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
-        >
-          <Plus size={16} strokeWidth={1.5} aria-hidden="true" />
-          新規作成
-        </Link>
+        {currentUserRole === "admin" && (
+          <Link
+            href="/events/new"
+            className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
+          >
+            <Plus size={16} strokeWidth={1.5} aria-hidden="true" />
+            新規作成
+          </Link>
+        )}
       </div>
 
       {view === "calendar" ? (
         <CalendarView events={events} />
       ) : events.length === 0 ? (
         <div className="rounded-lg border border-gray-200 bg-white p-6">
-          <p className="text-sm text-gray-500">まだイベントがありません</p>
+          <p className="text-sm text-gray-500">まだ予定がありません</p>
         </div>
       ) : (
         <div className="space-y-3">
           {events.map((event) => {
             const summary = summaries[event.id];
+            const typeName = event.event_types?.name ?? event.event_type;
+            const typeColor = event.event_types?.color ?? "#6b7280";
             return (
               <Link
                 key={event.id}
@@ -171,9 +168,13 @@ export default function EventsPage() {
                         {event.title}
                       </h2>
                       <span
-                        className={`rounded-full px-2 py-0.5 text-xs font-medium ${EVENT_TYPE_STYLES[event.event_type] ?? EVENT_TYPE_STYLES.other}`}
+                        className="rounded-full px-2 py-0.5 text-xs font-medium"
+                        style={{
+                          backgroundColor: typeColor + "20",
+                          color: typeColor,
+                        }}
                       >
-                        {EVENT_TYPE_LABELS[event.event_type] ?? event.event_type}
+                        {typeName}
                       </span>
                     </div>
                     <p className="mt-1 text-xs text-gray-500">

@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Copy, Check, Shield, Trash2 } from "lucide-react";
+import Image from "next/image";
 
 type Member = {
   id: string;
@@ -12,14 +13,42 @@ type Member = {
   profile: {
     name: string | null;
     email: string;
+    avatar_url: string | null;
   };
 };
 
 type Team = {
   id: string;
   name: string;
+  icon_url: string | null;
   invite_code: string;
 };
+
+function MemberAvatar({ name, avatarUrl, size = 40 }: { name: string | null; avatarUrl: string | null; size?: number }) {
+  const initials = name ? name.charAt(0).toUpperCase() : "?";
+  if (avatarUrl) {
+    return (
+      <div className="shrink-0 overflow-hidden rounded-full" style={{ width: size, height: size }}>
+        <Image
+          src={`${avatarUrl}?t=cached`}
+          alt={name ?? ""}
+          width={size}
+          height={size}
+          className="h-full w-full object-cover"
+          unoptimized
+        />
+      </div>
+    );
+  }
+  return (
+    <div
+      className="flex shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-700 font-semibold"
+      style={{ width: size, height: size, fontSize: size * 0.4 }}
+    >
+      {initials}
+    </div>
+  );
+}
 
 export default function MembersPage() {
   const supabase = createClient();
@@ -38,7 +67,6 @@ export default function MembersPage() {
     if (!user) return;
     setCurrentUserId(user.id);
 
-    // Get user's team membership
     const { data: membership } = await supabase
       .from("team_members")
       .select("team_id, role")
@@ -49,16 +77,14 @@ export default function MembersPage() {
     if (!membership) return;
     setCurrentUserRole(membership.role);
 
-    // Get team info
     const { data: teamData } = await supabase
       .from("teams")
-      .select("id, name, invite_code")
+      .select("id, name, invite_code, icon_url")
       .eq("id", membership.team_id)
       .single();
 
     if (teamData) setTeam(teamData);
 
-    // Get all members with profiles
     const { data: membersData } = await supabase
       .from("team_members")
       .select("id, user_id, role, created_at")
@@ -66,11 +92,10 @@ export default function MembersPage() {
       .order("created_at", { ascending: true });
 
     if (membersData) {
-      // Fetch profiles for each member
       const userIds = membersData.map((m) => m.user_id);
       const { data: profiles } = await supabase
         .from("profiles")
-        .select("id, name, email")
+        .select("id, name, email, avatar_url")
         .in("id", userIds);
 
       const profileMap = new Map(
@@ -83,6 +108,7 @@ export default function MembersPage() {
         profile: profileMap.get(m.user_id) ?? {
           name: null,
           email: "不明",
+          avatar_url: null,
         },
       }));
 
@@ -154,9 +180,27 @@ export default function MembersPage() {
       {/* Team Info & Invite Code */}
       <div className="mb-6 rounded-lg border border-gray-200 bg-white p-6">
         <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm text-gray-500">チーム名</p>
-            <p className="text-lg font-semibold">{team.name}</p>
+          <div className="flex items-center gap-3">
+            {team.icon_url ? (
+              <div className="h-12 w-12 overflow-hidden rounded-full border border-gray-200">
+                <Image
+                  src={`${team.icon_url}?t=cached`}
+                  alt={team.name}
+                  width={48}
+                  height={48}
+                  className="h-full w-full object-cover"
+                  unoptimized
+                />
+              </div>
+            ) : (
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-600 text-lg font-bold text-white">
+                {team.name.charAt(0)}
+              </div>
+            )}
+            <div>
+              <p className="text-xs text-gray-500">チーム名</p>
+              <p className="text-lg font-semibold">{team.name}</p>
+            </div>
           </div>
           <div className="text-right">
             <p className="text-sm text-gray-500">招待コード</p>
@@ -189,22 +233,29 @@ export default function MembersPage() {
               key={member.id}
               className="flex items-center justify-between px-6 py-4"
             >
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-gray-900">
-                  {member.profile.name || "名前未設定"}
-                  {member.user_id === currentUserId && (
-                    <span className="ml-2 text-xs text-gray-400">
-                      (あなた)
-                    </span>
-                  )}
-                </p>
-                <p className="text-xs text-gray-500">
-                  {member.profile.email}
-                </p>
-                <p className="text-xs text-gray-400">
-                  参加日:{" "}
-                  {new Date(member.created_at).toLocaleDateString("ja-JP")}
-                </p>
+              <div className="flex min-w-0 flex-1 items-center gap-3">
+                <MemberAvatar
+                  name={member.profile.name}
+                  avatarUrl={member.profile.avatar_url}
+                  size={40}
+                />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-gray-900">
+                    {member.profile.name || "名前未設定"}
+                    {member.user_id === currentUserId && (
+                      <span className="ml-2 text-xs text-gray-400">
+                        (あなた)
+                      </span>
+                    )}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {member.profile.email}
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    参加日:{" "}
+                    {new Date(member.created_at).toLocaleDateString("ja-JP")}
+                  </p>
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 <span

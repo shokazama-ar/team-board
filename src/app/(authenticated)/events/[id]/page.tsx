@@ -6,11 +6,19 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Pencil, Trash2, Clock, MapPin, Check, X, HelpCircle } from "lucide-react";
 
+type EventType = {
+  id: string;
+  name: string;
+  color: string;
+};
+
 type EventDetail = {
   id: string;
   team_id: string;
   title: string;
   event_type: string;
+  event_type_id: string | null;
+  event_types: EventType | null;
   date: string;
   end_at: string | null;
   location: string | null;
@@ -28,18 +36,6 @@ type MemberWithAttendance = {
   user_id: string;
   name: string;
   status: "present" | "absent" | "undecided" | null;
-};
-
-const EVENT_TYPE_LABELS: Record<string, string> = {
-  practice: "練習",
-  game: "試合",
-  other: "その他",
-};
-
-const EVENT_TYPE_STYLES: Record<string, string> = {
-  practice: "bg-green-50 text-green-700",
-  game: "bg-red-50 text-red-700",
-  other: "bg-gray-100 text-gray-600",
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -79,7 +75,7 @@ export default function EventDetailPage() {
 
     const { data: eventData } = await supabase
       .from("events")
-      .select("id, team_id, title, event_type, date, end_at, location, memo, created_by, created_at")
+      .select("id, team_id, title, event_type, event_type_id, date, end_at, location, memo, created_by, created_at, event_types(id, name, color)")
       .eq("id", eventId)
       .single();
 
@@ -87,7 +83,7 @@ export default function EventDetailPage() {
       setLoading(false);
       return;
     }
-    setEvent(eventData);
+    setEvent(eventData as EventDetail);
 
     const { data: membership } = await supabase
       .from("team_members")
@@ -217,11 +213,17 @@ export default function EventDetailPage() {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-bold">{event.title}</h1>
-              <span
-                className={`rounded-full px-2 py-0.5 text-xs font-medium ${EVENT_TYPE_STYLES[event.event_type] ?? EVENT_TYPE_STYLES.other}`}
-              >
-                {EVENT_TYPE_LABELS[event.event_type] ?? event.event_type}
-              </span>
+              {(event.event_types || event.event_type) && (
+                <span
+                  className="rounded-full px-2 py-0.5 text-xs font-medium"
+                  style={{
+                    backgroundColor: (event.event_types?.color ?? "#6b7280") + "20",
+                    color: event.event_types?.color ?? "#6b7280",
+                  }}
+                >
+                  {event.event_types?.name ?? event.event_type}
+                </span>
+              )}
             </div>
           </div>
           {canEdit && (

@@ -40,6 +40,7 @@ export type Database = {
         Row: {
           id: string;
           name: string;
+          icon_url: string | null;
           invite_code: string;
           created_by: string;
           created_at: string;
@@ -48,6 +49,7 @@ export type Database = {
         Insert: {
           id?: string;
           name: string;
+          icon_url?: string | null;
           invite_code?: string;
           created_by: string;
           created_at?: string;
@@ -56,6 +58,7 @@ export type Database = {
         Update: {
           id?: string;
           name?: string;
+          icon_url?: string | null;
           invite_code?: string;
           created_by?: string;
           created_at?: string;
@@ -110,12 +113,48 @@ export type Database = {
           },
         ];
       };
+      event_types: {
+        Row: {
+          id: string;
+          team_id: string;
+          name: string;
+          color: string;
+          sort_order: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          team_id: string;
+          name: string;
+          color?: string;
+          sort_order?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          team_id?: string;
+          name?: string;
+          color?: string;
+          sort_order?: number;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "event_types_team_id_fkey";
+            columns: ["team_id"];
+            isOneToOne: false;
+            referencedRelation: "teams";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       events: {
         Row: {
           id: string;
           team_id: string;
           title: string;
           event_type: string;
+          event_type_id: string | null;
           date: string;
           location: string | null;
           memo: string | null;
@@ -128,6 +167,7 @@ export type Database = {
           team_id: string;
           title: string;
           event_type?: string;
+          event_type_id?: string | null;
           date: string;
           location?: string | null;
           memo?: string | null;
@@ -140,6 +180,7 @@ export type Database = {
           team_id?: string;
           title?: string;
           event_type?: string;
+          event_type_id?: string | null;
           date?: string;
           location?: string | null;
           memo?: string | null;
@@ -160,6 +201,13 @@ export type Database = {
             columns: ["created_by"];
             isOneToOne: false;
             referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "events_event_type_id_fkey";
+            columns: ["event_type_id"];
+            isOneToOne: false;
+            referencedRelation: "event_types";
             referencedColumns: ["id"];
           },
         ];

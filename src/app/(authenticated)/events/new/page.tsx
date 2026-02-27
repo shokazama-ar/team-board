@@ -4,19 +4,26 @@ import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 
+type EventType = {
+  id: string;
+  name: string;
+  color: string;
+};
+
 export default function NewEventPage() {
   const supabase = createClient();
   const router = useRouter();
   const [teamId, setTeamId] = useState<string>("");
   const [userId, setUserId] = useState<string>("");
   const [title, setTitle] = useState("");
-  const [eventType, setEventType] = useState("practice");
+  const [eventTypeId, setEventTypeId] = useState<string>("");
   const [date, setDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [location, setLocation] = useState("");
   const [memo, setMemo] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [eventTypes, setEventTypes] = useState<EventType[]>([]);
 
   useEffect(() => {
     (async () => {
@@ -33,7 +40,19 @@ export default function NewEventPage() {
         .limit(1)
         .single();
 
-      if (membership) setTeamId(membership.team_id);
+      if (!membership) return;
+      setTeamId(membership.team_id);
+
+      const { data: types } = await supabase
+        .from("event_types")
+        .select("id, name, color")
+        .eq("team_id", membership.team_id)
+        .order("sort_order");
+
+      if (types && types.length > 0) {
+        setEventTypes(types);
+        setEventTypeId(types[0].id);
+      }
     })();
   }, [supabase]);
 
@@ -46,7 +65,8 @@ export default function NewEventPage() {
     const { error: insertError } = await supabase.from("events").insert({
       team_id: teamId,
       title,
-      event_type: eventType,
+      event_type: eventTypes.find((t) => t.id === eventTypeId)?.name ?? "",
+      event_type_id: eventTypeId || null,
       date: new Date(date).toISOString(),
       end_at: endDate ? new Date(endDate).toISOString() : null,
       location: location || null,
@@ -65,7 +85,7 @@ export default function NewEventPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <h1 className="mb-6 text-2xl font-bold">イベント作成</h1>
+      <h1 className="mb-6 text-2xl font-bold">予定を作成</h1>
 
       <form
         onSubmit={handleSubmit}
@@ -95,15 +115,31 @@ export default function NewEventPage() {
           <label className="mb-1 block text-sm font-medium text-gray-700">
             種別
           </label>
-          <select
-            value={eventType}
-            onChange={(e) => setEventType(e.target.value)}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-          >
-            <option value="practice">練習</option>
-            <option value="game">試合</option>
-            <option value="other">その他</option>
-          </select>
+          {eventTypes.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {eventTypes.map((type) => (
+                <button
+                  key={type.id}
+                  type="button"
+                  onClick={() => setEventTypeId(type.id)}
+                  className={`rounded-full px-3 py-1 text-sm font-medium border transition-all ${
+                    eventTypeId === type.id
+                      ? "border-transparent shadow-sm"
+                      : "border-gray-300 bg-white text-gray-600 hover:border-gray-400"
+                  }`}
+                  style={
+                    eventTypeId === type.id
+                      ? { backgroundColor: type.color + "20", color: type.color, borderColor: type.color }
+                      : {}
+                  }
+                >
+                  {type.name}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-400">種別が登録されていません</p>
+          )}
         </div>
 
         <div className="mb-4">

@@ -6,7 +6,7 @@ import { Home, Calendar, Megaphone, Users, Settings, type LucideIcon } from "luc
 
 const navItems: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/", label: "ホーム", icon: Home },
-  { href: "/events", label: "イベント", icon: Calendar },
+  { href: "/events", label: "予定表", icon: Calendar },
   { href: "/announcements", label: "お知らせ", icon: Megaphone },
   { href: "/members", label: "メンバー", icon: Users },
   { href: "/settings", label: "設定", icon: Settings },
