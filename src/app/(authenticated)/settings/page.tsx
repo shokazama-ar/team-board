@@ -3,27 +3,246 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { RefreshCw, Trash2, AlertTriangle, Plus, X } from "lucide-react";
+import { RefreshCw, Trash2, AlertTriangle, Plus, X, ChevronUp, ChevronDown, Pencil, Check } from "lucide-react";
 import { AvatarUpload } from "@/components/ui/AvatarUpload";
+
+type EventTypeKind = "type" | "category";
 
 type EventType = {
   id: string;
   name: string;
   color: string;
   sort_order: number;
+  kind: EventTypeKind;
 };
 
-const PRESET_COLORS = [
-  { label: "緑", value: "#16a34a" },
-  { label: "赤", value: "#dc2626" },
-  { label: "青", value: "#2563eb" },
-  { label: "紫", value: "#9333ea" },
+// イベント種別用：暖色系
+const TYPE_PRESET_COLORS = [
+  { label: "赤",       value: "#dc2626" },
   { label: "オレンジ", value: "#ea580c" },
-  { label: "ピンク", value: "#db2777" },
-  { label: "水色", value: "#0891b2" },
-  { label: "グレー", value: "#6b7280" },
+  { label: "アンバー", value: "#d97706" },
+  { label: "ピンク",   value: "#db2777" },
+  { label: "紫",       value: "#9333ea" },
+  { label: "マゼンタ", value: "#c026d3" },
 ];
 
+// 対象カテゴリ用：寒色系
+const CATEGORY_PRESET_COLORS = [
+  { label: "青",       value: "#2563eb" },
+  { label: "インジゴ", value: "#4f46e5" },
+  { label: "水色",     value: "#0891b2" },
+  { label: "ティール", value: "#0d9488" },
+  { label: "緑",       value: "#16a34a" },
+  { label: "スレート", value: "#64748b" },
+];
+
+// ── 種別/カテゴリ管理セクション（再利用） ──────────────────────────────────
+type SectionProps = {
+  title: string;
+  description: string;
+  addLabel: string;
+  items: EventType[];
+  colors: { label: string; value: string }[];
+  onMoveUp: (index: number) => Promise<void>;
+  onMoveDown: (index: number) => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
+  onAdd: (name: string, color: string) => Promise<string>;
+  onUpdate: (id: string, name: string) => Promise<string>;
+};
+
+function EventTypeSection({
+  title,
+  description,
+  addLabel,
+  items,
+  colors,
+  onMoveUp,
+  onMoveDown,
+  onDelete,
+  onAdd,
+  onUpdate,
+}: SectionProps) {
+  const [newName, setNewName] = useState("");
+  const [newColor, setNewColor] = useState(colors[0].value);
+  const [adding, setAdding] = useState(false);
+  const [message, setMessage] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState("");
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newName.trim()) return;
+    setAdding(true);
+    setMessage("");
+    const msg = await onAdd(newName, newColor);
+    setMessage(msg);
+    if (msg === "追加しました") setNewName("");
+    setAdding(false);
+  };
+
+  return (
+    <>
+      <hr className="my-8 border-gray-200" />
+      <h2 className="mb-1 text-lg font-semibold">{title}</h2>
+      <p className="mb-4 text-sm text-gray-500">{description}</p>
+
+      <div className="mb-4 space-y-2">
+        {items.map((item, index) => (
+          <div
+            key={item.id}
+            className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2"
+          >
+            <div className="flex flex-col">
+              <button
+                type="button"
+                onClick={() => onMoveUp(index)}
+                disabled={index === 0}
+                className="text-gray-300 hover:text-gray-600 disabled:opacity-20"
+                aria-label="上へ"
+              >
+                <ChevronUp size={14} strokeWidth={2} />
+              </button>
+              <button
+                type="button"
+                onClick={() => onMoveDown(index)}
+                disabled={index === items.length - 1}
+                className="text-gray-300 hover:text-gray-600 disabled:opacity-20"
+                aria-label="下へ"
+              >
+                <ChevronDown size={14} strokeWidth={2} />
+              </button>
+            </div>
+            <span
+              className="h-3 w-3 shrink-0 rounded-full"
+              style={{ backgroundColor: item.color }}
+            />
+            {editingId === item.id ? (
+              <>
+                <input
+                  type="text"
+                  value={editingName}
+                  onChange={(e) => setEditingName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape") setEditingId(null);
+                  }}
+                  autoFocus
+                  className="flex-1 rounded border border-blue-400 px-2 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!editingName.trim() || editingName === item.name) {
+                      setEditingId(null);
+                      return;
+                    }
+                    const msg = await onUpdate(item.id, editingName);
+                    if (!msg.includes("失敗") && !msg.includes("存在")) setEditingId(null);
+                    else setMessage(msg);
+                  }}
+                  className="text-blue-500 hover:text-blue-700"
+                  aria-label="保存"
+                >
+                  <Check size={16} strokeWidth={2} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditingId(null)}
+                  className="text-gray-400 hover:text-gray-600"
+                  aria-label="キャンセル"
+                >
+                  <X size={16} strokeWidth={1.5} />
+                </button>
+              </>
+            ) : (
+              <>
+                <span className="flex-1 text-sm text-gray-900">{item.name}</span>
+                <button
+                  type="button"
+                  onClick={() => { setEditingId(item.id); setEditingName(item.name); }}
+                  className="text-gray-400 hover:text-gray-600"
+                  aria-label="編集"
+                >
+                  <Pencil size={14} strokeWidth={1.5} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onDelete(item.id)}
+                  className="text-gray-400 hover:text-red-500"
+                  aria-label="削除"
+                >
+                  <X size={16} strokeWidth={1.5} />
+                </button>
+              </>
+            )}
+          </div>
+        ))}
+        {items.length === 0 && (
+          <p className="text-sm text-gray-400">登録されていません</p>
+        )}
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-3">
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-700">
+            名前
+          </label>
+          <input
+            type="text"
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            placeholder={addLabel}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          />
+        </div>
+        <div>
+          <label className="mb-2 block text-sm font-medium text-gray-700">
+            カラー
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {colors.map((c) => (
+              <button
+                key={c.value}
+                type="button"
+                onClick={() => setNewColor(c.value)}
+                className={`h-7 w-7 rounded-full border-2 transition-all ${
+                  newColor === c.value
+                    ? "scale-110 border-white ring-[3px] ring-gray-800"
+                    : "border-transparent hover:scale-105"
+                }`}
+                style={{ backgroundColor: c.value }}
+                aria-label={c.label}
+                title={c.label}
+              />
+            ))}
+          </div>
+        </div>
+
+        {message && (
+          <div
+            className={`rounded-md p-3 text-sm ${
+              message.includes("失敗") || message.includes("存在")
+                ? "bg-red-50 text-red-600"
+                : "bg-green-50 text-green-600"
+            }`}
+          >
+            {message}
+          </div>
+        )}
+
+        <button
+          type="submit"
+          disabled={adding || !newName.trim()}
+          className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+        >
+          <Plus size={16} strokeWidth={1.5} aria-hidden="true" />
+          {adding ? "追加中..." : "追加"}
+        </button>
+      </form>
+    </>
+  );
+}
+
+// ── メインページ ────────────────────────────────────────────────────────────
 export default function SettingsPage() {
   const supabase = createClient();
   const router = useRouter();
@@ -47,12 +266,9 @@ export default function SettingsPage() {
   const [teamMessage, setTeamMessage] = useState("");
   const [regenerating, setRegenerating] = useState(false);
 
-  // Event types state
+  // Event types / categories state
   const [eventTypes, setEventTypes] = useState<EventType[]>([]);
-  const [newTypeName, setNewTypeName] = useState("");
-  const [newTypeColor, setNewTypeColor] = useState("#16a34a");
-  const [addingType, setAddingType] = useState(false);
-  const [eventTypeMessage, setEventTypeMessage] = useState("");
+  const [eventCategories, setEventCategories] = useState<EventType[]>([]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -98,13 +314,16 @@ export default function SettingsPage() {
           setTeamIconUrl(team.icon_url ?? null);
         }
 
-        const { data: types } = await supabase
+        const { data: allTypes } = await supabase
           .from("event_types")
-          .select("id, name, color, sort_order")
+          .select("id, name, color, sort_order, kind")
           .eq("team_id", membership.team_id)
           .order("sort_order");
 
-        if (types) setEventTypes(types);
+        if (allTypes) {
+          setEventTypes(allTypes.filter((t) => t.kind === "type") as EventType[]);
+          setEventCategories(allTypes.filter((t) => t.kind === "category") as EventType[]);
+        }
       }
 
       setLoading(false);
@@ -112,6 +331,77 @@ export default function SettingsPage() {
     loadData();
   }, [supabase]);
 
+  // ── Generic helpers ─────────────────────────────────────────────────────
+  const moveItem = async (
+    items: EventType[],
+    setItems: React.Dispatch<React.SetStateAction<EventType[]>>,
+    index: number,
+    direction: "up" | "down"
+  ) => {
+    const targetIdx = direction === "up" ? index - 1 : index + 1;
+    if (targetIdx < 0 || targetIdx >= items.length) return;
+    const a = items[index];
+    const b = items[targetIdx];
+    await Promise.all([
+      supabase.from("event_types").update({ sort_order: b.sort_order }).eq("id", a.id),
+      supabase.from("event_types").update({ sort_order: a.sort_order }).eq("id", b.id),
+    ]);
+    setItems((prev) => {
+      const next = [...prev];
+      next[index] = { ...a, sort_order: b.sort_order };
+      next[targetIdx] = { ...b, sort_order: a.sort_order };
+      return next.sort((x, y) => x.sort_order - y.sort_order);
+    });
+  };
+
+  const deleteItem = async (
+    id: string,
+    setItems: React.Dispatch<React.SetStateAction<EventType[]>>
+  ) => {
+    if (!window.confirm("この項目を削除しますか？")) return;
+    const { error } = await supabase.from("event_types").delete().eq("id", id);
+    if (!error) setItems((prev) => prev.filter((t) => t.id !== id));
+  };
+
+  const updateItem = async (
+    id: string,
+    name: string,
+    setItems: React.Dispatch<React.SetStateAction<EventType[]>>
+  ): Promise<string> => {
+    if (!name.trim()) return "";
+    const { error } = await supabase
+      .from("event_types")
+      .update({ name: name.trim() })
+      .eq("id", id);
+    if (error) {
+      return error.message.includes("unique") ? "同じ名前がすでに存在します" : "更新に失敗しました";
+    }
+    setItems((prev) => prev.map((t) => (t.id === id ? { ...t, name: name.trim() } : t)));
+    return "更新しました";
+  };
+
+  const addItem = async (
+    kind: EventTypeKind,
+    name: string,
+    color: string,
+    items: EventType[],
+    setItems: React.Dispatch<React.SetStateAction<EventType[]>>
+  ): Promise<string> => {
+    if (!teamId || !name.trim()) return "";
+    const maxOrder = items.reduce((max, t) => Math.max(max, t.sort_order), -1);
+    const { data, error } = await supabase
+      .from("event_types")
+      .insert({ team_id: teamId, name: name.trim(), color, sort_order: maxOrder + 1, kind })
+      .select("id, name, color, sort_order, kind")
+      .single();
+    if (error) {
+      return error.message.includes("unique") ? "同じ名前がすでに存在します" : "追加に失敗しました";
+    }
+    if (data) setItems((prev) => [...prev, data as EventType]);
+    return "追加しました";
+  };
+
+  // ── Profile handlers ────────────────────────────────────────────────────
   const handleAvatarUploaded = async (url: string) => {
     if (!userId) return;
     await supabase.from("profiles").update({ avatar_url: url }).eq("id", userId);
@@ -139,11 +429,7 @@ export default function SettingsPage() {
       .update({ name })
       .eq("id", user.id);
 
-    if (error) {
-      setMessage("保存に失敗しました");
-    } else {
-      setMessage("保存しました");
-    }
+    setMessage(error ? "保存に失敗しました" : "保存しました");
     setSaving(false);
   };
 
@@ -158,11 +444,7 @@ export default function SettingsPage() {
       .update({ name: teamName.trim() })
       .eq("id", teamId);
 
-    if (error) {
-      setTeamMessage("保存に失敗しました");
-    } else {
-      setTeamMessage("保存しました");
-    }
+    setTeamMessage(error ? "保存に失敗しました" : "保存しました");
     setSavingTeam(false);
   };
 
@@ -211,53 +493,6 @@ export default function SettingsPage() {
       setTeamMessage("削除に失敗しました");
     } else {
       router.push("/teams/setup");
-    }
-  };
-
-  const handleAddEventType = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!teamId || !newTypeName.trim()) return;
-    setAddingType(true);
-    setEventTypeMessage("");
-
-    const maxOrder = eventTypes.reduce((max, t) => Math.max(max, t.sort_order), -1);
-    const { data, error } = await supabase
-      .from("event_types")
-      .insert({
-        team_id: teamId,
-        name: newTypeName.trim(),
-        color: newTypeColor,
-        sort_order: maxOrder + 1,
-      })
-      .select("id, name, color, sort_order")
-      .single();
-
-    if (error) {
-      setEventTypeMessage(
-        error.message.includes("unique") ? "同じ名前の種別がすでに存在します" : "追加に失敗しました"
-      );
-    } else if (data) {
-      setEventTypes((prev) => [...prev, data]);
-      setNewTypeName("");
-      setEventTypeMessage("追加しました");
-    }
-    setAddingType(false);
-  };
-
-  const handleDeleteEventType = async (typeId: string) => {
-    const confirmed = window.confirm("この種別を削除しますか？");
-    if (!confirmed) return;
-
-    const { error } = await supabase
-      .from("event_types")
-      .delete()
-      .eq("id", typeId);
-
-    if (error) {
-      setEventTypeMessage("削除に失敗しました");
-    } else {
-      setEventTypes((prev) => prev.filter((t) => t.id !== typeId));
-      setEventTypeMessage("削除しました");
     }
   };
 
@@ -416,98 +651,33 @@ export default function SettingsPage() {
             </button>
           </form>
 
-          {/* Event Types Management */}
-          <hr className="my-8 border-gray-200" />
-          <h2 className="mb-1 text-lg font-semibold">予定の種別</h2>
-          <p className="mb-4 text-sm text-gray-500">
-            予定作成時に選択できる種別を管理できます
-          </p>
+          {/* イベント種別 */}
+          <EventTypeSection
+            title="イベント種別"
+            description="予定作成時に選択できる種別（例: 練習・試合）を管理します"
+            addLabel="例: 合宿"
+            items={eventTypes}
+            colors={TYPE_PRESET_COLORS}
+            onMoveUp={(i) => moveItem(eventTypes, setEventTypes, i, "up")}
+            onMoveDown={(i) => moveItem(eventTypes, setEventTypes, i, "down")}
+            onDelete={(id) => deleteItem(id, setEventTypes)}
+            onAdd={(name, color) => addItem("type", name, color, eventTypes, setEventTypes)}
+            onUpdate={(id, name) => updateItem(id, name, setEventTypes)}
+          />
 
-          <div className="mb-4 space-y-2">
-            {eventTypes.map((type) => (
-              <div
-                key={type.id}
-                className="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-3 py-2"
-              >
-                <div className="flex items-center gap-2">
-                  <span
-                    className="h-3 w-3 rounded-full"
-                    style={{ backgroundColor: type.color }}
-                  />
-                  <span className="text-sm text-gray-900">{type.name}</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => handleDeleteEventType(type.id)}
-                  className="text-gray-400 hover:text-red-500"
-                  aria-label="削除"
-                >
-                  <X size={16} strokeWidth={1.5} />
-                </button>
-              </div>
-            ))}
-            {eventTypes.length === 0 && (
-              <p className="text-sm text-gray-400">種別が登録されていません</p>
-            )}
-          </div>
-
-          <form onSubmit={handleAddEventType} className="space-y-3">
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                種別名
-              </label>
-              <input
-                type="text"
-                value={newTypeName}
-                onChange={(e) => setNewTypeName(e.target.value)}
-                placeholder="例: 合宿"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700">
-                カラー
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {PRESET_COLORS.map((c) => (
-                  <button
-                    key={c.value}
-                    type="button"
-                    onClick={() => setNewTypeColor(c.value)}
-                    className={`h-7 w-7 rounded-full border-2 transition-transform ${
-                      newTypeColor === c.value
-                        ? "scale-110 border-gray-700"
-                        : "border-transparent hover:scale-105"
-                    }`}
-                    style={{ backgroundColor: c.value }}
-                    aria-label={c.label}
-                    title={c.label}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {eventTypeMessage && (
-              <div
-                className={`rounded-md p-3 text-sm ${
-                  eventTypeMessage.includes("失敗") || eventTypeMessage.includes("存在")
-                    ? "bg-red-50 text-red-600"
-                    : "bg-green-50 text-green-600"
-                }`}
-              >
-                {eventTypeMessage}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={addingType || !newTypeName.trim()}
-              className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-            >
-              <Plus size={16} strokeWidth={1.5} aria-hidden="true" />
-              {addingType ? "追加中..." : "種別を追加"}
-            </button>
-          </form>
+          {/* 対象カテゴリ */}
+          <EventTypeSection
+            title="対象カテゴリ"
+            description="予定の対象（例: 全体・男子・女子）を管理します"
+            addLabel="例: OB"
+            items={eventCategories}
+            colors={CATEGORY_PRESET_COLORS}
+            onMoveUp={(i) => moveItem(eventCategories, setEventCategories, i, "up")}
+            onMoveDown={(i) => moveItem(eventCategories, setEventCategories, i, "down")}
+            onDelete={(id) => deleteItem(id, setEventCategories)}
+            onAdd={(name, color) => addItem("category", name, color, eventCategories, setEventCategories)}
+            onUpdate={(id, name) => updateItem(id, name, setEventCategories)}
+          />
 
           <div className="mt-8 rounded-lg border border-red-200 bg-red-50 p-4">
             <h3 className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-red-700">

@@ -16,12 +16,11 @@ type Event = {
   id: string;
   title: string;
   event_type: string;
-  event_type_id: string | null;
   date: string;
   end_at: string | null;
   location: string | null;
   created_by: string;
-  event_types: EventType | null;
+  event_event_types: { event_types: EventType | null }[];
 };
 
 type AttendanceSummary = {
@@ -58,7 +57,7 @@ export default function EventsPage() {
 
     const { data: eventsData } = await supabase
       .from("events")
-      .select("id, title, event_type, event_type_id, date, end_at, location, created_by, event_types(id, name, color)")
+      .select("id, title, event_type, date, end_at, location, created_by, event_event_types(event_types(id, name, color))")
       .eq("team_id", membership.team_id)
       .order("date", { ascending: false });
 
@@ -153,8 +152,9 @@ export default function EventsPage() {
         <div className="space-y-3">
           {events.map((event) => {
             const summary = summaries[event.id];
-            const typeName = event.event_types?.name ?? event.event_type;
-            const typeColor = event.event_types?.color ?? "#6b7280";
+            const types = event.event_event_types
+              .map((e) => e.event_types)
+              .filter(Boolean) as EventType[];
             return (
               <Link
                 key={event.id}
@@ -163,19 +163,25 @@ export default function EventsPage() {
               >
                 <div className="flex items-start justify-between">
                   <div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <h2 className="text-sm font-semibold text-gray-900">
                         {event.title}
                       </h2>
-                      <span
-                        className="rounded-full px-2 py-0.5 text-xs font-medium"
-                        style={{
-                          backgroundColor: typeColor + "20",
-                          color: typeColor,
-                        }}
-                      >
-                        {typeName}
-                      </span>
+                      {types.length > 0
+                        ? types.map((et) => (
+                            <span
+                              key={et.id}
+                              className="rounded-full px-2 py-0.5 text-xs font-medium"
+                              style={{ backgroundColor: et.color + "20", color: et.color }}
+                            >
+                              {et.name}
+                            </span>
+                          ))
+                        : event.event_type && (
+                            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500">
+                              {event.event_type}
+                            </span>
+                          )}
                     </div>
                     <p className="mt-1 text-xs text-gray-500">
                       {new Date(event.date).toLocaleDateString("ja-JP", {

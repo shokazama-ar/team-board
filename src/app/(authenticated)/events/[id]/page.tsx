@@ -17,14 +17,13 @@ type EventDetail = {
   team_id: string;
   title: string;
   event_type: string;
-  event_type_id: string | null;
-  event_types: EventType | null;
   date: string;
   end_at: string | null;
   location: string | null;
   memo: string | null;
   created_by: string;
   created_at: string;
+  event_event_types: { event_types: EventType | null }[];
 };
 
 type Attendance = {
@@ -75,7 +74,7 @@ export default function EventDetailPage() {
 
     const { data: eventData } = await supabase
       .from("events")
-      .select("id, team_id, title, event_type, event_type_id, date, end_at, location, memo, created_by, created_at, event_types(id, name, color)")
+      .select("id, team_id, title, event_type, date, end_at, location, memo, created_by, created_at, event_event_types(event_types(id, name, color))")
       .eq("id", eventId)
       .single();
 
@@ -211,19 +210,20 @@ export default function EventDetailPage() {
       <div className="rounded-lg border border-gray-200 bg-white p-6">
         <div className="mb-4 flex items-start justify-between">
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-2xl font-bold">{event.title}</h1>
-              {(event.event_types || event.event_type) && (
-                <span
-                  className="rounded-full px-2 py-0.5 text-xs font-medium"
-                  style={{
-                    backgroundColor: (event.event_types?.color ?? "#6b7280") + "20",
-                    color: event.event_types?.color ?? "#6b7280",
-                  }}
-                >
-                  {event.event_types?.name ?? event.event_type}
-                </span>
-              )}
+              {event.event_event_types
+                .map((e) => e.event_types)
+                .filter(Boolean)
+                .map((et) => (
+                  <span
+                    key={et!.id}
+                    className="rounded-full px-2 py-0.5 text-xs font-medium"
+                    style={{ backgroundColor: et!.color + "20", color: et!.color }}
+                  >
+                    {et!.name}
+                  </span>
+                ))}
             </div>
           </div>
           {canEdit && (
