@@ -82,7 +82,7 @@ export default function EventDetailPage() {
       setLoading(false);
       return;
     }
-    setEvent(eventData as EventDetail);
+    setEvent(eventData as unknown as EventDetail);
 
     const { data: membership } = await supabase
       .from("team_members")
