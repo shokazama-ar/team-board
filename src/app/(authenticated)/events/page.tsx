@@ -1,15 +1,17 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import { CalendarView } from "@/components/events/CalendarView";
-import { List, CalendarDays, Plus, MapPin } from "lucide-react";
+import { ImportModal } from "@/components/events/ImportModal";
+import { List, CalendarDays, Plus, MapPin, Download, Upload } from "lucide-react";
 
 type EventType = {
   id: string;
   name: string;
   color: string;
+  kind: string;
 };
 
 type Event = {
@@ -37,6 +39,10 @@ export default function EventsPage() {
   const [loading, setLoading] = useState(true);
   const [summaries, setSummaries] = useState<Record<string, AttendanceSummary>>({});
   const [view, setView] = useState<"list" | "calendar">("list");
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [filterTypeIds, setFilterTypeIds] = useState<Set<string>>(new Set());
+  const [filterCategoryIds, setFilterCategoryIds] = useState<Set<string>>(new Set());
 
   const loadData = useCallback(async () => {
     const {
@@ -57,7 +63,7 @@ export default function EventsPage() {
 
     const { data: eventsData } = await supabase
       .from("events")
-      .select("id, title, event_type, date, end_at, location, created_by, event_event_types(event_types(id, name, color))")
+      .select("id, title, event_type, date, end_at, location, created_by, event_event_types(event_types(id, name, color, kind))")
       .eq("team_id", membership.team_id)
       .order("date", { ascending: false });
 
@@ -93,6 +99,125 @@ export default function EventsPage() {
     loadData();
   }, [loadData]);
 
+  // フィルタ用: 全イベントから利用可能な種別・カテゴリを収集
+  const { availableTypes, availableCategories } = useMemo(() => {
+    const typeMap = new Map<string, EventType>();
+    const categoryMap = new Map<string, EventType>();
+    for (const event of events) {
+      for (const et of event.event_event_types) {
+        if (!et.event_types) continue;
+        if (et.event_types.kind === "type") typeMap.set(et.event_types.id, et.event_types);
+        else if (et.event_types.kind === "category") categoryMap.set(et.event_types.id, et.event_types);
+      }
+    }
+    return {
+      availableTypes: Array.from(typeMap.values()),
+      availableCategories: Array.from(categoryMap.values()),
+    };
+  }, [events]);
+
+  // フィルタ適用後のイベント一覧
+  const filteredEvents = useMemo(() => {
+    return events.filter((event) => {
+      const types = event.event_event_types.map((e) => e.event_types).filter(Boolean) as EventType[];
+      const typeIds = types.filter((t) => t.kind === "type").map((t) => t.id);
+      const categoryIds = types.filter((t) => t.kind === "category").map((t) => t.id);
+      const typeMatch = filterTypeIds.size === 0 || typeIds.some((id) => filterTypeIds.has(id));
+      const categoryMatch = filterCategoryIds.size === 0 || categoryIds.some((id) => filterCategoryIds.has(id));
+      return typeMatch && categoryMatch;
+    });
+  }, [events, filterTypeIds, filterCategoryIds]);
+
+  function toggleTypeFilter(id: string) {
+    setFilterTypeIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleCategoryFilter(id: string) {
+    setFilterCategoryIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function clearFilters() {
+    setFilterTypeIds(new Set());
+    setFilterCategoryIds(new Set());
+  }
+
+  function toJSTString(date: Date): string {
+    const jst = new Date(date.getTime() + 9 * 60 * 60 * 1000);
+    const y = jst.getUTCFullYear();
+    const mo = String(jst.getUTCMonth() + 1).padStart(2, "0");
+    const d = String(jst.getUTCDate()).padStart(2, "0");
+    const h = String(jst.getUTCHours()).padStart(2, "0");
+    const mi = String(jst.getUTCMinutes()).padStart(2, "0");
+    return `${y}-${mo}-${d} ${h}:${mi}`;
+  }
+
+  function buildCSV(targetEvents: Event[]): string {
+    const headers = ["title", "date", "end_at", "location", "memo", "event_type", "categories"];
+    const rows: string[] = [headers.join(",")];
+    for (const event of targetEvents) {
+      const types = event.event_event_types.map((e) => e.event_types).filter(Boolean) as EventType[];
+      const eventType = types.find((t) => t.kind === "type")?.name ?? event.event_type ?? "";
+      const categories = types.filter((t) => t.kind === "category").map((t) => t.name).join("|");
+      const cols = [
+        event.title,
+        toJSTString(new Date(event.date)),
+        event.end_at ? toJSTString(new Date(event.end_at)) : "",
+        event.location ?? "",
+        "",
+        eventType,
+        categories,
+      ].map((v) => `"${String(v).replace(/"/g, '""')}"`);
+      rows.push(cols.join(","));
+    }
+    return "\uFEFF" + rows.join("\n");
+  }
+
+  function downloadCSV(content: string, filename: string) {
+    const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function handleExport() {
+    if (view === "list") {
+      // 一覧: フィルタ済み全件
+      if (filteredEvents.length === 0) {
+        const ok = window.confirm("表示中の予定は0件です。\nヘッダーのみの空のCSVファイルをダウンロードしますか？");
+        if (!ok) return;
+      }
+      downloadCSV(buildCSV(filteredEvents), "events.csv");
+    } else {
+      // カレンダー: フィルタ済み × 表示中の月
+      const y = currentMonth.getFullYear();
+      const m = currentMonth.getMonth();
+      const monthLabel = currentMonth.toLocaleDateString("ja-JP", { year: "numeric", month: "long" });
+      const monthEvents = filteredEvents.filter((e) => {
+        const d = new Date(e.date);
+        return d.getFullYear() === y && d.getMonth() === m;
+      });
+      if (monthEvents.length === 0) {
+        const ok = window.confirm(
+          `${monthLabel}の予定は0件です。\nヘッダーのみの空のCSVファイルをダウンロードしますか？`
+        );
+        if (!ok) return;
+      }
+      const mm = String(m + 1).padStart(2, "0");
+      downloadCSV(buildCSV(monthEvents), `events_${y}${mm}.csv`);
+    }
+  }
+
   if (loading) {
     return <div className="text-sm text-gray-500">読み込み中...</div>;
   }
@@ -101,9 +226,19 @@ export default function EventsPage() {
     return <div className="text-sm text-gray-500">チームが見つかりません</div>;
   }
 
+  const hasFilter = filterTypeIds.size > 0 || filterCategoryIds.size > 0;
+
   return (
     <div className="mx-auto max-w-3xl">
-      <div className="mb-6 flex items-center justify-between">
+      {showImportModal && (
+        <ImportModal
+          teamId={teamId}
+          existingEvents={events}
+          onSuccess={loadData}
+          onClose={() => setShowImportModal(false)}
+        />
+      )}
+      <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <h1 className="text-2xl font-bold">予定表</h1>
           <div className="flex gap-1 rounded-lg bg-gray-100 p-1">
@@ -131,26 +266,112 @@ export default function EventsPage() {
             </button>
           </div>
         </div>
-        {currentUserRole === "admin" && (
-          <Link
-            href="/events/new"
-            className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleExport}
+            className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50"
+            title="CSVエクスポート"
           >
-            <Plus size={16} strokeWidth={1.5} aria-hidden="true" />
-            新規作成
-          </Link>
-        )}
+            <Download size={15} strokeWidth={1.5} aria-hidden="true" />
+            エクスポート
+          </button>
+          {currentUserRole === "admin" && (
+            <>
+              <button
+                onClick={() => setShowImportModal(true)}
+                className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50"
+                title="CSVインポート"
+              >
+                <Upload size={15} strokeWidth={1.5} aria-hidden="true" />
+                インポート
+              </button>
+              <Link
+                href="/events/new"
+                className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              >
+                <Plus size={16} strokeWidth={1.5} aria-hidden="true" />
+                新規作成
+              </Link>
+            </>
+          )}
+        </div>
       </div>
 
+      {/* フィルタバー */}
+      {(availableTypes.length > 0 || availableCategories.length > 0) && (
+        <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border border-gray-200 bg-white px-3 py-2">
+          {availableTypes.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-xs text-gray-400 shrink-0">種別</span>
+              {availableTypes.map((t) => {
+                const active = filterTypeIds.size === 0 || filterTypeIds.has(t.id);
+                return (
+                  <button
+                    key={t.id}
+                    onClick={() => toggleTypeFilter(t.id)}
+                    className="rounded-full px-2.5 py-0.5 text-xs font-medium border transition-opacity"
+                    style={{
+                      borderColor: t.color,
+                      color: t.color,
+                      backgroundColor: t.color + "18",
+                      opacity: active ? 1 : 0.3,
+                    }}
+                  >
+                    {t.name}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          {availableCategories.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-xs text-gray-400 shrink-0">カテゴリ</span>
+              {availableCategories.map((c) => {
+                const active = filterCategoryIds.size === 0 || filterCategoryIds.has(c.id);
+                return (
+                  <button
+                    key={c.id}
+                    onClick={() => toggleCategoryFilter(c.id)}
+                    className="rounded-full px-2.5 py-0.5 text-xs font-medium border transition-opacity"
+                    style={{
+                      borderColor: c.color,
+                      color: c.color,
+                      backgroundColor: c.color + "18",
+                      opacity: active ? 1 : 0.3,
+                    }}
+                  >
+                    {c.name}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          {hasFilter && (
+            <button
+              onClick={clearFilters}
+              className="ml-auto text-xs text-gray-400 hover:text-gray-600"
+            >
+              クリア
+            </button>
+          )}
+        </div>
+      )}
+
       {view === "calendar" ? (
-        <CalendarView events={events} />
-      ) : events.length === 0 ? (
+        <CalendarView
+          events={filteredEvents}
+          date={currentMonth}
+          onNavigate={setCurrentMonth}
+        />
+      ) : filteredEvents.length === 0 ? (
         <div className="rounded-lg border border-gray-200 bg-white p-6">
-          <p className="text-sm text-gray-500">まだ予定がありません</p>
+          <p className="text-sm text-gray-500">
+            {events.length === 0 ? "まだ予定がありません" : "条件に一致する予定がありません"}
+          </p>
         </div>
       ) : (
         <div className="space-y-3">
-          {events.map((event) => {
+          {filteredEvents.map((event) => {
             const summary = summaries[event.id];
             const types = event.event_event_types
               .map((e) => e.event_types)

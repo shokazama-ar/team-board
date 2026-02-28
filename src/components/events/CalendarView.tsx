@@ -102,7 +102,15 @@ type EventInput = {
   end_at: string | null;
 };
 
-export function CalendarView({ events }: { events: EventInput[] }) {
+export function CalendarView({
+  events,
+  date,
+  onNavigate,
+}: {
+  events: EventInput[];
+  date: Date;
+  onNavigate: (date: Date) => void;
+}) {
   const router = useRouter();
 
   const calEvents: CalEvent[] = events.map((e) => ({
@@ -127,6 +135,8 @@ export function CalendarView({ events }: { events: EventInput[] }) {
       <Calendar
         localizer={localizer}
         events={calEvents}
+        date={date}
+        onNavigate={onNavigate}
         defaultView={Views.MONTH}
         views={[Views.MONTH]}
         culture="ja"
