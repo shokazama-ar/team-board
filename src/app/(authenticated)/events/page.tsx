@@ -193,10 +193,13 @@ export default function EventsPage() {
   function handleExport() {
     if (view === "list") {
       // 一覧: フィルタ済み全件
-      if (filteredEvents.length === 0) {
-        const ok = window.confirm("表示中の予定は0件です。\nヘッダーのみの空のCSVファイルをダウンロードしますか？");
-        if (!ok) return;
-      }
+      const count = filteredEvents.length;
+      const filterNote = hasFilter ? "（フィルタ適用中）" : "";
+      const message =
+        count === 0
+          ? `エクスポート対象の予定は0件です${filterNote}。\nヘッダーのみの空のCSVファイルをダウンロードしますか？`
+          : `全予定 ${count}件${filterNote} をCSVエクスポートします。\nよろしいですか？`;
+      if (!window.confirm(message)) return;
       downloadCSV(buildCSV(filteredEvents), "events.csv");
     } else {
       // カレンダー: フィルタ済み × 表示中の月
@@ -207,12 +210,13 @@ export default function EventsPage() {
         const d = new Date(e.date);
         return d.getFullYear() === y && d.getMonth() === m;
       });
-      if (monthEvents.length === 0) {
-        const ok = window.confirm(
-          `${monthLabel}の予定は0件です。\nヘッダーのみの空のCSVファイルをダウンロードしますか？`
-        );
-        if (!ok) return;
-      }
+      const count = monthEvents.length;
+      const filterNote = hasFilter ? "（フィルタ適用中）" : "";
+      const message =
+        count === 0
+          ? `${monthLabel}の予定は0件です${filterNote}。\nヘッダーのみの空のCSVファイルをダウンロードしますか？`
+          : `${monthLabel}の予定 ${count}件${filterNote} をCSVエクスポートします。\nよろしいですか？`;
+      if (!window.confirm(message)) return;
       const mm = String(m + 1).padStart(2, "0");
       downloadCSV(buildCSV(monthEvents), `events_${y}${mm}.csv`);
     }
