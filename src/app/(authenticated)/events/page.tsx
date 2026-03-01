@@ -244,6 +244,7 @@ export default function EventsPage() {
           <div className="flex gap-1 rounded-lg bg-gray-100 p-1">
             <button
               onClick={() => setView("list")}
+              aria-label="一覧"
               className={`flex items-center gap-1 rounded-md px-3 py-1 text-sm font-medium transition-colors ${
                 view === "list"
                   ? "bg-white text-gray-900 shadow-sm"
@@ -251,10 +252,11 @@ export default function EventsPage() {
               }`}
             >
               <List size={16} strokeWidth={1.5} aria-hidden="true" />
-              一覧
+              <span className="hidden sm:inline">一覧</span>
             </button>
             <button
               onClick={() => setView("calendar")}
+              aria-label="カレンダー"
               className={`flex items-center gap-1 rounded-md px-3 py-1 text-sm font-medium transition-colors ${
                 view === "calendar"
                   ? "bg-white text-gray-900 shadow-sm"
@@ -262,35 +264,38 @@ export default function EventsPage() {
               }`}
             >
               <CalendarDays size={16} strokeWidth={1.5} aria-hidden="true" />
-              カレンダー
+              <span className="hidden sm:inline">カレンダー</span>
             </button>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={handleExport}
+            aria-label="CSVエクスポート"
             className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50"
             title="CSVエクスポート"
           >
             <Download size={15} strokeWidth={1.5} aria-hidden="true" />
-            エクスポート
+            <span className="hidden sm:inline">エクスポート</span>
           </button>
           {currentUserRole === "admin" && (
             <>
               <button
                 onClick={() => setShowImportModal(true)}
+                aria-label="CSVインポート"
                 className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50"
                 title="CSVインポート"
               >
                 <Upload size={15} strokeWidth={1.5} aria-hidden="true" />
-                インポート
+                <span className="hidden sm:inline">インポート</span>
               </button>
               <Link
                 href="/events/new"
+                aria-label="新規作成"
                 className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
               >
                 <Plus size={16} strokeWidth={1.5} aria-hidden="true" />
-                新規作成
+                <span className="hidden sm:inline">新規作成</span>
               </Link>
             </>
           )}

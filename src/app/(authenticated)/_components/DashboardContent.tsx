@@ -57,10 +57,9 @@ export default async function DashboardContent({ userId }: { userId: string }) {
   }
 
   const today = new Date().toISOString();
-  const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
 
   // 独立したクエリを並列実行
-  const [teamResult, memberCountResult, eventsResult, recentEventsResult, announcementsResult] =
+  const [teamResult, memberCountResult, eventsResult, upcomingAllEventsResult, announcementsResult] =
     await Promise.all([
       supabase
         .from("teams")
@@ -78,12 +77,12 @@ export default async function DashboardContent({ userId }: { userId: string }) {
         .gte("date", today)
         .order("date", { ascending: true })
         .limit(5),
-      // 未回答チェック用: 過去14日 + 今後の全イベント
+      // 未回答チェック用: 今日以降の全イベント
       supabase
         .from("events")
         .select("id, title, event_type, date, location")
         .eq("team_id", membership.team_id)
-        .gte("date", fourteenDaysAgo)
+        .gte("date", today)
         .order("date", { ascending: true }),
       supabase
         .from("announcements")
@@ -96,13 +95,13 @@ export default async function DashboardContent({ userId }: { userId: string }) {
   const team = teamResult.data;
   const memberCount = memberCountResult.count ?? 0;
   const upcomingEvents: Event[] = eventsResult.data ?? [];
-  const recentAndUpcomingEvents: Event[] = recentEventsResult.data ?? [];
+  const upcomingAllEvents: Event[] = upcomingAllEventsResult.data ?? [];
   const latestAnnouncements: Announcement[] = announcementsResult.data ?? [];
 
-  // 出欠未回答イベント（過去14日 + 今後のイベントを対象）
+  // 出欠未回答イベント（今日以降のイベントを対象）
   let unansweredEvents: Event[] = [];
-  if (recentAndUpcomingEvents.length > 0) {
-    const eventIds = recentAndUpcomingEvents.map((e) => e.id);
+  if (upcomingAllEvents.length > 0) {
+    const eventIds = upcomingAllEvents.map((e) => e.id);
     const { data: userAttendances } = await supabase
       .from("attendances")
       .select("event_id")
@@ -112,7 +111,7 @@ export default async function DashboardContent({ userId }: { userId: string }) {
     const answeredEventIds = new Set(
       (userAttendances ?? []).map((a) => a.event_id)
     );
-    unansweredEvents = recentAndUpcomingEvents.filter(
+    unansweredEvents = upcomingAllEvents.filter(
       (e) => !answeredEventIds.has(e.id)
     );
   }

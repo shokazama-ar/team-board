@@ -27,12 +27,12 @@ export function BottomNav() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex flex-1 flex-col items-center py-2 text-xs ${
+              aria-label={item.label}
+              className={`flex flex-1 flex-col items-center py-3 ${
                 isActive ? "text-blue-600" : "text-gray-500"
               }`}
             >
-              <item.icon size={20} strokeWidth={1.5} aria-hidden="true" />
-              <span>{item.label}</span>
+              <item.icon size={24} strokeWidth={1.5} aria-hidden="true" />
             </Link>
           );
         })}
