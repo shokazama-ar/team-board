@@ -71,9 +71,10 @@ export default function AnnouncementDetailPage() {
 
     const { data: membership } = await supabase
       .from("team_members")
-      .select("role")
+      .select("role, member_profiles!inner(user_id)")
       .eq("team_id", announcement.team_id)
-      .eq("user_id", user.id)
+      .eq("member_profiles.user_id", user.id)
+      .limit(1)
       .single();
 
     if (membership) setCurrentUserRole(membership.role);

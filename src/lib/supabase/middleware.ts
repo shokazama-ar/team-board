@@ -59,12 +59,9 @@ export async function updateSession(request: NextRequest) {
     );
 
   if (shouldCheckTeam) {
-    const { count } = await supabase
-      .from("team_members")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", user.id);
+    const { data: teamId } = await supabase.rpc("get_my_team_id");
 
-    if (!count) {
+    if (!teamId) {
       const url = request.nextUrl.clone();
       url.pathname = "/teams/setup";
       return NextResponse.redirect(url);

@@ -50,21 +50,23 @@ export default function EventsPage() {
     } = await supabase.auth.getUser();
     if (!user) return;
 
-    const { data: membership } = await supabase
+    const { data: teamId } = await supabase.rpc("get_my_team_id");
+    if (!teamId) return;
+    setTeamId(teamId);
+
+    const { data: myMembership } = await supabase
       .from("team_members")
-      .select("team_id, role")
-      .eq("user_id", user.id)
+      .select("role, member_profiles!inner(user_id)")
+      .eq("team_id", teamId)
+      .eq("member_profiles.user_id", user.id)
       .limit(1)
       .single();
-
-    if (!membership) return;
-    setTeamId(membership.team_id);
-    setCurrentUserRole(membership.role);
+    setCurrentUserRole(myMembership?.role ?? "");
 
     const { data: eventsData } = await supabase
       .from("events")
       .select("id, title, event_type, date, end_at, location, created_by, event_event_types(event_types(id, name, color, kind))")
-      .eq("team_id", membership.team_id)
+      .eq("team_id", teamId)
       .order("date", { ascending: false });
 
     if (eventsData) {

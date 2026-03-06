@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { RefreshCw, Trash2, AlertTriangle, Plus, X, ChevronUp, ChevronDown, Pencil, Check } from "lucide-react";
+import { RefreshCw, Trash2, AlertTriangle, Plus, X, ChevronUp, ChevronDown, Pencil, Check, UserPlus } from "lucide-react";
 import { AvatarUpload } from "@/components/ui/AvatarUpload";
 
 type EventTypeKind = "type" | "category";
@@ -242,6 +242,233 @@ function EventTypeSection({
   );
 }
 
+// ── メンバープロファイル行 ────────────────────────────────────────────────────
+type MemberProfileRowProps = {
+  profile: {
+    id: string;
+    member_profile_id: string;
+    kind: "coach" | "player";
+    profile_name: string | null;
+    avatar_url: string | null;
+    number: string | null;
+    role: string;
+  };
+  onUpdated: (name: string, number: string) => Promise<void>;
+  onAvatarUploaded: (url: string) => Promise<void>;
+  canDelete: boolean;
+  onDeleted: () => Promise<void>;
+};
+
+function MemberProfileRow({ profile, onUpdated, onAvatarUploaded, canDelete, onDeleted }: MemberProfileRowProps) {
+  const [editing, setEditing] = useState(false);
+  const [editName, setEditName] = useState(profile.profile_name ?? "");
+  const [editNumber, setEditNumber] = useState(profile.number ?? "");
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    if (!editName.trim()) return;
+    setSaving(true);
+    await onUpdated(editName.trim(), editNumber.trim());
+    setSaving(false);
+    setEditing(false);
+  };
+
+  return (
+    <div className="rounded-lg border border-gray-200 bg-white p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <AvatarUpload
+            currentUrl={profile.avatar_url}
+            bucket="avatars"
+            folderPath={profile.member_profile_id}
+            size={48}
+            onUploaded={onAvatarUploaded}
+          />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span
+                className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                  profile.kind === "coach" ? "bg-blue-50 text-blue-700" : "bg-green-50 text-green-700"
+                }`}
+              >
+                {profile.kind === "coach" ? "コーチ" : "プレイヤー"}
+              </span>
+              {profile.role === "admin" && (
+                <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">管理者</span>
+              )}
+            </div>
+            {editing ? (
+              <div className="mt-2 space-y-2">
+                <input
+                  type="text"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  placeholder="名前"
+                  autoFocus
+                  className="w-full rounded border border-gray-300 px-2 py-1 text-sm focus:border-blue-500 focus:outline-none"
+                />
+                <input
+                  type="text"
+                  value={editNumber}
+                  onChange={(e) => setEditNumber(e.target.value)}
+                  placeholder="背番号（任意）"
+                  className="w-full rounded border border-gray-300 px-2 py-1 text-sm focus:border-blue-500 focus:outline-none"
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleSave}
+                    disabled={saving || !editName.trim()}
+                    className="flex items-center gap-1 rounded bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    <Check size={12} strokeWidth={2} />
+                    保存
+                  </button>
+                  <button
+                    onClick={() => { setEditing(false); setEditName(profile.profile_name ?? ""); setEditNumber(profile.number ?? ""); }}
+                    className="rounded border border-gray-300 px-3 py-1 text-xs text-gray-600 hover:bg-gray-50"
+                  >
+                    キャンセル
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <p className="mt-1 text-sm font-medium text-gray-900">
+                {profile.profile_name || "名前未設定"}
+                {profile.number && <span className="ml-1.5 text-xs text-gray-400">#{profile.number}</span>}
+              </p>
+            )}
+          </div>
+        </div>
+        {!editing && (
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => setEditing(true)}
+              className="text-gray-400 hover:text-gray-600"
+              aria-label="編集"
+            >
+              <Pencil size={16} strokeWidth={1.5} />
+            </button>
+            {canDelete && (
+              <button
+                onClick={onDeleted}
+                className="text-gray-400 hover:text-red-500"
+                aria-label="削除"
+              >
+                <Trash2 size={16} strokeWidth={1.5} />
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── プロファイル追加フォーム ───────────────────────────────────────────────
+function AddProfileForm({
+  teamId,
+  showKindSelector = true,
+  onAdded,
+}: {
+  teamId: string;
+  showKindSelector?: boolean;
+  onAdded: () => void;
+}) {
+  const supabase = createClient();
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [kind, setKind] = useState<"coach" | "player">("player");
+  const [adding, setAdding] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleAdd = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    setAdding(true);
+    setError("");
+    const { error: addError } = await supabase.rpc("add_profile_to_team", {
+      target_team_id: teamId,
+      profile_name: name.trim(),
+      profile_kind: kind,
+    });
+    if (addError) {
+      setError("追加に失敗しました");
+      setAdding(false);
+      return;
+    }
+    setName("");
+    setOpen(false);
+    onAdded();
+    setAdding(false);
+  };
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="flex items-center gap-1.5 rounded-lg border border-dashed border-gray-300 px-4 py-2 text-sm text-gray-500 hover:border-gray-400 hover:text-gray-700"
+      >
+        <UserPlus size={16} strokeWidth={1.5} aria-hidden="true" />
+        プロファイルを追加
+      </button>
+    );
+  }
+
+  return (
+    <div className="rounded-lg border border-gray-200 bg-white p-4">
+      <h3 className="mb-3 text-sm font-semibold text-gray-700">新しいプロファイルを追加</h3>
+      <form onSubmit={handleAdd} className="space-y-3">
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="名前（例: 山田 太郎）"
+          autoFocus
+          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+        />
+        {showKindSelector && (
+          <div className="flex gap-2">
+            {(["coach", "player"] as const).map((k) => (
+              <button
+                key={k}
+                type="button"
+                onClick={() => setKind(k)}
+                className={`flex-1 rounded-lg border py-1.5 text-sm font-medium transition-colors ${
+                  kind === k
+                    ? k === "coach"
+                      ? "border-blue-500 bg-blue-50 text-blue-700"
+                      : "border-green-500 bg-green-50 text-green-700"
+                    : "border-gray-300 text-gray-600 hover:bg-gray-50"
+                }`}
+              >
+                {k === "coach" ? "コーチ" : "プレイヤー"}
+              </button>
+            ))}
+          </div>
+        )}
+        {error && <p className="text-xs text-red-600">{error}</p>}
+        <div className="flex gap-2">
+          <button
+            type="submit"
+            disabled={adding || !name.trim()}
+            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+          >
+            {adding ? "追加中..." : "追加"}
+          </button>
+          <button
+            type="button"
+            onClick={() => { setOpen(false); setName(""); setError(""); }}
+            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50"
+          >
+            キャンセル
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
 // ── メインページ ────────────────────────────────────────────────────────────
 export default function SettingsPage() {
   const supabase = createClient();
@@ -261,14 +488,62 @@ export default function SettingsPage() {
   const [teamName, setTeamName] = useState("");
   const [teamIconUrl, setTeamIconUrl] = useState<string | null>(null);
   const [inviteCode, setInviteCode] = useState("");
+  const [inviteCodeGuardian, setInviteCodeGuardian] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
+  const [accountType, setAccountType] = useState<"coach" | "guardian">("coach");
   const [savingTeam, setSavingTeam] = useState(false);
   const [teamMessage, setTeamMessage] = useState("");
   const [regenerating, setRegenerating] = useState(false);
+  const [regeneratingGuardian, setRegeneratingGuardian] = useState(false);
+
+  // Tab state
+  const [activeTab, setActiveTab] = useState<"coach" | "guardian" | "admin">("coach");
 
   // Event types / categories state
   const [eventTypes, setEventTypes] = useState<EventType[]>([]);
   const [eventCategories, setEventCategories] = useState<EventType[]>([]);
+
+  // Member profiles state
+  type MemberProfileItem = {
+    id: string;
+    member_profile_id: string;
+    kind: "coach" | "player";
+    profile_name: string | null;
+    avatar_url: string | null;
+    number: string | null;
+    role: string;
+  };
+  const [myProfiles, setMyProfiles] = useState<MemberProfileItem[]>([]);
+
+  const reloadMyProfiles = useCallback(async (tid: string, uid: string) => {
+    const { data: myMemberships } = await supabase
+      .from("team_members")
+      .select("id, role, member_profile_id, member_profiles!inner(user_id, kind, name, avatar_url, number)")
+      .eq("team_id", tid)
+      .eq("member_profiles.user_id", uid);
+    if (myMemberships) {
+      setMyProfiles(
+        myMemberships.map((m) => {
+          const mp = m.member_profiles as unknown as {
+            user_id: string;
+            kind: "coach" | "player";
+            name: string | null;
+            avatar_url: string | null;
+            number: string | null;
+          } | null;
+          return {
+            id: m.id,
+            member_profile_id: m.member_profile_id,
+            kind: mp?.kind ?? "player",
+            profile_name: mp?.name ?? null,
+            avatar_url: mp?.avatar_url ?? null,
+            number: mp?.number ?? null,
+            role: m.role,
+          };
+        })
+      );
+    }
+  }, [supabase]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -291,26 +566,35 @@ export default function SettingsPage() {
         setAvatarUrl(profile.avatar_url ?? null);
       }
 
-      const { data: membership } = await supabase
-        .from("team_members")
-        .select("team_id, role")
-        .eq("user_id", user.id)
-        .limit(1)
-        .single();
+      const { data: teamIdResult } = await supabase.rpc("get_my_team_id");
+
+      const { data: membership } = teamIdResult
+        ? await supabase
+            .from("team_members")
+            .select("team_id, role, account_type, member_profiles!inner(user_id)")
+            .eq("team_id", teamIdResult)
+            .eq("member_profiles.user_id", user.id)
+            .limit(1)
+            .single()
+        : { data: null };
 
       if (membership) {
+        const type = (membership.account_type ?? "coach") as "coach" | "guardian";
         setIsAdmin(membership.role === "admin");
+        setAccountType(type);
+        setActiveTab(type === "guardian" ? "guardian" : "coach");
         setTeamId(membership.team_id);
 
         const { data: team } = await supabase
           .from("teams")
-          .select("name, invite_code, icon_url")
+          .select("name, invite_code, invite_code_guardian, icon_url")
           .eq("id", membership.team_id)
           .single();
 
         if (team) {
           setTeamName(team.name);
           setInviteCode(team.invite_code);
+          setInviteCodeGuardian(team.invite_code_guardian);
           setTeamIconUrl(team.icon_url ?? null);
         }
 
@@ -324,12 +608,14 @@ export default function SettingsPage() {
           setEventTypes(allTypes.filter((t) => t.kind === "type") as EventType[]);
           setEventCategories(allTypes.filter((t) => t.kind === "category") as EventType[]);
         }
+
+        await reloadMyProfiles(membership.team_id, user.id);
       }
 
       setLoading(false);
     };
     loadData();
-  }, [supabase]);
+  }, [supabase, reloadMyProfiles]);
 
   // ── Generic helpers ─────────────────────────────────────────────────────
   const moveItem = async (
@@ -451,7 +737,7 @@ export default function SettingsPage() {
   const handleRegenerateCode = async () => {
     if (!teamId) return;
     const confirmed = window.confirm(
-      "招待コードを再生成すると、以前のコードは無効になります。よろしいですか？"
+      "コーチ用招待コードを再生成すると、以前のコードは無効になります。よろしいですか？"
     );
     if (!confirmed) return;
 
@@ -467,9 +753,33 @@ export default function SettingsPage() {
       setTeamMessage("再生成に失敗しました");
     } else {
       setInviteCode(newCode);
-      setTeamMessage("招待コードを再生成しました");
+      setTeamMessage("コーチ用招待コードを再生成しました");
     }
     setRegenerating(false);
+  };
+
+  const handleRegenerateGuardianCode = async () => {
+    if (!teamId) return;
+    const confirmed = window.confirm(
+      "保護者用招待コードを再生成すると、以前のコードは無効になります。よろしいですか？"
+    );
+    if (!confirmed) return;
+
+    setRegeneratingGuardian(true);
+    setTeamMessage("");
+
+    const { data: newCode, error } = await supabase.rpc(
+      "regenerate_guardian_invite_code",
+      { target_team_id: teamId }
+    );
+
+    if (error) {
+      setTeamMessage("再生成に失敗しました");
+    } else {
+      setInviteCodeGuardian(newCode);
+      setTeamMessage("保護者用招待コードを再生成しました");
+    }
+    setRegeneratingGuardian(false);
   };
 
   const handleDeleteTeam = async () => {
@@ -500,93 +810,216 @@ export default function SettingsPage() {
     return <div className="text-sm text-gray-500">読み込み中...</div>;
   }
 
+  // ── プロファイルフォーム（コーチ・保護者タブ共通） ─────────────────────
+  const profileFormJsx = (
+    <form onSubmit={handleSaveProfile} className="space-y-4">
+      <div className="flex items-center gap-4">
+        {userId && (
+          <AvatarUpload
+            currentUrl={avatarUrl}
+            bucket="avatars"
+            folderPath={userId}
+            size={72}
+            onUploaded={handleAvatarUploaded}
+          />
+        )}
+        <div>
+          <p className="text-sm font-medium text-gray-700">プロフィール画像</p>
+          <p className="text-xs text-gray-400">クリックして変更</p>
+        </div>
+      </div>
+
+      <div>
+        <label className="mb-1 block text-sm font-medium text-gray-700">
+          メールアドレス
+        </label>
+        <input
+          type="email"
+          value={email}
+          disabled
+          className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-500"
+        />
+      </div>
+
+      <div>
+        <label
+          htmlFor="name"
+          className="mb-1 block text-sm font-medium text-gray-700"
+        >
+          名前
+        </label>
+        <input
+          id="name"
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+        />
+      </div>
+
+      {message && (
+        <div
+          className={`rounded-md p-3 text-sm ${
+            message.includes("失敗")
+              ? "bg-red-50 text-red-600"
+              : "bg-green-50 text-green-600"
+          }`}
+        >
+          {message}
+        </div>
+      )}
+
+      <button
+        type="submit"
+        disabled={saving}
+        className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+      >
+        {saving ? "保存中..." : "保存"}
+      </button>
+    </form>
+  );
+
+  // ── チームプロファイル一覧（コーチ・保護者タブ共通） ──────────────────
+  const memberProfilesJsx = teamId ? (
+    <>
+      <hr className="my-8 border-gray-200" />
+      <h2 className="mb-1 text-lg font-semibold">
+        {accountType === "guardian" ? "選手プロファイル" : "チームプロファイル"}
+      </h2>
+      <p className="mb-4 text-sm text-gray-500">
+        {accountType === "guardian"
+          ? "お子様などのプロファイルを管理します。"
+          : "このチームでのあなたのプロファイル一覧です。子供など別プレイヤーのプロファイルも追加できます。"}
+      </p>
+      <div className="space-y-3 mb-4">
+        {myProfiles.map((p) => (
+          <MemberProfileRow
+            key={p.id}
+            profile={p}
+            onUpdated={async (newName, newNumber) => {
+              await supabase
+                .from("member_profiles")
+                .update({ name: newName, number: newNumber || null })
+                .eq("id", p.member_profile_id);
+              setMyProfiles((prev) =>
+                prev.map((mp) =>
+                  mp.id === p.id
+                    ? { ...mp, profile_name: newName, number: newNumber || null }
+                    : mp
+                )
+              );
+            }}
+            onAvatarUploaded={async (url) => {
+              await supabase
+                .from("member_profiles")
+                .update({ avatar_url: url })
+                .eq("id", p.member_profile_id);
+              setMyProfiles((prev) =>
+                prev.map((mp) => (mp.id === p.id ? { ...mp, avatar_url: url } : mp))
+              );
+            }}
+            canDelete={myProfiles.length > 1}
+            onDeleted={async () => {
+              if (!window.confirm("このプロファイルをチームから削除しますか？")) return;
+              await supabase.from("team_members").delete().eq("id", p.id);
+              setMyProfiles((prev) => prev.filter((mp) => mp.id !== p.id));
+            }}
+          />
+        ))}
+      </div>
+      <AddProfileForm
+        teamId={teamId}
+        showKindSelector={accountType === "coach"}
+        onAdded={() => reloadMyProfiles(teamId, userId)}
+      />
+    </>
+  ) : null;
+
+  const showCoachTab = accountType === "coach";
+  const showGuardianTab = accountType === "guardian";
+
   return (
     <div className="mx-auto max-w-lg">
       <h1 className="mb-6 text-2xl font-bold">設定</h1>
 
-      {/* Profile Settings */}
-      <form onSubmit={handleSaveProfile} className="space-y-4">
-        <div className="flex items-center gap-4">
-          {userId && (
-            <AvatarUpload
-              currentUrl={avatarUrl}
-              bucket="avatars"
-              folderPath={userId}
-              size={72}
-              onUploaded={handleAvatarUploaded}
-            />
-          )}
-          <div>
-            <p className="text-sm font-medium text-gray-700">プロフィール画像</p>
-            <p className="text-xs text-gray-400">クリックして変更</p>
-          </div>
+      {/* タブナビゲーション */}
+      {teamId && (
+        <div className="mb-6 border-b border-gray-200">
+          <nav className="-mb-px flex space-x-6">
+            {showCoachTab && (
+              <button
+                onClick={() => setActiveTab("coach")}
+                className={`pb-3 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === "coach"
+                    ? "border-blue-500 text-blue-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                コーチ
+              </button>
+            )}
+            {showGuardianTab && (
+              <button
+                onClick={() => setActiveTab("guardian")}
+                className={`pb-3 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === "guardian"
+                    ? "border-blue-500 text-blue-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                保護者
+              </button>
+            )}
+            {isAdmin && (
+              <button
+                onClick={() => setActiveTab("admin")}
+                className={`pb-3 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === "admin"
+                    ? "border-blue-500 text-blue-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                管理者
+              </button>
+            )}
+          </nav>
         </div>
+      )}
 
-        <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">
-            メールアドレス
-          </label>
-          <input
-            type="email"
-            value={email}
-            disabled
-            className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-500"
-          />
-        </div>
-
-        <div>
-          <label
-            htmlFor="name"
-            className="mb-1 block text-sm font-medium text-gray-700"
-          >
-            名前
-          </label>
-          <input
-            id="name"
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-          />
-        </div>
-
-        {message && (
-          <div
-            className={`rounded-md p-3 text-sm ${
-              message.includes("失敗")
-                ? "bg-red-50 text-red-600"
-                : "bg-green-50 text-green-600"
-            }`}
-          >
-            {message}
-          </div>
-        )}
-
-        <button
-          type="submit"
-          disabled={saving}
-          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-        >
-          {saving ? "保存中..." : "保存"}
-        </button>
-      </form>
-
-      {/* Team Settings (admin only) */}
-      {isAdmin && teamId && (
+      {/* コーチタブ */}
+      {(activeTab === "coach" || !teamId) && showCoachTab && (
         <>
-          <hr className="my-8 border-gray-200" />
+          {profileFormJsx}
+          {memberProfilesJsx}
+        </>
+      )}
+
+      {/* 保護者タブ */}
+      {activeTab === "guardian" && showGuardianTab && (
+        <>
+          {profileFormJsx}
+          {memberProfilesJsx}
+        </>
+      )}
+
+      {/* チームがない場合（タブなし）のプロファイル表示 */}
+      {!teamId && (
+        profileFormJsx
+      )}
+
+      {/* 管理者タブ */}
+      {activeTab === "admin" && isAdmin && teamId && (
+        <>
           <h2 className="mb-4 text-lg font-semibold">チーム設定</h2>
 
           <div className="mb-4 flex items-center gap-4">
-            {teamId && (
-              <AvatarUpload
-                currentUrl={teamIconUrl}
-                bucket="team-icons"
-                folderPath={teamId}
-                size={72}
-                onUploaded={handleTeamIconUploaded}
-              />
-            )}
+            <AvatarUpload
+              currentUrl={teamIconUrl}
+              bucket="team-icons"
+              folderPath={teamId}
+              size={72}
+              onUploaded={handleTeamIconUploaded}
+            />
             <div>
               <p className="text-sm font-medium text-gray-700">チームアイコン</p>
               <p className="text-xs text-gray-400">クリックして変更</p>
@@ -612,7 +1045,7 @@ export default function SettingsPage() {
 
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700">
-                招待コード
+                コーチ用招待コード
               </label>
               <div className="flex items-center gap-2">
                 <code className="flex-1 rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm font-mono">
@@ -626,6 +1059,27 @@ export default function SettingsPage() {
                 >
                   <RefreshCw size={16} strokeWidth={1.5} aria-hidden="true" />
                   {regenerating ? "再生成中..." : "再生成"}
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                保護者用招待コード
+              </label>
+              <p className="mb-1.5 text-xs text-gray-400">保護者アカウントでチームに参加する際に使用します</p>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm font-mono">
+                  {inviteCodeGuardian}
+                </code>
+                <button
+                  type="button"
+                  onClick={handleRegenerateGuardianCode}
+                  disabled={regeneratingGuardian}
+                  className="flex shrink-0 items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  <RefreshCw size={16} strokeWidth={1.5} aria-hidden="true" />
+                  {regeneratingGuardian ? "再生成中..." : "再生成"}
                 </button>
               </div>
             </div>

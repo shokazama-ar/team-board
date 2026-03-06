@@ -26,10 +26,14 @@ export default function AnnouncementsPage() {
     } = await supabase.auth.getUser();
     if (!user) return;
 
+    const { data: teamId } = await supabase.rpc("get_my_team_id");
+    if (!teamId) return;
+
     const { data: membership } = await supabase
       .from("team_members")
-      .select("team_id, role")
-      .eq("user_id", user.id)
+      .select("team_id, role, member_profiles!inner(user_id)")
+      .eq("team_id", teamId)
+      .eq("member_profiles.user_id", user.id)
       .limit(1)
       .single();
 

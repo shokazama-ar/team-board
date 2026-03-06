@@ -35,7 +35,7 @@ team-board/
 
 | | ローカル確認 (EC2) | ステージング |
 |---|---|---|
-| **URL** | `http://13.115.226.216:3000` | `https://team-board-psi.vercel.app` |
+| **URL** | `http://<EC2の公開IP>:3000` | `https://team-board-psi.vercel.app` |
 | **フロントエンド** | Next.js dev server (EC2上) | Vercel |
 | **データベース** | ローカル Supabase (Docker) | Supabase クラウド |
 | **Supabase プロジェクト** | `127.0.0.1:54321` | `lgghvqytslnocbpgouhb.supabase.co` |
@@ -43,6 +43,35 @@ team-board/
 | **データ** | ローカル専用（完全分離） | ステージング専用（完全分離） |
 
 > ローカル確認とステージングはデータベースが完全に分離されています。
+
+---
+
+## 環境変数
+
+`.env.local` をプロジェクトルートに作成して設定します（Git 管理外）。
+
+| 変数名 | 必須 | 説明 |
+|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | ✅ | ブラウザから接続する Supabase API URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | ✅ | Supabase の anon（公開）キー |
+| `SUPABASE_INTERNAL_URL` | ローカルのみ | サーバーサイドが内部ネットワーク経由で接続する URL。未設定時は `NEXT_PUBLIC_SUPABASE_URL` にフォールバック |
+| `NEXT_PUBLIC_SUPABASE_STORAGE_KEY` | ローカルのみ | Auth トークンの Cookie 名。ブラウザとサーバー間で Cookie 名を統一するために使用 |
+| `DEV_HOST` | ローカルのみ | EC2 など外部からブラウザでアクセスする際のホスト名または IP。`next.config.ts` の `allowedDevOrigins` と画像の `remotePatterns` に反映される |
+
+### ローカル開発（EC2）の場合
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=http://<EC2の公開IP>:54321
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<npx supabase status で確認した anon key>
+SUPABASE_INTERNAL_URL=http://127.0.0.1:54321
+NEXT_PUBLIC_SUPABASE_STORAGE_KEY=sb-local-auth-token
+DEV_HOST=<EC2の公開IP>
+```
+
+### ステージング（Vercel）の場合
+
+Vercel ダッシュボードの **Settings > Environment Variables** で設定します。
+`NEXT_PUBLIC_SUPABASE_URL` と `NEXT_PUBLIC_SUPABASE_ANON_KEY` のみ設定すれば動作します。
 
 ---
 
@@ -124,6 +153,9 @@ SUPABASE_INTERNAL_URL=http://127.0.0.1:54321
 
 # ブラウザ・サーバー間で Cookie 名を統一するためのキー
 NEXT_PUBLIC_SUPABASE_STORAGE_KEY=sb-local-auth-token
+
+# EC2 の公開 IP（next.config.ts で allowedDevOrigins と remotePatterns に使用）
+DEV_HOST=<EC2の公開IP>
 EOF
 ```
 
@@ -245,7 +277,7 @@ npx supabase status
 
 ## GitHub へのプッシュ
 
-詳細は [GIT_PUSH_GUIDE.md](./GIT_PUSH_GUIDE.md) を参照してください。
+リポジトリ: https://github.com/shokazama-ar/team-board.git
 
 ```bash
 git add .

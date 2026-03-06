@@ -36,12 +36,54 @@ export type Database = {
         };
         Relationships: [];
       };
+      member_profiles: {
+        Row: {
+          id: string;
+          user_id: string;
+          kind: "coach" | "player";
+          name: string | null;
+          avatar_url: string | null;
+          number: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          kind?: "coach" | "player";
+          name?: string | null;
+          avatar_url?: string | null;
+          number?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          kind?: "coach" | "player";
+          name?: string | null;
+          avatar_url?: string | null;
+          number?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "member_profiles_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       teams: {
         Row: {
           id: string;
           name: string;
           icon_url: string | null;
           invite_code: string;
+          invite_code_guardian: string;
           created_by: string;
           created_at: string;
           updated_at: string;
@@ -51,6 +93,7 @@ export type Database = {
           name: string;
           icon_url?: string | null;
           invite_code?: string;
+          invite_code_guardian?: string;
           created_by: string;
           created_at?: string;
           updated_at?: string;
@@ -60,6 +103,7 @@ export type Database = {
           name?: string;
           icon_url?: string | null;
           invite_code?: string;
+          invite_code_guardian?: string;
           created_by?: string;
           created_at?: string;
           updated_at?: string;
@@ -78,22 +122,25 @@ export type Database = {
         Row: {
           id: string;
           team_id: string;
-          user_id: string;
+          member_profile_id: string;
           role: "admin" | "member";
+          account_type: "coach" | "guardian";
           created_at: string;
         };
         Insert: {
           id?: string;
           team_id: string;
-          user_id: string;
+          member_profile_id: string;
           role?: "admin" | "member";
+          account_type?: "coach" | "guardian";
           created_at?: string;
         };
         Update: {
           id?: string;
           team_id?: string;
-          user_id?: string;
+          member_profile_id?: string;
           role?: "admin" | "member";
+          account_type?: "coach" | "guardian";
           created_at?: string;
         };
         Relationships: [
@@ -105,10 +152,10 @@ export type Database = {
             referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "team_members_user_id_fkey";
-            columns: ["user_id"];
+            foreignKeyName: "team_members_member_profile_id_fkey";
+            columns: ["member_profile_id"];
             isOneToOne: false;
-            referencedRelation: "profiles";
+            referencedRelation: "member_profiles";
             referencedColumns: ["id"];
           },
         ];
@@ -216,7 +263,7 @@ export type Database = {
         Row: {
           id: string;
           event_id: string;
-          user_id: string;
+          member_profile_id: string;
           status: "present" | "absent" | "undecided";
           created_at: string;
           updated_at: string;
@@ -224,7 +271,7 @@ export type Database = {
         Insert: {
           id?: string;
           event_id: string;
-          user_id: string;
+          member_profile_id: string;
           status?: "present" | "absent" | "undecided";
           created_at?: string;
           updated_at?: string;
@@ -232,7 +279,7 @@ export type Database = {
         Update: {
           id?: string;
           event_id?: string;
-          user_id?: string;
+          member_profile_id?: string;
           status?: "present" | "absent" | "undecided";
           created_at?: string;
           updated_at?: string;
@@ -246,10 +293,10 @@ export type Database = {
             referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "attendances_user_id_fkey";
-            columns: ["user_id"];
+            foreignKeyName: "attendances_member_profile_id_fkey";
+            columns: ["member_profile_id"];
             isOneToOne: false;
-            referencedRelation: "profiles";
+            referencedRelation: "member_profiles";
             referencedColumns: ["id"];
           },
         ];
@@ -301,7 +348,48 @@ export type Database = {
       };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      is_member_of_team: {
+        Args: { tid: string };
+        Returns: boolean;
+      };
+      is_admin_of_team: {
+        Args: { tid: string };
+        Returns: boolean;
+      };
+      owns_member_profile: {
+        Args: { profile_id: string };
+        Returns: boolean;
+      };
+      get_my_team_id: {
+        Args: Record<string, never>;
+        Returns: string | null;
+      };
+      create_team_with_member: {
+        Args: { team_name: string; profile_name?: string; profile_kind?: string };
+        Returns: string;
+      };
+      join_team_with_profile: {
+        Args: { code: string; profile_name: string; profile_kind?: string };
+        Returns: string;
+      };
+      add_profile_to_team: {
+        Args: { target_team_id: string; profile_name: string; profile_kind?: string };
+        Returns: string;
+      };
+      regenerate_invite_code: {
+        Args: { target_team_id: string };
+        Returns: string;
+      };
+      regenerate_guardian_invite_code: {
+        Args: { target_team_id: string };
+        Returns: string;
+      };
+      is_coach_in_team: {
+        Args: { tid: string };
+        Returns: boolean;
+      };
+    };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
   };

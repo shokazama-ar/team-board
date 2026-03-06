@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
-import { AlertTriangle, Users, Link as LinkIcon, Calendar, ChevronRight, MapPin } from "lucide-react";
+import { AlertTriangle, Users, ChevronRight, MapPin } from "lucide-react";
 
 type Event = {
   id: string;
@@ -34,8 +34,8 @@ export default async function DashboardContent({ userId }: { userId: string }) {
 
   const { data: membership } = await supabase
     .from("team_members")
-    .select("team_id, role")
-    .eq("user_id", userId)
+    .select("team_id, role, member_profiles!inner(user_id)")
+    .eq("member_profiles.user_id", userId)
     .limit(1)
     .single();
 
@@ -63,12 +63,12 @@ export default async function DashboardContent({ userId }: { userId: string }) {
     await Promise.all([
       supabase
         .from("teams")
-        .select("id, name, invite_code")
+        .select("id, name")
         .eq("id", membership.team_id)
         .single(),
       supabase
         .from("team_members")
-        .select("*", { count: "exact", head: true })
+        .select("member_profiles(user_id, kind)")
         .eq("team_id", membership.team_id),
       supabase
         .from("events")
@@ -93,7 +93,13 @@ export default async function DashboardContent({ userId }: { userId: string }) {
     ]);
 
   const team = teamResult.data;
-  const memberCount = memberCountResult.count ?? 0;
+  const membersRaw = memberCountResult.data ?? [];
+  type MemberRaw = { member_profiles: { user_id: string; kind: string } | null };
+  const userAccountCount = new Set(
+    (membersRaw as MemberRaw[]).map((m) => m.member_profiles?.user_id).filter(Boolean)
+  ).size;
+  const coachCount = (membersRaw as MemberRaw[]).filter((m) => m.member_profiles?.kind === "coach").length;
+  const playerCount = (membersRaw as MemberRaw[]).filter((m) => m.member_profiles?.kind === "player").length;
   const upcomingEvents: Event[] = eventsResult.data ?? [];
   const upcomingAllEvents: Event[] = upcomingAllEventsResult.data ?? [];
   const latestAnnouncements: Announcement[] = announcementsResult.data ?? [];
@@ -102,11 +108,21 @@ export default async function DashboardContent({ userId }: { userId: string }) {
   let unansweredEvents: Event[] = [];
   if (upcomingAllEvents.length > 0) {
     const eventIds = upcomingAllEvents.map((e) => e.id);
-    const { data: userAttendances } = await supabase
-      .from("attendances")
-      .select("event_id")
-      .eq("user_id", userId)
-      .in("event_id", eventIds);
+    // ユーザーのmember_profile_idsを取得してから出欠を確認
+    const { data: myProfiles } = await supabase
+      .from("team_members")
+      .select("member_profile_id, member_profiles!inner(user_id)")
+      .eq("team_id", membership.team_id)
+      .eq("member_profiles.user_id", userId);
+    const myProfileIds = (myProfiles ?? []).map((m) => m.member_profile_id);
+
+    const { data: userAttendances } = myProfileIds.length > 0
+      ? await supabase
+          .from("attendances")
+          .select("event_id")
+          .in("member_profile_id", myProfileIds)
+          .in("event_id", eventIds)
+      : { data: [] };
 
     const answeredEventIds = new Set(
       (userAttendances ?? []).map((a) => a.event_id)
@@ -121,35 +137,27 @@ export default async function DashboardContent({ userId }: { userId: string }) {
   return (
     <>
       {/* Team Info */}
-      <div className="mt-6 grid gap-4 md:grid-cols-3">
+      <div className="mt-6">
         <div className="rounded-lg border border-gray-200 bg-white p-6">
-          <h2 className="mb-2 text-lg font-semibold">{team.name}</h2>
-          <p className="flex items-center gap-1 text-sm text-gray-500">
-            <Users size={16} strokeWidth={1.5} aria-hidden="true" />
-            メンバー: {memberCount}人
-          </p>
-        </div>
-
-        <div className="rounded-lg border border-gray-200 bg-white p-6">
-          <h2 className="mb-2 text-lg font-semibold">招待コード</h2>
-          <p className="flex items-center gap-1 text-sm text-gray-500">
-            <LinkIcon size={16} strokeWidth={1.5} aria-hidden="true" />
-            メンバーを招待しましょう
-          </p>
-          <code className="mt-2 inline-block rounded bg-gray-100 px-2 py-1 text-sm font-mono">
-            {team.invite_code}
-          </code>
-        </div>
-
-        <div className="rounded-lg border border-gray-200 bg-white p-6">
-          <h2 className="mb-2 text-lg font-semibold">直近のイベント</h2>
-          <p className="text-2xl font-bold text-blue-600">
-            {upcomingEvents.length}
-          </p>
-          <p className="flex items-center gap-1 text-sm text-gray-500">
-            <Calendar size={16} strokeWidth={1.5} aria-hidden="true" />
-            今後の予定
-          </p>
+          <h2 className="mb-3 text-lg font-semibold">{team.name}</h2>
+          <div className="flex items-center gap-1 text-xs text-gray-400 mb-2">
+            <Users size={14} strokeWidth={1.5} aria-hidden="true" />
+            メンバー構成
+          </div>
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <div className="rounded-md bg-gray-50 px-2 py-1.5">
+              <p className="text-base font-bold text-gray-800">{userAccountCount}</p>
+              <p className="text-xs text-gray-500">アカウント</p>
+            </div>
+            <div className="rounded-md bg-blue-50 px-2 py-1.5">
+              <p className="text-base font-bold text-blue-700">{coachCount}</p>
+              <p className="text-xs text-blue-500">コーチ</p>
+            </div>
+            <div className="rounded-md bg-green-50 px-2 py-1.5">
+              <p className="text-base font-bold text-green-700">{playerCount}</p>
+              <p className="text-xs text-green-500">選手</p>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -187,7 +195,12 @@ export default async function DashboardContent({ userId }: { userId: string }) {
         {/* Upcoming Events */}
         <div className="rounded-lg border border-gray-200 bg-white p-6">
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-semibold">直近のイベント</h2>
+            <h2 className="text-lg font-semibold">
+              直近のイベント
+              {upcomingEvents.length > 0 && (
+                <span className="ml-2 text-sm font-normal text-gray-500">{upcomingEvents.length}件</span>
+              )}
+            </h2>
             <Link href="/events" className="text-sm text-blue-600 hover:text-blue-700">
               すべて見る <ChevronRight size={16} strokeWidth={1.5} className="inline" aria-hidden="true" />
             </Link>

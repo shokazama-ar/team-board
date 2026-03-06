@@ -127,20 +127,14 @@ export default function NewEventPage() {
       if (!user) return;
       setUserId(user.id);
 
-      const { data: membership } = await supabase
-        .from("team_members")
-        .select("team_id")
-        .eq("user_id", user.id)
-        .limit(1)
-        .single();
-
-      if (!membership) return;
-      setTeamId(membership.team_id);
+      const { data: teamId } = await supabase.rpc("get_my_team_id");
+      if (!teamId) return;
+      setTeamId(teamId);
 
       const { data: types } = await supabase
         .from("event_types")
         .select("id, name, color, kind")
-        .eq("team_id", membership.team_id)
+        .eq("team_id", teamId)
         .order("sort_order");
 
       if (types) setEventTypes(types as EventType[]);
