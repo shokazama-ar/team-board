@@ -96,10 +96,10 @@ export default async function DashboardContent({ userId }: { userId: string }) {
   const membersRaw = memberCountResult.data ?? [];
   type MemberRaw = { member_profiles: { user_id: string; kind: string } | null };
   const userAccountCount = new Set(
-    (membersRaw as MemberRaw[]).map((m) => m.member_profiles?.user_id).filter(Boolean)
+    (membersRaw as unknown as MemberRaw[]).map((m) => m.member_profiles?.user_id).filter(Boolean)
   ).size;
-  const coachCount = (membersRaw as MemberRaw[]).filter((m) => m.member_profiles?.kind === "coach").length;
-  const playerCount = (membersRaw as MemberRaw[]).filter((m) => m.member_profiles?.kind === "player").length;
+  const coachCount = (membersRaw as unknown as MemberRaw[]).filter((m) => m.member_profiles?.kind === "coach").length;
+  const playerCount = (membersRaw as unknown as MemberRaw[]).filter((m) => m.member_profiles?.kind === "player").length;
   const upcomingEvents: Event[] = eventsResult.data ?? [];
   const upcomingAllEvents: Event[] = upcomingAllEventsResult.data ?? [];
   const latestAnnouncements: Announcement[] = announcementsResult.data ?? [];
