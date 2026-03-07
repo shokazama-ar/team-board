@@ -181,45 +181,50 @@ function EventTypeSection({
         )}
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-3">
+      <form onSubmit={handleSubmit}>
         <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">
-            名前
-          </label>
-          <input
-            type="text"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            placeholder={addLabel}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-          />
-        </div>
-        <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700">
-            カラー
-          </label>
-          <div className="flex flex-wrap gap-2">
-            {colors.map((c) => (
-              <button
-                key={c.value}
-                type="button"
-                onClick={() => setNewColor(c.value)}
-                className={`h-7 w-7 rounded-full border-2 transition-all ${
-                  newColor === c.value
-                    ? "scale-110 border-white ring-[3px] ring-gray-800"
-                    : "border-transparent hover:scale-105"
-                }`}
-                style={{ backgroundColor: c.value }}
-                aria-label={c.label}
-                title={c.label}
-              />
-            ))}
+          <div className="mb-1 flex items-center justify-between">
+            <label className="text-sm font-medium text-gray-700">名前</label>
+            <div className="flex flex-wrap gap-2">
+              {colors.map((c) => (
+                <button
+                  key={c.value}
+                  type="button"
+                  onClick={() => setNewColor(c.value)}
+                  className={`h-4 w-4 rounded-full border-2 transition-all ${
+                    newColor === c.value
+                      ? "scale-110 border-white ring-[3px] ring-gray-800"
+                      : "border-transparent hover:scale-105"
+                  }`}
+                  style={{ backgroundColor: c.value }}
+                  aria-label={c.label}
+                  title={c.label}
+                />
+              ))}
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              placeholder={addLabel}
+              className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+            <button
+              type="submit"
+              disabled={adding || !newName.trim()}
+              className="shrink-0 flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+            >
+              <Plus size={16} strokeWidth={1.5} aria-hidden="true" />
+              {adding ? "追加中..." : "追加"}
+            </button>
           </div>
         </div>
 
         {message && (
           <div
-            className={`rounded-md p-3 text-sm ${
+            className={`mt-3 rounded-md p-3 text-sm ${
               message.includes("失敗") || message.includes("存在")
                 ? "bg-red-50 text-red-600"
                 : "bg-green-50 text-green-600"
@@ -228,15 +233,6 @@ function EventTypeSection({
             {message}
           </div>
         )}
-
-        <button
-          type="submit"
-          disabled={adding || !newName.trim()}
-          className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-        >
-          <Plus size={16} strokeWidth={1.5} aria-hidden="true" />
-          {adding ? "追加中..." : "追加"}
-        </button>
       </form>
     </>
   );
@@ -282,6 +278,7 @@ function MemberProfileRow({ profile, onUpdated, onAvatarUploaded, canDelete, onD
             bucket="avatars"
             folderPath={profile.member_profile_id}
             size={48}
+            fallbackText={profile.profile_name ?? ""}
             onUploaded={onAvatarUploaded}
           />
           <div className="min-w-0 flex-1">
@@ -502,6 +499,13 @@ export default function SettingsPage() {
   // Event types / categories state
   const [eventTypes, setEventTypes] = useState<EventType[]>([]);
   const [eventCategories, setEventCategories] = useState<EventType[]>([]);
+
+  // Player category modal state
+  type PlayerForCategory = { member_profile_id: string; name: string | null };
+  const [playerCategoryModalOpen, setPlayerCategoryModalOpen] = useState(false);
+  const [playerCategoryPlayers, setPlayerCategoryPlayers] = useState<PlayerForCategory[]>([]);
+  const [playerCategoryAssignments, setPlayerCategoryAssignments] = useState<Set<string>>(new Set());
+  const [savingPlayerCategories, setSavingPlayerCategories] = useState(false);
 
   // Member profiles state
   type MemberProfileItem = {
@@ -806,6 +810,70 @@ export default function SettingsPage() {
     }
   };
 
+  // ── Player category handlers ────────────────────────────────────────────
+  const openPlayerCategoryModal = async () => {
+    if (!teamId) return;
+
+    const { data: members } = await supabase
+      .from("team_members")
+      .select("member_profile_id, account_type, member_profiles!inner(name, kind)")
+      .eq("team_id", teamId);
+
+    if (members) {
+      const seen = new Set<string>();
+      const players = members
+        .filter((m) => {
+          const mp = m.member_profiles as unknown as { kind: string } | null;
+          if (mp?.kind !== "player") return false;
+          if (seen.has(m.member_profile_id)) return false;
+          seen.add(m.member_profile_id);
+          return true;
+        })
+        .map((m) => {
+          const mp = m.member_profiles as unknown as { name: string | null } | null;
+          return { member_profile_id: m.member_profile_id, name: mp?.name ?? null };
+        });
+      setPlayerCategoryPlayers(players);
+    }
+
+    const { data: existing } = await supabase
+      .from("member_profile_categories")
+      .select("member_profile_id, event_type_id")
+      .eq("team_id", teamId);
+
+    setPlayerCategoryAssignments(
+      new Set((existing ?? []).map((a) => `${a.member_profile_id}:${a.event_type_id}`))
+    );
+    setPlayerCategoryModalOpen(true);
+  };
+
+  const togglePlayerCategory = (memberProfileId: string, eventTypeId: string) => {
+    const key = `${memberProfileId}:${eventTypeId}`;
+    setPlayerCategoryAssignments((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  };
+
+  const handleSavePlayerCategories = async () => {
+    if (!teamId) return;
+    setSavingPlayerCategories(true);
+
+    await supabase.from("member_profile_categories").delete().eq("team_id", teamId);
+
+    const rows = [...playerCategoryAssignments].map((key) => {
+      const [member_profile_id, event_type_id] = key.split(":");
+      return { team_id: teamId, member_profile_id, event_type_id };
+    });
+    if (rows.length > 0) {
+      await supabase.from("member_profile_categories").insert(rows);
+    }
+
+    setPlayerCategoryModalOpen(false);
+    setSavingPlayerCategories(false);
+  };
+
   if (loading) {
     return <div className="text-sm text-gray-500">読み込み中...</div>;
   }
@@ -820,6 +888,7 @@ export default function SettingsPage() {
             bucket="avatars"
             folderPath={userId}
             size={72}
+            fallbackText={name}
             onUploaded={handleAvatarUploaded}
           />
         )}
@@ -848,13 +917,22 @@ export default function SettingsPage() {
         >
           名前
         </label>
-        <input
-          id="name"
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-        />
+        <div className="flex items-center gap-2">
+          <input
+            id="name"
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          />
+          <button
+            type="submit"
+            disabled={saving}
+            className="shrink-0 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+          >
+            {saving ? "保存中..." : "保存"}
+          </button>
+        </div>
       </div>
 
       {message && (
@@ -868,14 +946,6 @@ export default function SettingsPage() {
           {message}
         </div>
       )}
-
-      <button
-        type="submit"
-        disabled={saving}
-        className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-      >
-        {saving ? "保存中..." : "保存"}
-      </button>
     </form>
   );
 
@@ -884,15 +954,15 @@ export default function SettingsPage() {
     <>
       <hr className="my-8 border-gray-200" />
       <h2 className="mb-1 text-lg font-semibold">
-        {accountType === "guardian" ? "選手プロファイル" : "チームプロファイル"}
+        {accountType === "guardian" ? "選手プロファイル" : "プレイヤープロファイル"}
       </h2>
       <p className="mb-4 text-sm text-gray-500">
         {accountType === "guardian"
           ? "お子様などのプロファイルを管理します。"
-          : "このチームでのあなたのプロファイル一覧です。子供など別プレイヤーのプロファイルも追加できます。"}
+          : "プレイヤーのプロファイルを登録してください。"}
       </p>
       <div className="space-y-3 mb-4">
-        {myProfiles.map((p) => (
+        {myProfiles.filter((p) => accountType !== "coach" || p.kind === "player").map((p) => (
           <MemberProfileRow
             key={p.id}
             profile={p}
@@ -918,7 +988,7 @@ export default function SettingsPage() {
                 prev.map((mp) => (mp.id === p.id ? { ...mp, avatar_url: url } : mp))
               );
             }}
-            canDelete={myProfiles.length > 1}
+            canDelete={myProfiles.filter((mp) => accountType !== "coach" || mp.kind === "player").length > 1}
             onDeleted={async () => {
               if (!window.confirm("このプロファイルをチームから削除しますか？")) return;
               await supabase.from("team_members").delete().eq("id", p.id);
@@ -929,7 +999,7 @@ export default function SettingsPage() {
       </div>
       <AddProfileForm
         teamId={teamId}
-        showKindSelector={accountType === "coach"}
+        showKindSelector={false}
         onAdded={() => reloadMyProfiles(teamId, userId)}
       />
     </>
@@ -1034,13 +1104,22 @@ export default function SettingsPage() {
               >
                 チーム名
               </label>
-              <input
-                id="teamName"
-                type="text"
-                value={teamName}
-                onChange={(e) => setTeamName(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              />
+              <div className="flex items-center gap-2">
+                <input
+                  id="teamName"
+                  type="text"
+                  value={teamName}
+                  onChange={(e) => setTeamName(e.target.value)}
+                  className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+                <button
+                  type="submit"
+                  disabled={savingTeam || !teamName.trim()}
+                  className="shrink-0 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {savingTeam ? "保存中..." : "保存"}
+                </button>
+              </div>
             </div>
 
             <div>
@@ -1095,14 +1174,6 @@ export default function SettingsPage() {
                 {teamMessage}
               </div>
             )}
-
-            <button
-              type="submit"
-              disabled={savingTeam || !teamName.trim()}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-            >
-              {savingTeam ? "保存中..." : "チーム名を保存"}
-            </button>
           </form>
 
           {/* イベント種別 */}
@@ -1133,6 +1204,23 @@ export default function SettingsPage() {
             onUpdate={(id, name) => updateItem(id, name, setEventCategories)}
           />
 
+          {/* プレイヤーカテゴリ */}
+          <hr className="my-8 border-gray-200" />
+          <div className="mb-1 flex items-center justify-between">
+            <h2 className="text-lg font-semibold">プレイヤーカテゴリ</h2>
+            <button
+              type="button"
+              onClick={openPlayerCategoryModal}
+              className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
+            >
+              <Pencil size={14} strokeWidth={1.5} aria-hidden="true" />
+              編集
+            </button>
+          </div>
+          <p className="text-sm text-gray-500">
+            プレイヤーごとに所属するカテゴリを設定します。予定やお知らせの対象絞り込みに使用します。
+          </p>
+
           <div className="mt-8 rounded-lg border border-red-200 bg-red-50 p-4">
             <h3 className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-red-700">
               <AlertTriangle size={16} strokeWidth={1.5} aria-hidden="true" />
@@ -1150,6 +1238,87 @@ export default function SettingsPage() {
             </button>
           </div>
         </>
+      )}
+
+      {/* プレイヤーカテゴリ編集モーダル */}
+      {playerCategoryModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 pt-12">
+          <div className="w-full max-w-2xl rounded-2xl bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+              <h2 className="text-base font-semibold">プレイヤーカテゴリ</h2>
+              <button
+                type="button"
+                onClick={() => setPlayerCategoryModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X size={20} strokeWidth={1.5} />
+              </button>
+            </div>
+
+            <div className="overflow-x-auto px-6 py-4">
+              {playerCategoryPlayers.length === 0 ? (
+                <p className="text-sm text-gray-400">プレイヤーが登録されていません</p>
+              ) : eventCategories.length === 0 ? (
+                <p className="text-sm text-gray-400">対象カテゴリが登録されていません。先に「対象カテゴリ」を追加してください。</p>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr>
+                      <th className="pb-3 pr-6 text-left text-sm font-medium text-gray-500">プレイヤー</th>
+                      {eventCategories.map((cat) => (
+                        <th key={cat.id} className="min-w-[72px] pb-3 text-center">
+                          <span
+                            className="inline-block rounded-full px-2 py-0.5 text-xs font-medium text-white"
+                            style={{ backgroundColor: cat.color }}
+                          >
+                            {cat.name}
+                          </span>
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {playerCategoryPlayers.map((player) => (
+                      <tr key={player.member_profile_id}>
+                        <td className="py-3 pr-6 font-medium text-gray-900">
+                          {player.name || "名前未設定"}
+                        </td>
+                        {eventCategories.map((cat) => (
+                          <td key={cat.id} className="py-3 text-center">
+                            <input
+                              type="checkbox"
+                              checked={playerCategoryAssignments.has(`${player.member_profile_id}:${cat.id}`)}
+                              onChange={() => togglePlayerCategory(player.member_profile_id, cat.id)}
+                              className="h-4 w-4 rounded border-gray-300 accent-blue-600"
+                            />
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-2 border-t border-gray-200 px-6 py-4">
+              <button
+                type="button"
+                onClick={() => setPlayerCategoryModalOpen(false)}
+                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50"
+              >
+                キャンセル
+              </button>
+              <button
+                type="button"
+                onClick={handleSavePlayerCategories}
+                disabled={savingPlayerCategories}
+                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                {savingPlayerCategories ? "保存中..." : "保存"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

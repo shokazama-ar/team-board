@@ -5,12 +5,19 @@ import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 
+type AnnouncementCategory = {
+  id: string;
+  name: string;
+  color: string;
+};
+
 type Announcement = {
   id: string;
   title: string;
   author_id: string;
   created_at: string;
   author_name: string | null;
+  categories: AnnouncementCategory[];
 };
 
 export default function AnnouncementsPage() {
@@ -43,7 +50,9 @@ export default function AnnouncementsPage() {
 
     const { data: announcementsData } = await supabase
       .from("announcements")
-      .select("id, title, author_id, created_at, profiles!announcements_author_id_fkey(name)")
+      .select(
+        "id, title, author_id, created_at, profiles!announcements_author_id_fkey(name), announcement_categories(event_types(id, name, color))"
+      )
       .eq("team_id", membership.team_id)
       .order("created_at", { ascending: false });
 
@@ -54,6 +63,9 @@ export default function AnnouncementsPage() {
         author_id: a.author_id,
         created_at: a.created_at,
         author_name: a.profiles?.name ?? null,
+        categories: (a.announcement_categories ?? [])
+          .map((ac: any) => ac.event_types)
+          .filter(Boolean) as AnnouncementCategory[],
       }));
       setAnnouncements(formatted);
     }
@@ -100,10 +112,23 @@ export default function AnnouncementsPage() {
               className="block rounded-lg border border-gray-200 bg-white p-4 hover:border-gray-300 hover:shadow-sm"
             >
               <div className="flex items-start justify-between">
-                <div>
+                <div className="min-w-0">
                   <h2 className="text-sm font-semibold text-gray-900">
                     {announcement.title}
                   </h2>
+                  {announcement.categories.length > 0 && (
+                    <div className="mt-1.5 flex flex-wrap gap-1">
+                      {announcement.categories.map((cat) => (
+                        <span
+                          key={cat.id}
+                          className="rounded-full px-2 py-0.5 text-xs font-medium text-white"
+                          style={{ backgroundColor: cat.color }}
+                        >
+                          {cat.name}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                   <p className="mt-1 text-xs text-gray-500">
                     {announcement.author_name ?? "不明"} ・{" "}
                     {new Date(announcement.created_at).toLocaleDateString(

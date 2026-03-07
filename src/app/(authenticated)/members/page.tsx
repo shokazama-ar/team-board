@@ -10,6 +10,7 @@ type MemberProfile = {
   member_profile_id: string;
   role: "admin" | "member";
   created_at: string;
+  account_type: "coach" | "guardian";
   kind: "coach" | "player";
   name: string | null;
   avatar_url: string | null;
@@ -58,8 +59,9 @@ function ProfileAvatar({ name, avatarUrl, size = 40 }: { name: string | null; av
 export default function MembersPage() {
   const supabase = createClient();
   const [team, setTeam] = useState<Team | null>(null);
-  const [coaches, setCoaches] = useState<MemberProfile[]>([]);
   const [players, setPlayers] = useState<MemberProfile[]>([]);
+  const [coaches, setCoaches] = useState<MemberProfile[]>([]);
+  const [guardians, setGuardians] = useState<MemberProfile[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string>("");
   const [currentUserRole, setCurrentUserRole] = useState<string>("");
   const [loading, setLoading] = useState(true);
@@ -98,7 +100,7 @@ export default function MembersPage() {
     // Load all team members with their profiles
     const { data: membersData } = await supabase
       .from("team_members")
-      .select("id, member_profile_id, role, created_at, member_profiles(id, user_id, kind, name, avatar_url, number)")
+      .select("id, member_profile_id, role, created_at, account_type, member_profiles(id, user_id, kind, name, avatar_url, number)")
       .eq("team_id", teamId)
       .order("created_at", { ascending: true });
 
@@ -117,6 +119,7 @@ export default function MembersPage() {
           member_profile_id: m.member_profile_id,
           role: m.role as "admin" | "member",
           created_at: m.created_at,
+          account_type: (m.account_type ?? "coach") as "coach" | "guardian",
           kind: mp?.kind ?? "player",
           name: mp?.name ?? null,
           avatar_url: mp?.avatar_url ?? null,
@@ -125,8 +128,10 @@ export default function MembersPage() {
         };
       });
 
-      setCoaches(enriched.filter((m) => m.kind === "coach"));
-      setPlayers(enriched.filter((m) => m.kind === "player"));
+      // 保護者: account_type="guardian"（プレイヤーセクションと重複させない）
+      setGuardians(enriched.filter((m) => m.account_type === "guardian"));
+      setCoaches(enriched.filter((m) => m.kind === "coach" && m.account_type === "coach"));
+      setPlayers(enriched.filter((m) => m.kind === "player" && m.account_type === "coach"));
     }
 
     setLoading(false);
@@ -252,11 +257,14 @@ export default function MembersPage() {
         </div>
       </div>
 
+      {/* Player Section */}
+      {renderSection("プレイヤー", players, "bg-green-50 text-green-700")}
+
       {/* Coach Section */}
       {renderSection("コーチ", coaches, "bg-blue-50 text-blue-700")}
 
-      {/* Player Section */}
-      {renderSection("プレイヤー", players, "bg-green-50 text-green-700")}
+      {/* Guardian Section */}
+      {renderSection("保護者", guardians, "bg-orange-50 text-orange-700")}
     </div>
   );
 }

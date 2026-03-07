@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 
+type EventCategory = { id: string; name: string; color: string };
+
 export default function NewAnnouncementPage() {
   const supabase = createClient();
   const router = useRouter();
@@ -12,6 +14,8 @@ export default function NewAnnouncementPage() {
   const [userRole, setUserRole] = useState<string>("");
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
+  const [categories, setCategories] = useState<EventCategory[]>([]);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<Set<string>>(new Set());
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -42,15 +46,30 @@ export default function NewAnnouncementPage() {
         setTeamId(membership.team_id);
         setUserRole(membership.role);
 
-        // 管理者でない場合はお知らせ一覧にリダイレクト
         if (membership.role !== "admin") {
           router.push("/announcements");
           return;
         }
+
+        const { data: cats } = await supabase
+          .from("event_types")
+          .select("id, name, color")
+          .eq("team_id", membership.team_id)
+          .eq("kind", "category")
+          .order("sort_order");
+        if (cats) setCategories(cats);
       }
       setLoading(false);
     })();
   }, [supabase, router]);
+
+  const toggleCategory = (id: string) => {
+    setSelectedCategoryIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,17 +77,25 @@ export default function NewAnnouncementPage() {
     setSubmitting(true);
     setError(null);
 
-    const { error: insertError } = await supabase.from("announcements").insert({
-      team_id: teamId,
-      author_id: userId,
-      title,
-      body,
-    });
+    const { data: inserted, error: insertError } = await supabase
+      .from("announcements")
+      .insert({ team_id: teamId, author_id: userId, title, body })
+      .select("id")
+      .single();
 
-    if (insertError) {
-      setError(insertError.message);
+    if (insertError || !inserted) {
+      setError(insertError?.message ?? "作成に失敗しました");
       setSubmitting(false);
       return;
+    }
+
+    if (selectedCategoryIds.size > 0) {
+      await supabase.from("announcement_categories").insert(
+        [...selectedCategoryIds].map((event_type_id) => ({
+          announcement_id: inserted.id,
+          event_type_id,
+        }))
+      );
     }
 
     router.push("/announcements");
@@ -81,9 +108,7 @@ export default function NewAnnouncementPage() {
   if (userRole !== "admin") {
     return (
       <div className="rounded-lg border border-gray-200 bg-white p-6">
-        <p className="text-sm text-gray-500">
-          お知らせの作成は管理者のみ可能です
-        </p>
+        <p className="text-sm text-gray-500">お知らせの作成は管理者のみ可能です</p>
       </div>
     );
   }
@@ -92,14 +117,9 @@ export default function NewAnnouncementPage() {
     <div className="mx-auto max-w-3xl">
       <h1 className="mb-6 text-2xl font-bold">お知らせ作成</h1>
 
-      <form
-        onSubmit={handleSubmit}
-        className="rounded-lg border border-gray-200 bg-white p-6"
-      >
+      <form onSubmit={handleSubmit} className="rounded-lg border border-gray-200 bg-white p-6">
         {error && (
-          <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">
-            {error}
-          </div>
+          <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">{error}</div>
         )}
 
         <div className="mb-4">
@@ -116,7 +136,7 @@ export default function NewAnnouncementPage() {
           />
         </div>
 
-        <div className="mb-6">
+        <div className="mb-4">
           <label className="mb-1 block text-sm font-medium text-gray-700">
             本文 <span className="text-red-500">*</span>
           </label>
@@ -129,6 +149,37 @@ export default function NewAnnouncementPage() {
             placeholder="お知らせの内容を入力してください"
           />
         </div>
+
+        {categories.length > 0 && (
+          <div className="mb-6">
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              対象カテゴリ
+              <span className="ml-1.5 text-xs font-normal text-gray-400">
+                （未選択で全員に表示）
+              </span>
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {categories.map((cat) => {
+                const selected = selectedCategoryIds.has(cat.id);
+                return (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => toggleCategory(cat.id)}
+                    className="rounded-full border px-3 py-1 text-xs font-medium transition-colors"
+                    style={
+                      selected
+                        ? { backgroundColor: cat.color, borderColor: cat.color, color: "#fff" }
+                        : { borderColor: "#d1d5db", color: "#6b7280" }
+                    }
+                  >
+                    {cat.name}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         <div className="flex gap-3">
           <button
