@@ -17,7 +17,12 @@ jobs:
         with:
           version: latest
 
+      - name: Link project
+        run: supabase link --project-ref lgghvqytslnocbpgouhb
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
       - name: Apply migrations
-        run: supabase db push --project-ref lgghvqytslnocbpgouhb
+        run: supabase db push
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
