@@ -85,6 +85,11 @@ export default function LoginPage() {
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               placeholder="パスワード"
             />
+            <div className="mt-1 text-right">
+              <Link href="/forgot-password" className="text-xs text-gray-500 hover:text-gray-700">
+                パスワードをお忘れですか？
+              </Link>
+            </div>
           </div>
 
           <button

@@ -10,6 +10,7 @@ type EventType = {
   id: string;
   name: string;
   color: string;
+  kind: string;
 };
 
 type EventDetail = {
@@ -91,7 +92,7 @@ export default function EventDetailPage() {
 
     const { data: eventData } = await supabase
       .from("events")
-      .select("id, team_id, title, event_type, date, end_at, location, memo, created_by, created_at, event_event_types(event_types(id, name, color))")
+      .select("id, team_id, title, event_type, date, end_at, location, memo, created_by, created_at, event_event_types(event_types(id, name, color, kind))")
       .eq("id", eventId)
       .single();
 
@@ -270,8 +271,10 @@ export default function EventDetailPage() {
                 .map((et) => (
                   <span
                     key={et!.id}
-                    className="rounded-full px-2 py-0.5 text-xs font-medium"
-                    style={{ backgroundColor: et!.color + "20", color: et!.color }}
+                    className={et!.kind === "category" ? "rounded border px-2 py-0.5 text-xs font-medium" : "rounded-full px-2 py-0.5 text-xs font-medium"}
+                    style={et!.kind === "category"
+                      ? { borderColor: et!.color, color: et!.color }
+                      : { backgroundColor: et!.color + "20", color: et!.color }}
                   >
                     {et!.name}
                   </span>
@@ -279,21 +282,21 @@ export default function EventDetailPage() {
             </div>
           </div>
           {canEdit && (
-            <div className="flex gap-2">
+            <div className="flex shrink-0 gap-2">
               <Link
                 href={`/events/${event.id}/edit`}
-                className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                aria-label="編集"
+                className="rounded-lg border border-gray-300 p-2 text-gray-700 hover:bg-gray-50"
               >
                 <Pencil size={16} strokeWidth={1.5} aria-hidden="true" />
-                編集
               </Link>
               <button
                 onClick={handleDelete}
                 disabled={deleting}
-                className="flex items-center gap-1.5 rounded-lg border border-red-300 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
+                aria-label="削除"
+                className="rounded-lg border border-red-300 p-2 text-red-600 hover:bg-red-50 disabled:opacity-50"
               >
                 <Trash2 size={16} strokeWidth={1.5} aria-hidden="true" />
-                {deleting ? "削除中..." : "削除"}
               </button>
             </div>
           )}

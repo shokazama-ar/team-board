@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import { CalendarView } from "@/components/events/CalendarView";
 import { ImportModal } from "@/components/events/ImportModal";
-import { List, CalendarDays, Plus, MapPin, Download, Upload } from "lucide-react";
+import { List, CalendarDays, Plus, MapPin, Download, Upload, LayoutList } from "lucide-react";
 
 type EventType = {
   id: string;
@@ -296,6 +296,14 @@ export default function EventsPage() {
                 <span className="hidden sm:inline">インポート</span>
               </button>
               <Link
+                href="/events/bulk"
+                aria-label="一括追加"
+                className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                <LayoutList size={16} strokeWidth={1.5} aria-hidden="true" />
+                <span className="hidden sm:inline">一括追加</span>
+              </Link>
+              <Link
                 href="/events/new"
                 aria-label="新規作成"
                 className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
@@ -320,11 +328,10 @@ export default function EventsPage() {
                   <button
                     key={t.id}
                     onClick={() => toggleTypeFilter(t.id)}
-                    className="rounded-full px-2.5 py-0.5 text-xs font-medium border transition-opacity"
+                    className="rounded-full px-2.5 py-0.5 text-xs font-medium transition-opacity"
                     style={{
-                      borderColor: t.color,
                       color: t.color,
-                      backgroundColor: t.color + "18",
+                      backgroundColor: t.color + "20",
                       opacity: active ? 1 : 0.3,
                     }}
                   >
@@ -343,11 +350,10 @@ export default function EventsPage() {
                   <button
                     key={c.id}
                     onClick={() => toggleCategoryFilter(c.id)}
-                    className="rounded-full px-2.5 py-0.5 text-xs font-medium border transition-opacity"
+                    className="rounded border px-2.5 py-0.5 text-xs font-medium transition-opacity"
                     style={{
                       borderColor: c.color,
                       color: c.color,
-                      backgroundColor: c.color + "18",
                       opacity: active ? 1 : 0.3,
                     }}
                   >
@@ -403,8 +409,10 @@ export default function EventsPage() {
                         ? types.map((et) => (
                             <span
                               key={et.id}
-                              className="rounded-full px-2 py-0.5 text-xs font-medium"
-                              style={{ backgroundColor: et.color + "20", color: et.color }}
+                              className={et.kind === "category" ? "rounded border px-2 py-0.5 text-xs font-medium" : "rounded-full px-2 py-0.5 text-xs font-medium"}
+                              style={et.kind === "category"
+                                ? { borderColor: et.color, color: et.color }
+                                : { backgroundColor: et.color + "20", color: et.color }}
                             >
                               {et.name}
                             </span>

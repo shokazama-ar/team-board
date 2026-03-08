@@ -124,8 +124,8 @@ export default function DashboardFilteredContent({
                     {event.categories.map((cat) => (
                       <span
                         key={cat.id}
-                        className="rounded-full px-2 py-0.5 text-xs font-medium text-white"
-                        style={{ backgroundColor: cat.color }}
+                        className="rounded border px-2 py-0.5 text-xs font-medium"
+                        style={{ borderColor: cat.color, color: cat.color }}
                       >
                         {cat.name}
                       </span>
@@ -182,8 +182,8 @@ export default function DashboardFilteredContent({
                           {ev.categories.map((cat) => (
                             <span
                               key={cat.id}
-                              className="rounded-full px-2 py-0.5 text-xs font-medium text-white"
-                              style={{ backgroundColor: cat.color }}
+                              className="rounded border px-2 py-0.5 text-xs font-medium"
+                              style={{ borderColor: cat.color, color: cat.color }}
                             >
                               {cat.name}
                             </span>
@@ -236,8 +236,8 @@ export default function DashboardFilteredContent({
                       {announcement.categories.map((cat) => (
                         <span
                           key={cat.id}
-                          className="rounded-full px-2 py-0.5 text-xs font-medium text-white shrink-0"
-                          style={{ backgroundColor: cat.color }}
+                          className="rounded border px-2 py-0.5 text-xs font-medium shrink-0"
+                          style={{ borderColor: cat.color, color: cat.color }}
                         >
                           {cat.name}
                         </span>

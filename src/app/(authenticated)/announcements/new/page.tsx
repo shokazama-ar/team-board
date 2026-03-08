@@ -16,6 +16,7 @@ export default function NewAnnouncementPage() {
   const [body, setBody] = useState("");
   const [categories, setCategories] = useState<EventCategory[]>([]);
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<Set<string>>(new Set());
+  const [targetRole, setTargetRole] = useState<"member" | "admin">("member");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -77,9 +78,17 @@ export default function NewAnnouncementPage() {
     setSubmitting(true);
     setError(null);
 
+    const insertPayload: Record<string, unknown> = {
+      team_id: teamId,
+      author_id: userId,
+      title,
+      body,
+      target_role: targetRole === "admin" ? "admin" : null,
+    };
+
     const { data: inserted, error: insertError } = await supabase
       .from("announcements")
-      .insert({ team_id: teamId, author_id: userId, title, body })
+      .insert(insertPayload)
       .select("id")
       .single();
 
@@ -148,6 +157,34 @@ export default function NewAnnouncementPage() {
             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             placeholder="お知らせの内容を入力してください"
           />
+        </div>
+
+        <div className="mb-4">
+          <label className="mb-2 block text-sm font-medium text-gray-700">公開対象</label>
+          <div className="flex flex-col gap-2">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="targetRole"
+                value="member"
+                checked={targetRole === "member"}
+                onChange={() => setTargetRole("member")}
+                className="accent-blue-600"
+              />
+              <span className="text-sm text-gray-700">全員向け</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="targetRole"
+                value="admin"
+                checked={targetRole === "admin"}
+                onChange={() => setTargetRole("admin")}
+                className="accent-blue-600"
+              />
+              <span className="text-sm text-gray-700">管理者のみ</span>
+            </label>
+          </div>
         </div>
 
         {categories.length > 0 && (

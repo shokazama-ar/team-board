@@ -32,7 +32,7 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const publicPaths = ["/login", "/signup", "/auth/callback"];
+  const publicPaths = ["/login", "/signup", "/auth/callback", "/forgot-password", "/reset-password", "/contact"];
   const isPublicPath = publicPaths.some((path) =>
     request.nextUrl.pathname.startsWith(path)
   );
@@ -50,7 +50,7 @@ export async function updateSession(request: NextRequest) {
   }
 
   // Check if authenticated user has a team (skip for setup and settings pages)
-  const skipTeamCheck = ["/teams/setup", "/settings"];
+  const skipTeamCheck = ["/teams/setup", "/settings", "/onboarding"];
   const shouldCheckTeam =
     user &&
     !isPublicPath &&

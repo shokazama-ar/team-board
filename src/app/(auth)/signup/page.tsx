@@ -1,13 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-export default function SignupPage() {
+function SignupForm() {
+  const searchParams = useSearchParams();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [inviteCode, setInviteCode] = useState(searchParams.get("invite") ?? "");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -24,11 +27,15 @@ export default function SignupPage() {
     }
 
     const supabase = createClient();
+    const redirectTo = `${window.location.origin}/auth/callback?next=/onboarding${
+      inviteCode.trim() ? `?invite=${encodeURIComponent(inviteCode.trim())}` : ""
+    }`;
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: { name },
+        emailRedirectTo: redirectTo,
       },
     });
 
@@ -134,6 +141,23 @@ export default function SignupPage() {
             />
           </div>
 
+          <div>
+            <label
+              htmlFor="inviteCode"
+              className="mb-1 block text-sm font-medium text-gray-700"
+            >
+              招待コード（お持ちの場合）
+            </label>
+            <input
+              id="inviteCode"
+              type="text"
+              value={inviteCode}
+              onChange={(e) => setInviteCode(e.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              placeholder="招待コードを入力"
+            />
+          </div>
+
           <button
             type="submit"
             disabled={loading}
@@ -151,5 +175,13 @@ export default function SignupPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense>
+      <SignupForm />
+    </Suspense>
   );
 }

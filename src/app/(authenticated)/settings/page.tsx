@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { RefreshCw, Trash2, AlertTriangle, Plus, X, ChevronUp, ChevronDown, Pencil, Check, UserPlus, ExternalLink } from "lucide-react";
+import { RefreshCw, Trash2, AlertTriangle, Plus, X, ChevronUp, ChevronDown, Pencil, Check, UserPlus, ExternalLink, Share2 } from "lucide-react";
 import { AvatarUpload } from "@/components/ui/AvatarUpload";
 
 type EventTypeKind = "type" | "category";
@@ -492,6 +492,15 @@ export default function SettingsPage() {
   const [teamMessage, setTeamMessage] = useState("");
   const [regenerating, setRegenerating] = useState(false);
   const [regeneratingGuardian, setRegeneratingGuardian] = useState(false);
+  const [contactUrlCopied, setContactUrlCopied] = useState(false);
+  const [coachShareOpen, setCoachShareOpen] = useState(false);
+  const [guardianShareOpen, setGuardianShareOpen] = useState(false);
+  const [coachCopied, setCoachCopied] = useState<"code" | "link" | null>(null);
+  const [guardianCopied, setGuardianCopied] = useState<"code" | "link" | null>(null);
+
+  // Refs for share panels (outside click)
+  const coachShareRef = useRef<HTMLDivElement>(null);
+  const guardianShareRef = useRef<HTMLDivElement>(null);
 
   // Tab state
   const [activeTab, setActiveTab] = useState<"coach" | "guardian" | "admin">("coach");
@@ -648,6 +657,20 @@ export default function SettingsPage() {
     };
     loadData();
   }, [supabase, reloadMyProfiles]);
+
+  // ── Share panel outside-click handlers ──────────────────────────────────
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (coachShareRef.current && !coachShareRef.current.contains(e.target as Node)) {
+        setCoachShareOpen(false);
+      }
+      if (guardianShareRef.current && !guardianShareRef.current.contains(e.target as Node)) {
+        setGuardianShareOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   // ── Generic helpers ─────────────────────────────────────────────────────
   const moveItem = async (
@@ -1248,6 +1271,70 @@ export default function SettingsPage() {
                 <code className="flex-1 rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm font-mono">
                   {inviteCode}
                 </code>
+                <div className="relative shrink-0" ref={coachShareRef}>
+                  <button
+                    type="button"
+                    aria-label="共有"
+                    onClick={() => {
+                      if (typeof navigator !== "undefined" && !!navigator.share) {
+                        navigator.share({
+                          title: "TeamBoard 招待",
+                          text: `招待コード: ${inviteCode}`,
+                          url: `${window.location.origin}/signup?invite=${inviteCode}`,
+                        });
+                      } else {
+                        setCoachShareOpen((prev) => !prev);
+                      }
+                    }}
+                    className="flex shrink-0 items-center rounded-lg border border-gray-300 p-2 text-gray-600 hover:bg-gray-50"
+                  >
+                    <Share2 size={16} strokeWidth={1.5} aria-hidden="true" />
+                  </button>
+                  {coachShareOpen && (
+                    <div className="absolute right-0 top-full z-10 mt-1 w-48 rounded-lg border border-gray-200 bg-white shadow-lg">
+                      <button
+                        type="button"
+                        className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50"
+                        onClick={() => {
+                          navigator.clipboard.writeText(inviteCode).then(() => {
+                            setCoachCopied("code");
+                            setTimeout(() => setCoachCopied(null), 1500);
+                          });
+                          setCoachShareOpen(false);
+                        }}
+                      >
+                        {coachCopied === "code" ? "コピーしました！" : "コードをコピー"}
+                      </button>
+                      <button
+                        type="button"
+                        className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50"
+                        onClick={() => {
+                          navigator.clipboard.writeText(`${window.location.origin}/signup?invite=${inviteCode}`).then(() => {
+                            setCoachCopied("link");
+                            setTimeout(() => setCoachCopied(null), 1500);
+                          });
+                          setCoachShareOpen(false);
+                        }}
+                      >
+                        {coachCopied === "link" ? "コピーしました！" : "リンクをコピー"}
+                      </button>
+                      <button
+                        type="button"
+                        className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50"
+                        onClick={() => {
+                          const origin = window.location.origin;
+                          const body = encodeURIComponent(
+                            `TeamBoard のチームへ招待します。\n\n以下のリンクからサインアップして参加してください：\n${origin}/signup?invite=${inviteCode}\n\nすでにアカウントをお持ちの場合は、ログイン後に\n招待コード「${inviteCode}」を入力してチームに参加できます。`
+                          );
+                          window.open(`mailto:?subject=${encodeURIComponent("TeamBoard チームへの招待")}&body=${body}`);
+                          setCoachShareOpen(false);
+                        }}
+                      >
+                        メールで共有
+                      </button>
+                    </div>
+                  )}
+                </div>
                 <button
                   type="button"
                   onClick={handleRegenerateCode}
@@ -1269,6 +1356,70 @@ export default function SettingsPage() {
                 <code className="flex-1 rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm font-mono">
                   {inviteCodeGuardian}
                 </code>
+                <div className="relative shrink-0" ref={guardianShareRef}>
+                  <button
+                    type="button"
+                    aria-label="共有"
+                    onClick={() => {
+                      if (typeof navigator !== "undefined" && !!navigator.share) {
+                        navigator.share({
+                          title: "TeamBoard 招待",
+                          text: `招待コード: ${inviteCodeGuardian}`,
+                          url: `${window.location.origin}/signup?invite=${inviteCodeGuardian}`,
+                        });
+                      } else {
+                        setGuardianShareOpen((prev) => !prev);
+                      }
+                    }}
+                    className="flex shrink-0 items-center rounded-lg border border-gray-300 p-2 text-gray-600 hover:bg-gray-50"
+                  >
+                    <Share2 size={16} strokeWidth={1.5} aria-hidden="true" />
+                  </button>
+                  {guardianShareOpen && (
+                    <div className="absolute right-0 top-full z-10 mt-1 w-48 rounded-lg border border-gray-200 bg-white shadow-lg">
+                      <button
+                        type="button"
+                        className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50"
+                        onClick={() => {
+                          navigator.clipboard.writeText(inviteCodeGuardian).then(() => {
+                            setGuardianCopied("code");
+                            setTimeout(() => setGuardianCopied(null), 1500);
+                          });
+                          setGuardianShareOpen(false);
+                        }}
+                      >
+                        {guardianCopied === "code" ? "コピーしました！" : "コードをコピー"}
+                      </button>
+                      <button
+                        type="button"
+                        className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50"
+                        onClick={() => {
+                          navigator.clipboard.writeText(`${window.location.origin}/signup?invite=${inviteCodeGuardian}`).then(() => {
+                            setGuardianCopied("link");
+                            setTimeout(() => setGuardianCopied(null), 1500);
+                          });
+                          setGuardianShareOpen(false);
+                        }}
+                      >
+                        {guardianCopied === "link" ? "コピーしました！" : "リンクをコピー"}
+                      </button>
+                      <button
+                        type="button"
+                        className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50"
+                        onClick={() => {
+                          const origin = window.location.origin;
+                          const body = encodeURIComponent(
+                            `TeamBoard のチームへ招待します。\n\n以下のリンクからサインアップして参加してください：\n${origin}/signup?invite=${inviteCodeGuardian}\n\nすでにアカウントをお持ちの場合は、ログイン後に\n招待コード「${inviteCodeGuardian}」を入力してチームに参加できます。`
+                          );
+                          window.open(`mailto:?subject=${encodeURIComponent("TeamBoard チームへの招待")}&body=${body}`);
+                          setGuardianShareOpen(false);
+                        }}
+                      >
+                        メールで共有
+                      </button>
+                    </div>
+                  )}
+                </div>
                 <button
                   type="button"
                   onClick={handleRegenerateGuardianCode}
@@ -1277,6 +1428,33 @@ export default function SettingsPage() {
                 >
                   <RefreshCw size={16} strokeWidth={1.5} aria-hidden="true" />
                   {regeneratingGuardian ? "再生成中..." : "再生成"}
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                問い合わせフォームURL
+              </label>
+              <p className="mb-1.5 text-xs text-gray-400">外部公開用の問い合わせフォームです。未ログインでもアクセスできます</p>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 truncate rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm font-mono">
+                  {typeof window !== "undefined"
+                    ? `${window.location.origin}/contact/${teamId}`
+                    : `/contact/${teamId}`}
+                </code>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const url = `${window.location.origin}/contact/${teamId}`;
+                    navigator.clipboard.writeText(url).then(() => {
+                      setContactUrlCopied(true);
+                      setTimeout(() => setContactUrlCopied(false), 1500);
+                    });
+                  }}
+                  className="flex shrink-0 items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
+                >
+                  {contactUrlCopied ? "コピーしました！" : "コピー"}
                 </button>
               </div>
             </div>
