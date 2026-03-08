@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import DashboardContent from "./_components/DashboardContent";
 import DashboardSkeleton from "./_components/DashboardSkeleton";
@@ -9,11 +10,23 @@ export default async function Dashboard() {
     data: { user },
   } = await supabase.auth.getUser();
 
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("name")
+    .eq("id", user?.id ?? "")
+    .single();
+
+  const displayName = profile?.name || user?.email?.split("@")[0] || "ゲスト";
+
   return (
     <div className="mx-auto max-w-5xl">
       <h1 className="mb-6 text-2xl font-bold">ダッシュボード</h1>
       <p className="text-gray-600">
-        ようこそ、{user?.email ?? "ゲスト"}さん
+        ようこそ、
+        <Link href="/settings" className="font-medium text-gray-900 hover:underline">
+          {displayName}
+        </Link>
+        さん
       </p>
       <Suspense fallback={<DashboardSkeleton />}>
         <DashboardContent userId={user?.id ?? ""} />

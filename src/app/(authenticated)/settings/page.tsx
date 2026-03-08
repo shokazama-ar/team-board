@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { RefreshCw, Trash2, AlertTriangle, Plus, X, ChevronUp, ChevronDown, Pencil, Check, UserPlus } from "lucide-react";
+import { RefreshCw, Trash2, AlertTriangle, Plus, X, ChevronUp, ChevronDown, Pencil, Check, UserPlus, ExternalLink } from "lucide-react";
 import { AvatarUpload } from "@/components/ui/AvatarUpload";
 
 type EventTypeKind = "type" | "category";
@@ -500,12 +500,19 @@ export default function SettingsPage() {
   const [eventTypes, setEventTypes] = useState<EventType[]>([]);
   const [eventCategories, setEventCategories] = useState<EventType[]>([]);
 
-  // Player category modal state
-  type PlayerForCategory = { member_profile_id: string; name: string | null };
+  // Coach category state (self-managed)
+  const [coachProfileIds, setCoachProfileIds] = useState<string[]>([]);
+  const [coachCategoryIds, setCoachCategoryIds] = useState<Set<string>>(new Set());
+  const [savingCoachCategories, setSavingCoachCategories] = useState(false);
+  const [coachCategoryMessage, setCoachCategoryMessage] = useState("");
+
+  // Player/profile category modal state (admin)
+  type PlayerForCategory = { member_profile_id: string; name: string | null; kind: "coach" | "player" };
   const [playerCategoryModalOpen, setPlayerCategoryModalOpen] = useState(false);
   const [playerCategoryPlayers, setPlayerCategoryPlayers] = useState<PlayerForCategory[]>([]);
   const [playerCategoryAssignments, setPlayerCategoryAssignments] = useState<Set<string>>(new Set());
   const [savingPlayerCategories, setSavingPlayerCategories] = useState(false);
+  const [playerCategoryModalTab, setPlayerCategoryModalTab] = useState<"coach" | "player">("coach");
 
   // Member profiles state
   type MemberProfileItem = {
@@ -614,6 +621,27 @@ export default function SettingsPage() {
         }
 
         await reloadMyProfiles(membership.team_id, user.id);
+
+        // コーチプロファイルの担当カテゴリを読み込む
+        const { data: myMembershipsForKind } = await supabase
+          .from("team_members")
+          .select("member_profile_id, member_profiles!inner(user_id, kind)")
+          .eq("team_id", membership.team_id)
+          .eq("member_profiles.user_id", user.id);
+
+        const coachIds = (myMembershipsForKind ?? [])
+          .filter((m) => (m.member_profiles as unknown as { kind: string } | null)?.kind === "coach")
+          .map((m) => m.member_profile_id);
+
+        setCoachProfileIds(coachIds);
+
+        if (coachIds.length > 0) {
+          const { data: coachCats } = await supabase
+            .from("member_profile_categories")
+            .select("event_type_id")
+            .in("member_profile_id", coachIds);
+          setCoachCategoryIds(new Set((coachCats ?? []).map((c) => c.event_type_id)));
+        }
       }
 
       setLoading(false);
@@ -810,6 +838,40 @@ export default function SettingsPage() {
     }
   };
 
+  // ── Coach category handlers ─────────────────────────────────────────────
+  const toggleCoachCategory = (eventTypeId: string) => {
+    setCoachCategoryIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(eventTypeId)) next.delete(eventTypeId); else next.add(eventTypeId);
+      return next;
+    });
+  };
+
+  const handleSaveCoachCategories = async () => {
+    if (!teamId || coachProfileIds.length === 0) return;
+    setSavingCoachCategories(true);
+    setCoachCategoryMessage("");
+
+    await supabase
+      .from("member_profile_categories")
+      .delete()
+      .in("member_profile_id", coachProfileIds);
+
+    const rows = [...coachCategoryIds].flatMap((catId) =>
+      coachProfileIds.map((profileId) => ({
+        team_id: teamId,
+        member_profile_id: profileId,
+        event_type_id: catId,
+      }))
+    );
+    if (rows.length > 0) {
+      await supabase.from("member_profile_categories").insert(rows);
+    }
+
+    setCoachCategoryMessage("保存しました");
+    setSavingCoachCategories(false);
+  };
+
   // ── Player category handlers ────────────────────────────────────────────
   const openPlayerCategoryModal = async () => {
     if (!teamId) return;
@@ -823,15 +885,13 @@ export default function SettingsPage() {
       const seen = new Set<string>();
       const players = members
         .filter((m) => {
-          const mp = m.member_profiles as unknown as { kind: string } | null;
-          if (mp?.kind !== "player") return false;
           if (seen.has(m.member_profile_id)) return false;
           seen.add(m.member_profile_id);
           return true;
         })
         .map((m) => {
-          const mp = m.member_profiles as unknown as { name: string | null } | null;
-          return { member_profile_id: m.member_profile_id, name: mp?.name ?? null };
+          const mp = m.member_profiles as unknown as { name: string | null; kind: "coach" | "player" } | null;
+          return { member_profile_id: m.member_profile_id, name: mp?.name ?? null, kind: mp?.kind ?? "player" };
         });
       setPlayerCategoryPlayers(players);
     }
@@ -844,6 +904,7 @@ export default function SettingsPage() {
     setPlayerCategoryAssignments(
       new Set((existing ?? []).map((a) => `${a.member_profile_id}:${a.event_type_id}`))
     );
+    setPlayerCategoryModalTab("coach");
     setPlayerCategoryModalOpen(true);
   };
 
@@ -1060,7 +1121,64 @@ export default function SettingsPage() {
       {(activeTab === "coach" || !teamId) && showCoachTab && (
         <>
           {profileFormJsx}
-          {memberProfilesJsx}
+          {teamId && (
+            <>
+              <hr className="my-8 border-gray-200" />
+              <h2 className="mb-1 text-lg font-semibold">担当カテゴリ</h2>
+              <p className="mb-4 text-sm text-gray-500">
+                担当するカテゴリを設定すると、関連する予定・お知らせのみダッシュボードに表示されます。未設定の場合は全件表示されます。
+              </p>
+              {eventCategories.length === 0 ? (
+                <p className="text-sm text-gray-400">カテゴリが登録されていません（管理者に依頼してください）</p>
+              ) : (
+                <>
+                  <div className="mb-4 flex flex-wrap gap-2">
+                    {eventCategories.map((cat) => {
+                      const selected = coachCategoryIds.has(cat.id);
+                      return (
+                        <button
+                          key={cat.id}
+                          type="button"
+                          onClick={() => toggleCoachCategory(cat.id)}
+                          className={`rounded-full border-2 px-3 py-1 text-sm font-medium transition-all ${
+                            selected
+                              ? "shadow-sm"
+                              : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
+                          }`}
+                          style={
+                            selected
+                              ? { backgroundColor: cat.color + "20", color: cat.color, borderColor: cat.color }
+                              : {}
+                          }
+                        >
+                          {cat.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleSaveCoachCategories}
+                    disabled={savingCoachCategories}
+                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    {savingCoachCategories ? "保存中..." : "保存"}
+                  </button>
+                  {coachCategoryMessage && (
+                    <div
+                      className={`mt-3 rounded-md p-3 text-sm ${
+                        coachCategoryMessage.includes("失敗")
+                          ? "bg-red-50 text-red-600"
+                          : "bg-green-50 text-green-600"
+                      }`}
+                    >
+                      {coachCategoryMessage}
+                    </div>
+                  )}
+                </>
+              )}
+            </>
+          )}
         </>
       )}
 
@@ -1204,10 +1322,10 @@ export default function SettingsPage() {
             onUpdate={(id, name) => updateItem(id, name, setEventCategories)}
           />
 
-          {/* プレイヤーカテゴリ */}
+          {/* カテゴリ割り当て */}
           <hr className="my-8 border-gray-200" />
           <div className="mb-1 flex items-center justify-between">
-            <h2 className="text-lg font-semibold">プレイヤーカテゴリ</h2>
+            <h2 className="text-lg font-semibold">カテゴリ割り当て</h2>
             <button
               type="button"
               onClick={openPlayerCategoryModal}
@@ -1218,7 +1336,7 @@ export default function SettingsPage() {
             </button>
           </div>
           <p className="text-sm text-gray-500">
-            プレイヤーごとに所属するカテゴリを設定します。予定やお知らせの対象絞り込みに使用します。
+            コーチ・選手プロファイルごとに担当カテゴリを設定します。予定やお知らせの対象絞り込みに使用します。
           </p>
 
           <div className="mt-8 rounded-lg border border-red-200 bg-red-50 p-4">
@@ -1237,6 +1355,32 @@ export default function SettingsPage() {
               チームを削除
             </button>
           </div>
+
+          {/* 機能説明 */}
+          <hr className="my-8 border-gray-200" />
+          <h2 className="mb-1 text-lg font-semibold">機能説明</h2>
+          <p className="mb-4 text-sm text-gray-500">各機能の使い方を確認できます。</p>
+          <ul className="space-y-2">
+            {[
+              { href: "/help/events",        label: "予定と出欠管理" },
+              { href: "/help/announcements", label: "お知らせ" },
+              { href: "/help/categories",    label: "カテゴリ機能" },
+              { href: "/help/invite",        label: "招待コード" },
+              { href: "/help/members",       label: "メンバー管理" },
+            ].map(({ href, label }) => (
+              <li key={href}>
+                <a
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-sm text-blue-600 hover:underline"
+                >
+                  <ExternalLink size={14} strokeWidth={1.5} aria-hidden="true" />
+                  {label}
+                </a>
+              </li>
+            ))}
+          </ul>
         </>
       )}
 
@@ -1245,7 +1389,7 @@ export default function SettingsPage() {
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 pt-12">
           <div className="w-full max-w-2xl rounded-2xl bg-white shadow-xl">
             <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
-              <h2 className="text-base font-semibold">プレイヤーカテゴリ</h2>
+              <h2 className="text-base font-semibold">カテゴリ割り当て</h2>
               <button
                 type="button"
                 onClick={() => setPlayerCategoryModalOpen(false)}
@@ -1255,49 +1399,88 @@ export default function SettingsPage() {
               </button>
             </div>
 
+            {/* モーダル内タブ */}
+            <div className="border-b border-gray-200 px-6">
+              <nav className="-mb-px flex gap-6">
+                {(["coach", "player"] as const).map((tab) => {
+                  const label = tab === "coach" ? "コーチ" : "選手";
+                  const count = playerCategoryPlayers.filter((p) => p.kind === tab).length;
+                  return (
+                    <button
+                      key={tab}
+                      type="button"
+                      onClick={() => setPlayerCategoryModalTab(tab)}
+                      className={`border-b-2 pb-3 pt-2 text-sm font-medium transition-colors ${
+                        playerCategoryModalTab === tab
+                          ? tab === "coach"
+                            ? "border-blue-500 text-blue-600"
+                            : "border-green-500 text-green-600"
+                          : "border-transparent text-gray-500 hover:text-gray-700"
+                      }`}
+                    >
+                      {label}
+                      <span className="ml-1.5 text-xs text-gray-400">({count})</span>
+                    </button>
+                  );
+                })}
+              </nav>
+            </div>
+
             <div className="overflow-x-auto px-6 py-4">
-              {playerCategoryPlayers.length === 0 ? (
-                <p className="text-sm text-gray-400">プレイヤーが登録されていません</p>
-              ) : eventCategories.length === 0 ? (
+              {eventCategories.length === 0 ? (
                 <p className="text-sm text-gray-400">対象カテゴリが登録されていません。先に「対象カテゴリ」を追加してください。</p>
-              ) : (
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr>
-                      <th className="pb-3 pr-6 text-left text-sm font-medium text-gray-500">プレイヤー</th>
-                      {eventCategories.map((cat) => (
-                        <th key={cat.id} className="min-w-[72px] pb-3 text-center">
-                          <span
-                            className="inline-block rounded-full px-2 py-0.5 text-xs font-medium text-white"
-                            style={{ backgroundColor: cat.color }}
-                          >
-                            {cat.name}
-                          </span>
+              ) : (() => {
+                const visibleProfiles = playerCategoryPlayers.filter(
+                  (p) => p.kind === playerCategoryModalTab
+                );
+                if (visibleProfiles.length === 0) {
+                  return (
+                    <p className="text-sm text-gray-400">
+                      {playerCategoryModalTab === "coach" ? "コーチ" : "選手"}プロファイルが登録されていません
+                    </p>
+                  );
+                }
+                return (
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr>
+                        <th className="pb-3 pr-6 text-left text-sm font-medium text-gray-500">
+                          {playerCategoryModalTab === "coach" ? "コーチ" : "選手"}
                         </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {playerCategoryPlayers.map((player) => (
-                      <tr key={player.member_profile_id}>
-                        <td className="py-3 pr-6 font-medium text-gray-900">
-                          {player.name || "名前未設定"}
-                        </td>
                         {eventCategories.map((cat) => (
-                          <td key={cat.id} className="py-3 text-center">
-                            <input
-                              type="checkbox"
-                              checked={playerCategoryAssignments.has(`${player.member_profile_id}:${cat.id}`)}
-                              onChange={() => togglePlayerCategory(player.member_profile_id, cat.id)}
-                              className="h-4 w-4 rounded border-gray-300 accent-blue-600"
-                            />
-                          </td>
+                          <th key={cat.id} className="min-w-[72px] pb-3 text-center">
+                            <span
+                              className="inline-block rounded-full px-2 py-0.5 text-xs font-medium text-white"
+                              style={{ backgroundColor: cat.color }}
+                            >
+                              {cat.name}
+                            </span>
+                          </th>
                         ))}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {visibleProfiles.map((player) => (
+                        <tr key={player.member_profile_id}>
+                          <td className="py-3 pr-6 font-medium text-gray-900">
+                            {player.name || "名前未設定"}
+                          </td>
+                          {eventCategories.map((cat) => (
+                            <td key={cat.id} className="py-3 text-center">
+                              <input
+                                type="checkbox"
+                                checked={playerCategoryAssignments.has(`${player.member_profile_id}:${cat.id}`)}
+                                onChange={() => togglePlayerCategory(player.member_profile_id, cat.id)}
+                                className="h-4 w-4 rounded border-gray-300 accent-blue-600"
+                              />
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                );
+              })()}
             </div>
 
             <div className="flex justify-end gap-2 border-t border-gray-200 px-6 py-4">
