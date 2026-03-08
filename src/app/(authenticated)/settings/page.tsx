@@ -593,7 +593,7 @@ export default function SettingsPage() {
         const type = (membership.account_type ?? "coach") as "coach" | "guardian";
         setIsAdmin(membership.role === "admin");
         setAccountType(type);
-        setActiveTab(type === "guardian" ? "guardian" : "coach");
+        setActiveTab(membership.role === "admin" ? "admin" : type === "guardian" ? "guardian" : "coach");
         setTeamId(membership.team_id);
 
         const { data: team } = await supabase
@@ -1077,16 +1077,16 @@ export default function SettingsPage() {
       {teamId && (
         <div className="mb-6 border-b border-gray-200">
           <nav className="-mb-px flex space-x-6">
-            {showCoachTab && (
+            {isAdmin && (
               <button
-                onClick={() => setActiveTab("coach")}
+                onClick={() => setActiveTab("admin")}
                 className={`pb-3 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === "coach"
+                  activeTab === "admin"
                     ? "border-blue-500 text-blue-600"
                     : "border-transparent text-gray-500 hover:text-gray-700"
                 }`}
               >
-                コーチ
+                管理者
               </button>
             )}
             {showGuardianTab && (
@@ -1101,16 +1101,16 @@ export default function SettingsPage() {
                 保護者
               </button>
             )}
-            {isAdmin && (
+            {showCoachTab && (
               <button
-                onClick={() => setActiveTab("admin")}
+                onClick={() => setActiveTab("coach")}
                 className={`pb-3 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === "admin"
+                  activeTab === "coach"
                     ? "border-blue-500 text-blue-600"
                     : "border-transparent text-gray-500 hover:text-gray-700"
                 }`}
               >
-                管理者
+                コーチ
               </button>
             )}
           </nav>
@@ -1362,6 +1362,7 @@ export default function SettingsPage() {
           <p className="mb-4 text-sm text-gray-500">各機能の使い方を確認できます。</p>
           <ul className="space-y-2">
             {[
+              { href: "/help",               label: "ヘルプ一覧" },
               { href: "/help/events",        label: "予定と出欠管理" },
               { href: "/help/announcements", label: "お知らせ" },
               { href: "/help/categories",    label: "カテゴリ機能" },
