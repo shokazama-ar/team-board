@@ -166,3 +166,24 @@ Supabase (PostgreSQL) のテーブル構成。RLSはすべて有効。
 | `join_team_with_profile(code, profile_name, profile_kind)` | 招待コードでチーム参加 |
 | `regenerate_invite_code(target_team_id)` | コーチ用招待コード再生成 |
 | `regenerate_guardian_invite_code(target_team_id)` | 保護者用招待コード再生成 |
+
+---
+
+### `inquiries`
+チームへの外部問い合わせ。認証不要の公開フォーム（`/contact/[teamId]`）から送信される。
+
+| カラム | 型 | 備考 |
+|---|---|---|
+| id | uuid | |
+| team_id | uuid | teams.id |
+| type | text | `trial`（体験・見学）/ `join`（入会）/ `leave`（退会）/ `other` |
+| name | text | 問い合わせ者の氏名 |
+| email | text | メールアドレス（必須） |
+| phone | text | 電話番号（任意） |
+| message | text | メッセージ（任意） |
+| status | text | `new`（未読）/ `read`（既読）/ `replied`（返信済み） |
+| created_at | timestamptz | |
+
+RLSポリシー:
+- INSERT: 誰でも可（公開フォームから送信）
+- SELECT/UPDATE: `is_admin_of_team(team_id)` を満たす管理者のみ

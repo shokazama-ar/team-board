@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import DateTimePicker from "@/components/ui/DateTimePicker";
-import { Copy, Trash2, Plus, ChevronDown, ChevronUp, LayoutList } from "lucide-react";
+import { Copy, Trash2, Plus, ChevronDown, ChevronUp } from "lucide-react";
 
 type EventType = {
   id: string;
@@ -30,9 +30,16 @@ type SaveResult = {
   error?: string;
 };
 
+function randomId(): string {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return Math.random().toString(36).slice(2) + Date.now().toString(36);
+}
+
 function newDraft(): DraftEvent {
   return {
-    localId: crypto.randomUUID(),
+    localId: randomId(),
     title: "",
     selectedTypeId: null,
     selectedCategoryIds: [],
@@ -47,51 +54,7 @@ function isValid(draft: DraftEvent): boolean {
   return draft.title.trim() !== "" && draft.date !== "";
 }
 
-function TypeRadios({
-  items,
-  selectedId,
-  onSelect,
-}: {
-  items: EventType[];
-  selectedId: string | null;
-  onSelect: (id: string | null) => void;
-}) {
-  if (items.length === 0) return null;
-  return (
-    <div className="flex flex-wrap gap-x-4 gap-y-1.5">
-      {items.map((item) => {
-        const selected = selectedId === item.id;
-        return (
-          <button
-            key={item.id}
-            type="button"
-            onClick={() => onSelect(selected ? null : item.id)}
-            className="flex items-center gap-1.5"
-          >
-            <span
-              className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full border-2 transition-all"
-              style={
-                selected
-                  ? { borderColor: item.color, backgroundColor: item.color }
-                  : { borderColor: "#d1d5db" }
-              }
-            >
-              {selected && <span className="h-1 w-1 rounded-full bg-white" />}
-            </span>
-            <span
-              className="text-xs font-medium transition-colors"
-              style={selected ? { color: item.color } : { color: "#4b5563" }}
-            >
-              {item.name}
-            </span>
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-function CategoryPills({
+function CategorySelect({
   items,
   selectedIds,
   onToggle,
@@ -100,29 +63,59 @@ function CategoryPills({
   selectedIds: string[];
   onToggle: (id: string) => void;
 }) {
-  if (items.length === 0) return null;
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  const selectedItems = items.filter((i) => selectedIds.includes(i.id));
+  const label =
+    selectedItems.length === 0
+      ? "カテゴリ"
+      : selectedItems.length === 1
+      ? selectedItems[0].name
+      : `${selectedItems.length}件選択`;
+
   return (
-    <div className="flex flex-wrap gap-1.5">
-      {items.map((item) => {
-        const selected = selectedIds.includes(item.id);
-        return (
-          <button
-            key={item.id}
-            type="button"
-            onClick={() => onToggle(item.id)}
-            className={`rounded-full border px-2.5 py-0.5 text-xs font-medium transition-all ${
-              selected ? "shadow-sm" : "border-gray-200 bg-white text-gray-500 hover:border-gray-300"
-            }`}
-            style={
-              selected
-                ? { backgroundColor: item.color + "20", color: item.color, borderColor: item.color }
-                : {}
-            }
-          >
-            {item.name}
-          </button>
-        );
-      })}
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+      >
+        <span className={selectedItems.length > 0 ? "text-gray-800" : "text-gray-400"}>{label}</span>
+        <ChevronDown size={14} strokeWidth={1.5} className="text-gray-400" />
+      </button>
+      {open && (
+        <div className="absolute left-0 z-20 mt-1 min-w-[150px] rounded-lg border border-gray-200 bg-white shadow-lg">
+          {items.map((item) => {
+            const checked = selectedIds.includes(item.id);
+            return (
+              <label
+                key={item.id}
+                className="flex cursor-pointer items-center gap-2 px-3 py-2 hover:bg-gray-50"
+              >
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={() => onToggle(item.id)}
+                  className="h-3.5 w-3.5 rounded accent-blue-600"
+                />
+                <span className="text-sm font-medium" style={{ color: item.color }}>
+                  {item.name}
+                </span>
+              </label>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -133,7 +126,6 @@ function EventCard({
   total,
   types,
   categories,
-  memoOpen,
   failed,
   onChange,
   onDuplicate,
@@ -145,19 +137,13 @@ function EventCard({
   total: number;
   types: EventType[];
   categories: EventType[];
-  memoOpen: boolean;
   failed: boolean;
   onChange: (updated: DraftEvent) => void;
   onDuplicate: () => void;
   onDelete: () => void;
   onAddBelow: () => void;
 }) {
-  const [localMemoOpen, setLocalMemoOpen] = useState(memoOpen);
-
-  useEffect(() => {
-    setLocalMemoOpen(memoOpen);
-  }, [memoOpen]);
-
+  const [memoOpen, setMemoOpen] = useState(false);
   const update = (patch: Partial<DraftEvent>) => onChange({ ...draft, ...patch });
 
   const toggleCategory = (id: string) => {
@@ -167,147 +153,126 @@ function EventCard({
     update({ selectedCategoryIds: next });
   };
 
-  const selectedType = types.find((t) => t.id === draft.selectedTypeId);
-  const selectedCategories = categories.filter((c) => draft.selectedCategoryIds.includes(c.id));
-
   return (
     <div className="group">
       <div
-        className={`rounded-lg border bg-white p-4 transition-all ${
-          failed
-            ? "border-red-400 bg-red-50"
-            : isValid(draft)
-            ? "border-gray-200"
-            : "border-gray-200"
+        className={`rounded-lg border bg-white p-3 transition-all ${
+          failed ? "border-red-400 bg-red-50" : "border-gray-200"
         }`}
       >
-        {/* Card header: badges + actions */}
-        <div className="mb-3 flex items-start justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-1.5">
-            {selectedType && (
-              <span
-                className="rounded-full px-2 py-0.5 text-xs font-medium"
-                style={{ backgroundColor: selectedType.color + "20", color: selectedType.color }}
-              >
-                {selectedType.name}
-              </span>
-            )}
-            {selectedCategories.map((c) => (
-              <span
-                key={c.id}
-                className="rounded border px-2 py-0.5 text-xs font-medium"
-                style={{ borderColor: c.color, color: c.color }}
-              >
-                {c.name}
-              </span>
-            ))}
-          </div>
-          <div className="flex shrink-0 items-center gap-1">
+        {/* Row 1: タイトル | 種別 | アクション */}
+        <div className="mb-2 flex items-center gap-2">
+          <input
+            type="text"
+            value={draft.title}
+            onChange={(e) => update({ title: e.target.value })}
+            placeholder="タイトル *"
+            className="min-w-0 flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          />
+          {types.length > 0 ? (
+            <select
+              value={draft.selectedTypeId ?? ""}
+              onChange={(e) => update({ selectedTypeId: e.target.value || null })}
+              className="shrink-0 rounded-lg border border-gray-300 px-2 py-1.5 text-sm text-gray-700 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            >
+              <option value="">種別なし</option>
+              {types.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <a
+              href="/settings"
+              className="shrink-0 rounded-lg border border-dashed border-gray-300 px-2 py-1.5 text-xs text-gray-400 hover:border-blue-400 hover:text-blue-500 whitespace-nowrap"
+              title="設定から種別を追加できます"
+            >
+              種別を設定
+            </a>
+          )}
+          <button
+            type="button"
+            onClick={onDuplicate}
+            aria-label="複製"
+            title="複製"
+            className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+          >
+            <Copy size={14} strokeWidth={1.5} />
+          </button>
+          {total > 1 && (
             <button
               type="button"
-              onClick={onDuplicate}
-              aria-label="複製"
-              title="複製"
-              className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+              onClick={onDelete}
+              aria-label="削除"
+              title="削除"
+              className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-500"
             >
-              <Copy size={14} strokeWidth={1.5} />
+              <Trash2 size={14} strokeWidth={1.5} />
             </button>
-            {total > 1 && (
-              <button
-                type="button"
-                onClick={onDelete}
-                aria-label="削除"
-                title="削除"
-                className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-500"
-              >
-                <Trash2 size={14} strokeWidth={1.5} />
-              </button>
-            )}
-          </div>
+          )}
         </div>
 
-        {/* Title */}
-        <input
-          type="text"
-          value={draft.title}
-          onChange={(e) => update({ title: e.target.value })}
-          placeholder="タイトル *"
-          className="mb-3 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-        />
-
-        {/* Type */}
-        {types.length > 0 && (
-          <div className="mb-2">
-            <p className="mb-1 text-xs text-gray-400">種別</p>
-            <TypeRadios
-              items={types}
-              selectedId={draft.selectedTypeId}
-              onSelect={(id) => update({ selectedTypeId: id })}
-            />
-          </div>
-        )}
-
-        {/* Category */}
-        {categories.length > 0 && (
-          <div className="mb-3">
-            <p className="mb-1 text-xs text-gray-400">カテゴリ</p>
-            <CategoryPills
-              items={categories}
-              selectedIds={draft.selectedCategoryIds}
-              onToggle={toggleCategory}
-            />
-          </div>
-        )}
-
-        {/* Dates */}
-        <div className="mb-3 space-y-2">
-          <div>
-            <p className="mb-1 text-xs text-gray-400">開始日時 *</p>
+        {/* Row 2: 開始日時 | 終了日時 | カテゴリ | 場所 */}
+        <div className="flex flex-wrap items-end gap-x-3 gap-y-2">
+          <div className="flex flex-col gap-0.5">
+            <span className="text-xs text-gray-400">開始 *</span>
             <DateTimePicker
               value={draft.date}
               onChange={(val) => update({ date: val })}
               required
             />
           </div>
-          <div>
-            <p className="mb-1 text-xs text-gray-400">終了日時（任意）</p>
+          <div className="flex flex-col gap-0.5">
+            <span className="text-xs text-gray-400">終了</span>
             <DateTimePicker
               value={draft.endDate}
               onChange={(val) => update({ endDate: val })}
               min={draft.date}
             />
           </div>
+          {categories.length > 0 && (
+            <div className="flex flex-col gap-0.5">
+              <span className="text-xs text-gray-400">カテゴリ</span>
+              <CategorySelect
+                items={categories}
+                selectedIds={draft.selectedCategoryIds}
+                onToggle={toggleCategory}
+              />
+            </div>
+          )}
+          <div className="flex min-w-[120px] flex-1 flex-col gap-0.5">
+            <span className="text-xs text-gray-400">場所</span>
+            <input
+              type="text"
+              value={draft.location}
+              onChange={(e) => update({ location: e.target.value })}
+              placeholder="場所（任意）"
+              className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
         </div>
 
-        {/* Location */}
-        <input
-          type="text"
-          value={draft.location}
-          onChange={(e) => update({ location: e.target.value })}
-          placeholder="場所（任意）"
-          className="mb-3 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-        />
-
-        {/* Memo toggle */}
+        {/* メモ（折りたたみ） */}
         <button
           type="button"
-          onClick={() => setLocalMemoOpen((prev) => !prev)}
-          className="mb-1 flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600"
+          onClick={() => setMemoOpen((prev) => !prev)}
+          className="mt-2 flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600"
         >
-          {localMemoOpen ? (
-            <ChevronUp size={14} strokeWidth={1.5} />
+          {memoOpen ? (
+            <ChevronUp size={13} strokeWidth={1.5} />
           ) : (
-            <ChevronDown size={14} strokeWidth={1.5} />
+            <ChevronDown size={13} strokeWidth={1.5} />
           )}
           メモ{draft.memo ? "（入力済み）" : ""}
         </button>
-        {localMemoOpen && (
+        {memoOpen && (
           <textarea
             value={draft.memo}
             onChange={(e) => update({ memo: e.target.value })}
-            rows={3}
+            rows={2}
             placeholder="持ち物や注意事項など"
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
         )}
 
@@ -316,7 +281,7 @@ function EventCard({
         )}
       </div>
 
-      {/* Add row below */}
+      {/* 行を追加 */}
       <div className="flex justify-center py-1">
         <button
           type="button"
@@ -341,7 +306,6 @@ export default function BulkEventsPage() {
   const [eventTypes, setEventTypes] = useState<EventType[]>([]);
   const [loading, setLoading] = useState(true);
   const [drafts, setDrafts] = useState<DraftEvent[]>([newDraft()]);
-  const [allMemoOpen, setAllMemoOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [failedIds, setFailedIds] = useState<Set<string>>(new Set());
 
@@ -399,7 +363,7 @@ export default function BulkEventsPage() {
       const timePart = src.date.includes("T") ? "T" + src.date.split("T")[1] : "";
       const duplicated: DraftEvent = {
         ...src,
-        localId: crypto.randomUUID(),
+        localId: randomId(),
         date: timePart ? timePart : "",
         endDate: src.endDate.includes("T") ? "T" + src.endDate.split("T")[1] : "",
       };
@@ -504,23 +468,6 @@ export default function BulkEventsPage() {
     <div className="mx-auto max-w-3xl pb-24">
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-2xl font-bold">予定を一括追加</h1>
-        <button
-          type="button"
-          onClick={() => setAllMemoOpen((prev) => !prev)}
-          className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
-        >
-          {allMemoOpen ? (
-            <>
-              <ChevronUp size={13} strokeWidth={1.5} />
-              詳細を折りたたむ
-            </>
-          ) : (
-            <>
-              <ChevronDown size={13} strokeWidth={1.5} />
-              詳細を展開する
-            </>
-          )}
-        </button>
       </div>
 
       {overLimit && (
@@ -538,7 +485,6 @@ export default function BulkEventsPage() {
             total={drafts.length}
             types={types}
             categories={categories}
-            memoOpen={allMemoOpen}
             failed={failedIds.has(draft.localId)}
             onChange={(updated) => updateDraft(draft.localId, updated)}
             onDuplicate={() => duplicateDraft(index)}

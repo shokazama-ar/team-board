@@ -231,6 +231,7 @@ export default function AnnouncementDetailPage() {
                   {new Date(announcement.created_at).toLocaleDateString("ja-JP", {
                     year: "numeric", month: "long", day: "numeric",
                     hour: "2-digit", minute: "2-digit",
+                    timeZone: "Asia/Tokyo",
                   })}
                 </dd>
               </div>
@@ -241,6 +242,7 @@ export default function AnnouncementDetailPage() {
                     {new Date(announcement.updated_at).toLocaleDateString("ja-JP", {
                       year: "numeric", month: "long", day: "numeric",
                       hour: "2-digit", minute: "2-digit",
+                      timeZone: "Asia/Tokyo",
                     })}
                   </dd>
                 </div>

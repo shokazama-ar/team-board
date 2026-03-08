@@ -79,3 +79,85 @@ border-b border-gray-200 / -mb-px flex space-x-6
 
 - アイコンのみのボタンには `aria-label` を付与
 - 装飾アイコンには `aria-hidden="true"` を付与
+
+## クリップボードコピー
+
+HTTP環境（`navigator.clipboard` が使えない環境）向けのフォールバック関数を使用すること：
+
+```tsx
+function copyToClipboard(text: string): Promise<void> {
+  if (navigator.clipboard?.writeText) {
+    return navigator.clipboard.writeText(text);
+  }
+  const el = document.createElement("textarea");
+  el.value = text;
+  el.style.position = "fixed";
+  el.style.opacity = "0";
+  document.body.appendChild(el);
+  el.select();
+  document.execCommand("copy");
+  document.body.removeChild(el);
+  return Promise.resolve();
+}
+```
+
+`navigator.clipboard.writeText()` を直接呼ばないこと。
+
+## 招待コード共有UIパターン
+
+招待コードはブロック表示し、下に「共有」「再生成」ボタンを横並びにする：
+
+```tsx
+<code className="mb-2 block w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm font-mono">
+  {inviteCode}
+</code>
+<div className="flex gap-2">
+  <div className="relative" ref={shareRef}>
+    <button className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50">
+      <Share2 size={16} /> 共有
+    </button>
+    {/* ドロップダウンは left-0（左揃え）で配置 */}
+    <div className="absolute left-0 top-full z-10 mt-1 w-48 ...">...</div>
+  </div>
+  <button className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50">
+    <RefreshCw size={16} /> 再生成
+  </button>
+</div>
+```
+
+## 送信確認ダイアログパターン
+
+フォーム送信前の確認には固定モーダルを使用：
+
+```tsx
+{showConfirm && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+    <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
+      <h3 className="mb-3 text-base font-semibold text-gray-900">送信内容の確認</h3>
+      {/* 確認内容 */}
+      <div className="flex gap-3">
+        <button onClick={() => setShowConfirm(false)}
+          className="flex-1 rounded-lg border border-gray-300 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+          戻る
+        </button>
+        <button onClick={handleConfirmedSubmit}
+          className="flex-1 rounded-lg bg-blue-600 py-2 text-sm font-medium text-white hover:bg-blue-700">
+          この内容で送信
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+```
+
+## タイムゾーン
+
+日付表示には必ず `timeZone: "Asia/Tokyo"` を指定すること：
+
+```tsx
+// NG
+new Date(value).toLocaleDateString("ja-JP", { year: "numeric", ... })
+
+// OK
+new Date(value).toLocaleDateString("ja-JP", { year: "numeric", ..., timeZone: "Asia/Tokyo" })
+```

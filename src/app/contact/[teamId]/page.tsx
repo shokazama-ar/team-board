@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, use } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 type InquiryType = "trial" | "join" | "leave" | "other";
@@ -15,9 +15,9 @@ const INQUIRY_TYPES: { value: InquiryType; label: string }[] = [
 export default function ContactPage({
   params,
 }: {
-  params: { teamId: string };
+  params: Promise<{ teamId: string }>;
 }) {
-  const { teamId } = params;
+  const { teamId } = use(params);
   const supabase = createClient();
 
   const [teamName, setTeamName] = useState<string | null>(null);
@@ -32,6 +32,7 @@ export default function ContactPage({
 
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -48,16 +49,21 @@ export default function ContactPage({
     })();
   }, [teamId]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitting(true);
     setError("");
+    setShowConfirm(true);
+  };
+
+  const handleConfirmedSubmit = async () => {
+    setShowConfirm(false);
+    setSubmitting(true);
 
     const { error: insertError } = await supabase.from("inquiries").insert({
       team_id: teamId,
       type: inquiryType,
       name: name.trim(),
-      email: email.trim() || null,
+      email: email.trim(),
       phone: phone.trim() || null,
       message: message.trim() || null,
     });
@@ -129,6 +135,42 @@ export default function ContactPage({
             </div>
           )}
 
+          {/* Confirm dialog */}
+          {showConfirm && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+              <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
+                <h3 className="mb-3 text-base font-semibold text-gray-900">
+                  送信内容の確認
+                </h3>
+                <p className="mb-2 text-sm text-gray-600">
+                  以下のメールアドレスに問い合わせ内容のコピーが届きます。
+                </p>
+                <p className="mb-4 rounded-lg bg-gray-50 px-3 py-2 text-sm font-medium text-gray-800 break-all">
+                  {email}
+                </p>
+                <p className="mb-5 text-xs text-gray-500">
+                  メールが届かない場合は、アドレスが正しいかご確認のうえ、フォームから送信しなおしてください。
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirm(false)}
+                    className="flex-1 rounded-lg border border-gray-300 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  >
+                    戻る
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleConfirmedSubmit}
+                    className="flex-1 rounded-lg bg-blue-600 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                  >
+                    この内容で送信
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Form */}
           {!loadingTeam && !teamNotFound && !submitted && (
             <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
@@ -190,13 +232,12 @@ export default function ContactPage({
                     className="mb-1 block text-sm font-medium text-gray-700"
                   >
                     メールアドレス
+                    <span className="ml-1 text-red-500">*</span>
                   </label>
-                  <p className="mb-1 text-xs text-gray-400">
-                    返信希望の場合はご入力ください
-                  </p>
                   <input
                     id="email"
                     type="email"
+                    required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"

@@ -190,7 +190,7 @@ export default function MembersPage() {
                   )}
                 </p>
                 <p className="text-xs text-gray-400">
-                  参加日: {new Date(member.created_at).toLocaleDateString("ja-JP")}
+                  参加日: {new Date(member.created_at).toLocaleDateString("ja-JP", { timeZone: "Asia/Tokyo" })}
                 </p>
               </div>
             </div>

@@ -431,6 +431,7 @@ export default function EventsPage() {
                         weekday: "short",
                         hour: "2-digit",
                         minute: "2-digit",
+                        timeZone: "Asia/Tokyo",
                       })}
                       {event.end_at && (
                         <span>
@@ -438,6 +439,7 @@ export default function EventsPage() {
                           {new Date(event.end_at).toLocaleDateString("ja-JP", {
                             hour: "2-digit",
                             minute: "2-digit",
+                            timeZone: "Asia/Tokyo",
                           })}
                         </span>
                       )}

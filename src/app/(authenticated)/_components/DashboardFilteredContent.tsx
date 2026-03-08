@@ -135,6 +135,7 @@ export default function DashboardFilteredContent({
                         month: "short",
                         day: "numeric",
                         weekday: "short",
+                        timeZone: "Asia/Tokyo",
                       })}
                     </span>
                   </div>
@@ -196,6 +197,7 @@ export default function DashboardFilteredContent({
                             weekday: "short",
                             hour: "2-digit",
                             minute: "2-digit",
+                            timeZone: "Asia/Tokyo",
                           })}
                         </p>
                         {ev.location && (
@@ -252,6 +254,7 @@ export default function DashboardFilteredContent({
                         month: "short",
                         day: "numeric",
                         weekday: "short",
+                        timeZone: "Asia/Tokyo",
                       })}
                     </p>
                   </Link>

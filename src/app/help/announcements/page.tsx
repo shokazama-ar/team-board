@@ -114,6 +114,47 @@ export default function HelpAnnouncementsPage() {
           </div>
         </MockupFrame>
       </Section>
+
+      <Section title="問い合わせ管理（管理者向け）">
+        <ul className="list-disc space-y-1.5 pl-5 text-sm text-gray-700">
+          <li>お知らせ画面の<b>管理者タブ</b>から、チームへの問い合わせ一覧を確認できます。</li>
+          <li>問い合わせは「未読・既読・返信済み」の3つのステータスで管理できます。</li>
+          <li>チームの公開お問い合わせフォーム（<code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-xs">/contact/[チームID]</code>）から送信されます。</li>
+          <li>フォームではメールアドレスが必須で、送信前に確認ダイアログが表示されます。</li>
+        </ul>
+        <MockupFrame title="お知らせ › 管理者タブ — TeamBoard">
+          <div className="text-xs">
+            <div className="mb-3 flex gap-2 border-b border-gray-200 pb-2">
+              {["全員向け", "管理者"].map((tab) => (
+                <span
+                  key={tab}
+                  className={`px-3 py-1 ${tab === "管理者" ? "border-b-2 border-blue-600 font-medium text-blue-600" : "text-gray-500"}`}
+                >
+                  {tab}
+                </span>
+              ))}
+            </div>
+            <p className="mb-2 font-semibold text-gray-700">問い合わせ</p>
+            <div className="space-y-2">
+              {[
+                { name: "田中 太郎", type: "体験・見学希望", status: "未読", statusStyle: "bg-yellow-100 text-yellow-800" },
+                { name: "鈴木 次郎", type: "入会依頼", status: "返信済み", statusStyle: "bg-green-100 text-green-700" },
+              ].map(({ name, type, status, statusStyle }) => (
+                <div key={name} className="rounded-lg border border-gray-200 bg-white p-2.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="font-medium text-gray-900">{name}</p>
+                      <p className="text-gray-500">{type}</p>
+                    </div>
+                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${statusStyle}`}>{status}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="mt-2 text-[10px] text-blue-500">↑ ステータスをタップして既読・返信済みに変更できます</p>
+          </div>
+        </MockupFrame>
+      </Section>
     </article>
   );
 }

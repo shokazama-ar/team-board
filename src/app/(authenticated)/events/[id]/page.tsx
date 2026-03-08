@@ -315,6 +315,7 @@ export default function EventDetailPage() {
                 weekday: "short",
                 hour: "2-digit",
                 minute: "2-digit",
+                timeZone: "Asia/Tokyo",
               })}
               {event.end_at && (
                 <span className="text-gray-500">
@@ -322,6 +323,7 @@ export default function EventDetailPage() {
                   {new Date(event.end_at).toLocaleDateString("ja-JP", {
                     hour: "2-digit",
                     minute: "2-digit",
+                    timeZone: "Asia/Tokyo",
                   })}
                 </span>
               )}
@@ -347,7 +349,7 @@ export default function EventDetailPage() {
           </div>
           <div>
             <dt className="text-xs text-gray-500">作成日</dt>
-            <dd className="text-sm text-gray-900">{new Date(event.created_at).toLocaleDateString("ja-JP")}</dd>
+            <dd className="text-sm text-gray-900">{new Date(event.created_at).toLocaleDateString("ja-JP", { timeZone: "Asia/Tokyo" })}</dd>
           </div>
         </dl>
       </div>

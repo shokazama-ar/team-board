@@ -160,6 +160,40 @@ export default function HelpEventsPage() {
           </div>
         </MockupFrame>
       </Section>
+
+      <Section title="一括登録">
+        <ul className="list-disc space-y-1.5 pl-5 text-sm text-gray-700">
+          <li>「予定」一覧右上の「一括登録」ボタンから複数の予定をまとめて作成できます。</li>
+          <li>各予定のタイトル・日時・種別・カテゴリをコンパクトなカード形式で入力します。</li>
+          <li>種別はセレクトボックス、カテゴリはドロップダウンで選択します。</li>
+          <li>「複製」ボタンで同じ内容のカードをすばやく追加できます。</li>
+        </ul>
+        <MockupFrame title="一括登録 — TeamBoard">
+          <div className="space-y-2 text-xs">
+            {[
+              { title: "第11回練習", date: "2024/04/01  10:00", type: "練習", cat: "A組" },
+              { title: "第12回練習", date: "2024/04/08  10:00", type: "練習", cat: "A組" },
+            ].map(({ title, date, type, cat }, i) => (
+              <div key={i} className="rounded-lg border border-gray-200 bg-white p-2.5">
+                <div className="mb-1.5 flex items-center gap-1.5">
+                  <span className="flex-1 rounded border border-gray-300 bg-gray-50 px-2 py-1 text-gray-700">{title}</span>
+                  <span className="rounded border border-gray-300 bg-gray-50 px-2 py-1 text-gray-600">{type} ▾</span>
+                  <span className="rounded border border-gray-300 bg-gray-50 px-2 py-1 text-gray-400">複製</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="flex-1 rounded border border-gray-300 bg-gray-50 px-2 py-1 text-gray-600">{date}</span>
+                  <span className="rounded border border-gray-300 bg-gray-50 px-2 py-1 text-blue-600">{cat} ▾</span>
+                </div>
+              </div>
+            ))}
+            <div className="flex gap-2">
+              <span className="rounded-lg border border-dashed border-gray-300 px-3 py-1.5 text-gray-400">+ 追加</span>
+              <span className="ml-auto rounded-lg bg-blue-600 px-4 py-1.5 font-medium text-white">一括保存</span>
+            </div>
+            <p className="text-[10px] text-blue-500">↑ 種別・カテゴリはセレクトボックスで素早く選択できます</p>
+          </div>
+        </MockupFrame>
+      </Section>
     </article>
   );
 }

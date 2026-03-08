@@ -33,17 +33,19 @@ export default function HelpInvitePage() {
             <div className="space-y-3">
               <div className="rounded-lg border-2 border-blue-200 bg-blue-50 p-3">
                 <p className="mb-1 font-medium text-blue-800">コーチ用</p>
-                <div className="flex items-center gap-2">
-                  <code className="flex-1 rounded border border-blue-300 bg-white px-2 py-1 font-mono text-blue-900 tracking-wider">COACH-ABCD-1234</code>
-                  <span className="rounded bg-blue-600 px-2 py-1 text-white">コピー</span>
+                <code className="mb-2 block rounded border border-blue-300 bg-white px-2 py-1 font-mono text-blue-900 tracking-wider">COACH-ABCD-1234</code>
+                <div className="flex gap-2">
+                  <span className="rounded-lg border border-blue-300 px-3 py-1 text-xs text-blue-700">共有</span>
+                  <span className="rounded-lg border border-gray-300 px-3 py-1 text-xs text-gray-600">再生成</span>
                 </div>
                 <p className="mt-1.5 text-[10px] text-blue-600">↑ コーチとして参加する人に共有します</p>
               </div>
               <div className="rounded-lg border-2 border-purple-200 bg-purple-50 p-3">
                 <p className="mb-1 font-medium text-purple-800">保護者用</p>
-                <div className="flex items-center gap-2">
-                  <code className="flex-1 rounded border border-purple-300 bg-white px-2 py-1 font-mono text-purple-900 tracking-wider">PRNT-EFGH-5678</code>
-                  <span className="rounded bg-purple-600 px-2 py-1 text-white">コピー</span>
+                <code className="mb-2 block rounded border border-purple-300 bg-white px-2 py-1 font-mono text-purple-900 tracking-wider">PRNT-EFGH-5678</code>
+                <div className="flex gap-2">
+                  <span className="rounded-lg border border-purple-300 px-3 py-1 text-xs text-purple-700">共有</span>
+                  <span className="rounded-lg border border-gray-300 px-3 py-1 text-xs text-gray-600">再生成</span>
                 </div>
                 <p className="mt-1.5 text-[10px] text-purple-600">↑ 保護者として参加する人に共有します</p>
               </div>
@@ -103,9 +105,10 @@ export default function HelpInvitePage() {
           <div className="text-xs">
             <div className="rounded-lg border-2 border-orange-200 bg-orange-50 p-3">
               <p className="mb-2 font-medium text-orange-800">コーチ用招待コード</p>
-              <div className="mb-2 flex items-center gap-2">
-                <code className="flex-1 rounded border border-orange-200 bg-white px-2 py-1 font-mono text-gray-700">COACH-ABCD-1234</code>
-                <span className="rounded bg-blue-600 px-2 py-1 text-white">コピー</span>
+              <code className="mb-2 block rounded border border-orange-200 bg-white px-2 py-1 font-mono text-gray-700">COACH-ABCD-1234</code>
+              <div className="flex gap-2">
+                <span className="rounded-lg border border-orange-300 px-3 py-1 text-xs text-orange-700">共有</span>
+                <span className="rounded-lg border border-gray-300 px-3 py-1 text-xs text-gray-600">再生成</span>
               </div>
               <div className="flex items-center gap-2 rounded-lg border border-orange-300 bg-white p-2">
                 <span className="text-orange-500">⚠</span>

@@ -6,6 +6,22 @@ import { createClient } from "@/lib/supabase/client";
 import { RefreshCw, Trash2, AlertTriangle, Plus, X, ChevronUp, ChevronDown, Pencil, Check, UserPlus, ExternalLink, Share2 } from "lucide-react";
 import { AvatarUpload } from "@/components/ui/AvatarUpload";
 
+function copyToClipboard(text: string): Promise<void> {
+  if (navigator.clipboard?.writeText) {
+    return navigator.clipboard.writeText(text);
+  }
+  // HTTP環境用フォールバック
+  const el = document.createElement("textarea");
+  el.value = text;
+  el.style.position = "fixed";
+  el.style.opacity = "0";
+  document.body.appendChild(el);
+  el.select();
+  document.execCommand("copy");
+  document.body.removeChild(el);
+  return Promise.resolve();
+}
+
 type EventTypeKind = "type" | "category";
 
 type EventType = {
@@ -482,6 +498,7 @@ export default function SettingsPage() {
 
   // Team state
   const [teamId, setTeamId] = useState<string | null>(null);
+  const [origin, setOrigin] = useState("");
   const [teamName, setTeamName] = useState("");
   const [teamIconUrl, setTeamIconUrl] = useState<string | null>(null);
   const [inviteCode, setInviteCode] = useState("");
@@ -564,6 +581,10 @@ export default function SettingsPage() {
       );
     }
   }, [supabase]);
+
+  useEffect(() => {
+    setOrigin(window.location.origin);
+  }, []);
 
   useEffect(() => {
     const loadData = async () => {
@@ -1267,11 +1288,11 @@ export default function SettingsPage() {
               <label className="mb-1 block text-sm font-medium text-gray-700">
                 コーチ用招待コード
               </label>
-              <div className="flex items-center gap-2">
-                <code className="flex-1 rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm font-mono">
-                  {inviteCode}
-                </code>
-                <div className="relative shrink-0" ref={coachShareRef}>
+              <code className="mb-2 block w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm font-mono">
+                {inviteCode}
+              </code>
+              <div className="flex gap-2">
+                <div className="relative" ref={coachShareRef}>
                   <button
                     type="button"
                     aria-label="共有"
@@ -1286,17 +1307,18 @@ export default function SettingsPage() {
                         setCoachShareOpen((prev) => !prev);
                       }
                     }}
-                    className="flex shrink-0 items-center rounded-lg border border-gray-300 p-2 text-gray-600 hover:bg-gray-50"
+                    className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
                   >
                     <Share2 size={16} strokeWidth={1.5} aria-hidden="true" />
+                    共有
                   </button>
                   {coachShareOpen && (
-                    <div className="absolute right-0 top-full z-10 mt-1 w-48 rounded-lg border border-gray-200 bg-white shadow-lg">
+                    <div className="absolute left-0 top-full z-10 mt-1 w-48 rounded-lg border border-gray-200 bg-white shadow-lg">
                       <button
                         type="button"
                         className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50"
                         onClick={() => {
-                          navigator.clipboard.writeText(inviteCode).then(() => {
+                          copyToClipboard(inviteCode).then(() => {
                             setCoachCopied("code");
                             setTimeout(() => setCoachCopied(null), 1500);
                           });
@@ -1309,7 +1331,7 @@ export default function SettingsPage() {
                         type="button"
                         className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50"
                         onClick={() => {
-                          navigator.clipboard.writeText(`${window.location.origin}/signup?invite=${inviteCode}`).then(() => {
+                          copyToClipboard(`${window.location.origin}/signup?invite=${inviteCode}`).then(() => {
                             setCoachCopied("link");
                             setTimeout(() => setCoachCopied(null), 1500);
                           });
@@ -1339,7 +1361,7 @@ export default function SettingsPage() {
                   type="button"
                   onClick={handleRegenerateCode}
                   disabled={regenerating}
-                  className="flex shrink-0 items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                  className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50"
                 >
                   <RefreshCw size={16} strokeWidth={1.5} aria-hidden="true" />
                   {regenerating ? "再生成中..." : "再生成"}
@@ -1352,11 +1374,11 @@ export default function SettingsPage() {
                 保護者用招待コード
               </label>
               <p className="mb-1.5 text-xs text-gray-400">保護者アカウントでチームに参加する際に使用します</p>
-              <div className="flex items-center gap-2">
-                <code className="flex-1 rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm font-mono">
-                  {inviteCodeGuardian}
-                </code>
-                <div className="relative shrink-0" ref={guardianShareRef}>
+              <code className="mb-2 block w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm font-mono">
+                {inviteCodeGuardian}
+              </code>
+              <div className="flex gap-2">
+                <div className="relative" ref={guardianShareRef}>
                   <button
                     type="button"
                     aria-label="共有"
@@ -1371,17 +1393,18 @@ export default function SettingsPage() {
                         setGuardianShareOpen((prev) => !prev);
                       }
                     }}
-                    className="flex shrink-0 items-center rounded-lg border border-gray-300 p-2 text-gray-600 hover:bg-gray-50"
+                    className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
                   >
                     <Share2 size={16} strokeWidth={1.5} aria-hidden="true" />
+                    共有
                   </button>
                   {guardianShareOpen && (
-                    <div className="absolute right-0 top-full z-10 mt-1 w-48 rounded-lg border border-gray-200 bg-white shadow-lg">
+                    <div className="absolute left-0 top-full z-10 mt-1 w-48 rounded-lg border border-gray-200 bg-white shadow-lg">
                       <button
                         type="button"
                         className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50"
                         onClick={() => {
-                          navigator.clipboard.writeText(inviteCodeGuardian).then(() => {
+                          copyToClipboard(inviteCodeGuardian).then(() => {
                             setGuardianCopied("code");
                             setTimeout(() => setGuardianCopied(null), 1500);
                           });
@@ -1394,7 +1417,7 @@ export default function SettingsPage() {
                         type="button"
                         className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50"
                         onClick={() => {
-                          navigator.clipboard.writeText(`${window.location.origin}/signup?invite=${inviteCodeGuardian}`).then(() => {
+                          copyToClipboard(`${window.location.origin}/signup?invite=${inviteCodeGuardian}`).then(() => {
                             setGuardianCopied("link");
                             setTimeout(() => setGuardianCopied(null), 1500);
                           });
@@ -1424,7 +1447,7 @@ export default function SettingsPage() {
                   type="button"
                   onClick={handleRegenerateGuardianCode}
                   disabled={regeneratingGuardian}
-                  className="flex shrink-0 items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                  className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50"
                 >
                   <RefreshCw size={16} strokeWidth={1.5} aria-hidden="true" />
                   {regeneratingGuardian ? "再生成中..." : "再生成"}
@@ -1437,26 +1460,22 @@ export default function SettingsPage() {
                 問い合わせフォームURL
               </label>
               <p className="mb-1.5 text-xs text-gray-400">外部公開用の問い合わせフォームです。未ログインでもアクセスできます</p>
-              <div className="flex items-center gap-2">
-                <code className="flex-1 truncate rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm font-mono">
-                  {typeof window !== "undefined"
-                    ? `${window.location.origin}/contact/${teamId}`
-                    : `/contact/${teamId}`}
-                </code>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const url = `${window.location.origin}/contact/${teamId}`;
-                    navigator.clipboard.writeText(url).then(() => {
-                      setContactUrlCopied(true);
-                      setTimeout(() => setContactUrlCopied(false), 1500);
-                    });
-                  }}
-                  className="flex shrink-0 items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
-                >
-                  {contactUrlCopied ? "コピーしました！" : "コピー"}
-                </button>
-              </div>
+              <code className="mb-2 block w-full truncate rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm font-mono">
+                {origin ? `${origin}/contact/${teamId}` : `/contact/${teamId}`}
+              </code>
+              <button
+                type="button"
+                onClick={() => {
+                  const url = `${window.location.origin}/contact/${teamId}`;
+                  copyToClipboard(url).then(() => {
+                    setContactUrlCopied(true);
+                    setTimeout(() => setContactUrlCopied(false), 1500);
+                  });
+                }}
+                className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
+              >
+                {contactUrlCopied ? "コピーしました！" : "コピー"}
+              </button>
             </div>
 
             {teamMessage && (

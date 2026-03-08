@@ -255,6 +255,7 @@ export default function AnnouncementsPage() {
                         month: "long",
                         day: "numeric",
                         weekday: "short",
+                        timeZone: "Asia/Tokyo",
                       }
                     )}
                   </p>
@@ -307,6 +308,7 @@ export default function AnnouncementsPage() {
                         year: "numeric",
                         month: "numeric",
                         day: "numeric",
+                        timeZone: "Asia/Tokyo",
                       })}
                     </span>
                   </div>

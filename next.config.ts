@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
 
+const devHost = process.env.DEV_HOST;
+
 const nextConfig: NextConfig = {
-  allowedDevOrigins: ["13.115.226.216"],
+  allowedDevOrigins: devHost ? [devHost] : [],
   images: {
     remotePatterns: [
       {
@@ -10,12 +12,16 @@ const nextConfig: NextConfig = {
         port: "54321",
         pathname: "/storage/v1/object/public/**",
       },
-      {
-        protocol: "http",
-        hostname: "13.115.226.216",
-        port: "54321",
-        pathname: "/storage/v1/object/public/**",
-      },
+      ...(devHost
+        ? [
+            {
+              protocol: "http" as const,
+              hostname: devHost,
+              port: "54321",
+              pathname: "/storage/v1/object/public/**",
+            },
+          ]
+        : []),
       {
         protocol: "https",
         hostname: "*.supabase.co",
