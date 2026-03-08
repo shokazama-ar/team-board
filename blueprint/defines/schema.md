@@ -127,8 +127,9 @@ Supabase (PostgreSQL) のテーブル構成。RLSはすべて有効。
 ---
 
 ### `member_profile_categories`
-プレイヤープロファイルが所属するカテゴリ（`event_types.kind='category'`）。
+プロファイル（コーチ・選手）が所属する担当カテゴリ（`event_types.kind='category'`）。
 イベント・お知らせの表示フィルタに使用。
+コーチは設定画面「コーチ」タブで自己管理、選手は管理者が「カテゴリ割り当て」モーダルから管理する。
 
 | カラム | 型 | 備考 |
 |---|---|---|
