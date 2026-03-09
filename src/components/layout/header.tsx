@@ -2,13 +2,24 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { LogOut } from "lucide-react";
+import { LogOut, Home, Calendar, Megaphone, Users, Settings, type LucideIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 
-export function Header() {
+const navItems: { href: string; label: string; icon: LucideIcon }[] = [
+  { href: "/", label: "ホーム", icon: Home },
+  { href: "/events", label: "予定表", icon: Calendar },
+  { href: "/announcements", label: "お知らせ", icon: Megaphone },
+  { href: "/members", label: "メンバー", icon: Users },
+  { href: "/settings", label: "設定", icon: Settings },
+];
+
+const ALWAYS_ACTIVE = ["/", "/settings"];
+
+export function Header({ hasTeam }: { hasTeam: boolean }) {
   const router = useRouter();
+  const pathname = usePathname();
   const supabase = createClient();
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState<string>("");
@@ -40,6 +51,34 @@ export function Header() {
         <Link href="/" className="text-lg font-bold text-gray-900">
           TeamBoard
         </Link>
+        {/* Desktop nav icons (md+ only) */}
+        <nav className="hidden md:flex items-center gap-1">
+          {navItems.map((item) => {
+            const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+            const isEnabled = hasTeam || ALWAYS_ACTIVE.includes(item.href);
+            if (!isEnabled) {
+              return (
+                <span
+                  key={item.href}
+                  title={`${item.label}（チーム参加後に利用可能）`}
+                  className="p-2 rounded-lg text-gray-300 cursor-not-allowed"
+                >
+                  <item.icon size={20} strokeWidth={1.5} aria-hidden="true" />
+                </span>
+              );
+            }
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                title={item.label}
+                className={`p-2 rounded-lg ${isActive ? "text-blue-600 bg-blue-50" : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"}`}
+              >
+                <item.icon size={20} strokeWidth={1.5} aria-hidden="true" />
+              </Link>
+            );
+          })}
+        </nav>
         <div className="flex items-center gap-3">
           <Link href="/settings" className="flex items-center gap-2 hover:opacity-80">
             {avatarUrl ? (

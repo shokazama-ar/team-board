@@ -1,5 +1,5 @@
 import { Header } from "@/components/layout/header";
-import { BottomNav, SideNav } from "@/components/layout/nav";
+import { BottomNav } from "@/components/layout/nav";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function AuthenticatedLayout({
@@ -25,9 +25,8 @@ export default async function AuthenticatedLayout({
 
   return (
     <div className="flex min-h-screen flex-col">
-      <Header />
+      <Header hasTeam={hasTeam} />
       <div className="flex flex-1">
-        <SideNav hasTeam={hasTeam} />
         <main className="flex-1 p-4 pb-20 md:pb-4">{children}</main>
       </div>
       <BottomNav hasTeam={hasTeam} />

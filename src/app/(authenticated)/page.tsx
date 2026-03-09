@@ -20,8 +20,8 @@ export default async function Dashboard() {
 
   return (
     <div className="mx-auto max-w-5xl">
-      <h1 className="mb-6 text-2xl font-bold">ダッシュボード</h1>
-      <p className="text-gray-600">
+      <h1 className="mb-6 text-2xl font-bold hidden md:block">ダッシュボード</h1>
+      <p className="mt-4 md:mt-0 text-gray-600">
         ようこそ、
         <Link href="/settings" className="font-medium text-gray-900 hover:underline">
           {displayName}

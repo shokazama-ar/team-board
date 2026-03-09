@@ -1,6 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
-import { Users } from "lucide-react";
 import DashboardFilteredContent, {
   type EventWithCategories,
   type AnnouncementWithCategories,
@@ -44,7 +43,7 @@ export default async function DashboardContent({ userId }: { userId: string }) {
         .single(),
       supabase
         .from("team_members")
-        .select("member_profiles(user_id, kind)")
+        .select("account_type, member_profiles(user_id, kind)")
         .eq("team_id", membership.team_id),
       supabase
         .from("events")
@@ -68,12 +67,16 @@ export default async function DashboardContent({ userId }: { userId: string }) {
 
   const team = teamResult.data;
   const membersRaw = memberCountResult.data ?? [];
-  type MemberRaw = { member_profiles: { user_id: string; kind: string } | null };
-  const userAccountCount = new Set(
-    (membersRaw as unknown as MemberRaw[]).map((m) => m.member_profiles?.user_id).filter(Boolean)
+  type MemberRaw = { account_type: string | null; member_profiles: { user_id: string; kind: string } | null };
+  const membersTyped = membersRaw as unknown as MemberRaw[];
+
+  const coachAccountCount = new Set(
+    membersTyped.filter((m) => m.account_type === "coach").map((m) => m.member_profiles?.user_id).filter(Boolean)
   ).size;
-  const coachCount = (membersRaw as unknown as MemberRaw[]).filter((m) => m.member_profiles?.kind === "coach").length;
-  const playerCount = (membersRaw as unknown as MemberRaw[]).filter((m) => m.member_profiles?.kind === "player").length;
+  const guardianAccountCount = new Set(
+    membersTyped.filter((m) => m.account_type === "guardian").map((m) => m.member_profiles?.user_id).filter(Boolean)
+  ).size;
+  const playerCount = membersTyped.filter((m) => m.member_profiles?.kind === "player").length;
 
   const myProfileIds = (myProfilesResult.data ?? []).map((m) => m.member_profile_id);
 
@@ -129,19 +132,20 @@ export default async function DashboardContent({ userId }: { userId: string }) {
       {/* Team Info */}
       <div className="mt-6">
         <div className="rounded-lg border border-gray-200 bg-white p-6">
-          <h2 className="mb-3 text-lg font-semibold">{team.name}</h2>
-          <div className="flex items-center gap-1 text-xs text-gray-400 mb-2">
-            <Users size={14} strokeWidth={1.5} aria-hidden="true" />
-            メンバー構成
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-lg font-semibold">{team.name}</h2>
+            <Link href="/members" className="text-sm text-blue-600 hover:underline">
+              メンバー一覧 ›
+            </Link>
           </div>
           <div className="grid grid-cols-3 gap-2 text-center">
-            <div className="rounded-md bg-gray-50 px-2 py-1.5">
-              <p className="text-base font-bold text-gray-800">{userAccountCount}</p>
-              <p className="text-xs text-gray-500">アカウント</p>
-            </div>
             <div className="rounded-md bg-blue-50 px-2 py-1.5">
-              <p className="text-base font-bold text-blue-700">{coachCount}</p>
+              <p className="text-base font-bold text-blue-700">{coachAccountCount}</p>
               <p className="text-xs text-blue-500">コーチ</p>
+            </div>
+            <div className="rounded-md bg-orange-50 px-2 py-1.5">
+              <p className="text-base font-bold text-orange-700">{guardianAccountCount}</p>
+              <p className="text-xs text-orange-500">保護者</p>
             </div>
             <div className="rounded-md bg-green-50 px-2 py-1.5">
               <p className="text-base font-bold text-green-700">{playerCount}</p>

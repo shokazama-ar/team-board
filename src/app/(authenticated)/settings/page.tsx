@@ -142,7 +142,7 @@ function EventTypeSection({
                     if (e.key === "Escape") setEditingId(null);
                   }}
                   autoFocus
-                  className="flex-1 rounded border border-blue-400 px-2 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="flex-1 min-w-0 rounded border border-blue-400 px-2 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
                 <button
                   type="button"
@@ -219,13 +219,13 @@ function EventTypeSection({
               ))}
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <input
               type="text"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               placeholder={addLabel}
-              className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="flex-1 min-w-0 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
             <button
               type="submit"
@@ -327,7 +327,7 @@ function MemberProfileRow({ profile, onUpdated, onAvatarUploaded, canDelete, onD
                   placeholder="背番号（任意）"
                   className="w-full rounded border border-gray-300 px-2 py-1 text-sm focus:border-blue-500 focus:outline-none"
                 />
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <button
                     onClick={handleSave}
                     disabled={saving || !editName.trim()}
@@ -1022,13 +1022,13 @@ export default function SettingsPage() {
         >
           名前
         </label>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <input
             id="name"
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="flex-1 min-w-0 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
           <button
             type="submit"
@@ -1115,16 +1115,16 @@ export default function SettingsPage() {
 
   return (
     <div className="mx-auto max-w-lg">
-      <h1 className="mb-6 text-2xl font-bold">設定</h1>
+      <h1 className="mb-6 text-2xl font-bold hidden md:block">設定</h1>
 
       {/* タブナビゲーション */}
       {teamId && (
         <div className="mb-6 border-b border-gray-200">
-          <nav className="-mb-px flex space-x-1 overflow-x-auto sm:space-x-6">
+          <nav className="-mb-px flex">
             {isAdmin && (
               <button
                 onClick={() => setActiveTab("admin")}
-                className={`whitespace-nowrap pb-3 text-sm font-medium border-b-2 transition-colors ${
+                className={`px-4 pb-3 text-sm font-medium border-b-2 transition-colors ${
                   activeTab === "admin"
                     ? "border-blue-500 text-blue-600"
                     : "border-transparent text-gray-500 hover:text-gray-700"
@@ -1136,7 +1136,7 @@ export default function SettingsPage() {
             {showGuardianTab && (
               <button
                 onClick={() => setActiveTab("guardian")}
-                className={`whitespace-nowrap pb-3 text-sm font-medium border-b-2 transition-colors ${
+                className={`px-4 pb-3 text-sm font-medium border-b-2 transition-colors ${
                   activeTab === "guardian"
                     ? "border-blue-500 text-blue-600"
                     : "border-transparent text-gray-500 hover:text-gray-700"
@@ -1148,7 +1148,7 @@ export default function SettingsPage() {
             {showCoachTab && (
               <button
                 onClick={() => setActiveTab("coach")}
-                className={`whitespace-nowrap pb-3 text-sm font-medium border-b-2 transition-colors ${
+                className={`px-4 pb-3 text-sm font-medium border-b-2 transition-colors ${
                   activeTab === "coach"
                     ? "border-blue-500 text-blue-600"
                     : "border-transparent text-gray-500 hover:text-gray-700"
@@ -1266,13 +1266,13 @@ export default function SettingsPage() {
               >
                 チーム名
               </label>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <input
                   id="teamName"
                   type="text"
                   value={teamName}
                   onChange={(e) => setTeamName(e.target.value)}
-                  className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="flex-1 min-w-0 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
                 <button
                   type="submit"
@@ -1288,7 +1288,7 @@ export default function SettingsPage() {
               <label className="mb-1 block text-sm font-medium text-gray-700">
                 コーチ用招待コード
               </label>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <code className="flex-1 min-w-0 truncate rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm font-mono">
                   {inviteCode}
                 </code>
@@ -1366,7 +1366,7 @@ export default function SettingsPage() {
                 保護者用招待コード
               </label>
               <p className="mb-1.5 text-xs text-gray-400">保護者アカウントでチームに参加する際に使用します</p>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <code className="flex-1 min-w-0 truncate rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm font-mono">
                   {inviteCodeGuardian}
                 </code>

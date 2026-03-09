@@ -170,7 +170,7 @@ export default function AnnouncementsPage() {
   return (
     <div className="mx-auto max-w-3xl">
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">お知らせ</h1>
+        <h1 className="text-2xl font-bold hidden md:block">お知らせ</h1>
         {isAdmin && (
           <Link
             href="/announcements/new"

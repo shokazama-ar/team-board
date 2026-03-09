@@ -229,7 +229,7 @@ export default function MembersPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <h1 className="mb-6 text-2xl font-bold">メンバー</h1>
+      <h1 className="mb-6 text-2xl font-bold hidden md:block">メンバー</h1>
 
       {/* Team Info & Invite Code */}
       <div className="mb-6 rounded-lg border border-gray-200 bg-white p-6">

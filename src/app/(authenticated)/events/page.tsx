@@ -246,7 +246,7 @@ export default function EventsPage() {
       )}
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <h1 className="text-2xl font-bold">予定表</h1>
+          <h1 className="text-2xl font-bold hidden md:block">予定表</h1>
           <div className="flex gap-1 rounded-lg bg-gray-100 p-1">
             <button
               onClick={() => setView("list")}

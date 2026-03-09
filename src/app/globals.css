@@ -15,3 +15,9 @@ body {
   background: var(--background);
   color: var(--foreground);
 }
+
+@layer base {
+  button {
+    white-space: nowrap;
+  }
+}
