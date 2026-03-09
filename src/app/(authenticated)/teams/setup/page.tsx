@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-type Kind = "coach" | "player";
+type CreateKind = "coach" | "guardian";
 
 export default function TeamSetupPage() {
   const router = useRouter();
@@ -13,16 +13,30 @@ export default function TeamSetupPage() {
   // Create team form
   const [teamName, setTeamName] = useState("");
   const [createProfileName, setCreateProfileName] = useState("");
-  const [createKind, setCreateKind] = useState<Kind>("coach");
+  const [createAccountType, setCreateAccountType] = useState<CreateKind>("coach");
   const [creating, setCreating] = useState(false);
 
   // Join team form
   const [inviteCode, setInviteCode] = useState("");
   const [joinProfileName, setJoinProfileName] = useState("");
-  const [joinKind, setJoinKind] = useState<Kind>("player");
+  const [detectedJoinKind, setDetectedJoinKind] = useState<"coach" | "guardian" | null>(null);
   const [joining, setJoining] = useState(false);
 
   const [error, setError] = useState("");
+
+  const handleInviteCodeChange = async (value: string) => {
+    setInviteCode(value);
+    if (value.trim().length >= 6) {
+      const { data } = await supabase.rpc("check_invite_code_type", { code: value.trim() });
+      if (data) {
+        setDetectedJoinKind(data as "coach" | "guardian");
+      } else {
+        setDetectedJoinKind(null);
+      }
+    } else {
+      setDetectedJoinKind(null);
+    }
+  };
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,7 +49,8 @@ export default function TeamSetupPage() {
       {
         team_name: teamName.trim(),
         profile_name: createProfileName.trim(),
-        profile_kind: createKind,
+        profile_kind: createAccountType === "coach" ? "coach" : "player",
+        team_account_type: createAccountType,
       }
     );
 
@@ -57,7 +72,7 @@ export default function TeamSetupPage() {
     const { error: joinError } = await supabase.rpc("join_team_with_profile", {
       code: inviteCode.trim(),
       profile_name: joinProfileName.trim(),
-      profile_kind: joinKind,
+      profile_kind: detectedJoinKind ?? "coach",
     });
 
     if (joinError) {
@@ -124,20 +139,20 @@ export default function TeamSetupPage() {
                 参加種別
               </label>
               <div className="flex gap-3">
-                {(["coach", "player"] as Kind[]).map((k) => (
+                {(["coach", "guardian"] as CreateKind[]).map((k) => (
                   <button
                     key={k}
                     type="button"
-                    onClick={() => setCreateKind(k)}
+                    onClick={() => setCreateAccountType(k)}
                     className={`flex-1 rounded-lg border py-2 text-sm font-medium transition-colors ${
-                      createKind === k
+                      createAccountType === k
                         ? k === "coach"
                           ? "border-blue-500 bg-blue-50 text-blue-700"
                           : "border-green-500 bg-green-50 text-green-700"
                         : "border-gray-300 text-gray-600 hover:bg-gray-50"
                     }`}
                   >
-                    {k === "coach" ? "コーチ" : "プレイヤー"}
+                    {k === "coach" ? "コーチ（指導者）" : "保護者"}
                   </button>
                 ))}
               </div>
@@ -173,10 +188,19 @@ export default function TeamSetupPage() {
                 id="inviteCode"
                 type="text"
                 value={inviteCode}
-                onChange={(e) => setInviteCode(e.target.value)}
+                onChange={(e) => handleInviteCodeChange(e.target.value)}
                 placeholder="例: a1b2c3d4"
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
+              {detectedJoinKind && (
+                <div className="mt-2 flex items-center gap-2 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-700">
+                  <span className="text-gray-500">参加種別（自動判定）:</span>
+                  <span className="font-medium">{detectedJoinKind === "coach" ? "コーチ" : "保護者"}</span>
+                </div>
+              )}
+              {!detectedJoinKind && inviteCode.trim().length >= 6 && (
+                <p className="mt-1 text-xs text-red-500">招待コードが見つかりません</p>
+              )}
             </div>
             <div>
               <label htmlFor="joinProfileName" className="mb-1 block text-sm font-medium text-gray-700">
@@ -190,29 +214,6 @@ export default function TeamSetupPage() {
                 placeholder="例: 田中"
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
-            </div>
-            <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700">
-                参加種別
-              </label>
-              <div className="flex gap-3">
-                {(["coach", "player"] as Kind[]).map((k) => (
-                  <button
-                    key={k}
-                    type="button"
-                    onClick={() => setJoinKind(k)}
-                    className={`flex-1 rounded-lg border py-2 text-sm font-medium transition-colors ${
-                      joinKind === k
-                        ? k === "coach"
-                          ? "border-blue-500 bg-blue-50 text-blue-700"
-                          : "border-green-500 bg-green-50 text-green-700"
-                        : "border-gray-300 text-gray-600 hover:bg-gray-50"
-                    }`}
-                  >
-                    {k === "coach" ? "コーチ" : "プレイヤー"}
-                  </button>
-                ))}
-              </div>
             </div>
             <button
               type="submit"

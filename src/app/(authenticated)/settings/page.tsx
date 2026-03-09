@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { RefreshCw, Trash2, AlertTriangle, Plus, X, ChevronUp, ChevronDown, Pencil, Check, UserPlus, ExternalLink, Share2 } from "lucide-react";
+import { RefreshCw, Trash2, AlertTriangle, Plus, X, ChevronUp, ChevronDown, Pencil, Check, UserPlus, ExternalLink, Copy, Mail } from "lucide-react";
 import { AvatarUpload } from "@/components/ui/AvatarUpload";
 
 function copyToClipboard(text: string): Promise<void> {
@@ -1120,11 +1120,11 @@ export default function SettingsPage() {
       {/* タブナビゲーション */}
       {teamId && (
         <div className="mb-6 border-b border-gray-200">
-          <nav className="-mb-px flex space-x-6">
+          <nav className="-mb-px flex space-x-1 overflow-x-auto sm:space-x-6">
             {isAdmin && (
               <button
                 onClick={() => setActiveTab("admin")}
-                className={`pb-3 text-sm font-medium border-b-2 transition-colors ${
+                className={`whitespace-nowrap pb-3 text-sm font-medium border-b-2 transition-colors ${
                   activeTab === "admin"
                     ? "border-blue-500 text-blue-600"
                     : "border-transparent text-gray-500 hover:text-gray-700"
@@ -1136,7 +1136,7 @@ export default function SettingsPage() {
             {showGuardianTab && (
               <button
                 onClick={() => setActiveTab("guardian")}
-                className={`pb-3 text-sm font-medium border-b-2 transition-colors ${
+                className={`whitespace-nowrap pb-3 text-sm font-medium border-b-2 transition-colors ${
                   activeTab === "guardian"
                     ? "border-blue-500 text-blue-600"
                     : "border-transparent text-gray-500 hover:text-gray-700"
@@ -1148,7 +1148,7 @@ export default function SettingsPage() {
             {showCoachTab && (
               <button
                 onClick={() => setActiveTab("coach")}
-                className={`pb-3 text-sm font-medium border-b-2 transition-colors ${
+                className={`whitespace-nowrap pb-3 text-sm font-medium border-b-2 transition-colors ${
                   activeTab === "coach"
                     ? "border-blue-500 text-blue-600"
                     : "border-transparent text-gray-500 hover:text-gray-700"
@@ -1288,32 +1288,21 @@ export default function SettingsPage() {
               <label className="mb-1 block text-sm font-medium text-gray-700">
                 コーチ用招待コード
               </label>
-              <code className="mb-2 block w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm font-mono">
-                {inviteCode}
-              </code>
-              <div className="flex gap-2">
+              <div className="flex items-center gap-2">
+                <code className="flex-1 min-w-0 truncate rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm font-mono">
+                  {inviteCode}
+                </code>
                 <div className="relative" ref={coachShareRef}>
                   <button
                     type="button"
-                    aria-label="共有"
-                    onClick={() => {
-                      if (typeof navigator !== "undefined" && !!navigator.share) {
-                        navigator.share({
-                          title: "TeamBoard 招待",
-                          text: `招待コード: ${inviteCode}`,
-                          url: `${window.location.origin}/signup?invite=${inviteCode}`,
-                        });
-                      } else {
-                        setCoachShareOpen((prev) => !prev);
-                      }
-                    }}
-                    className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
+                    onClick={() => setCoachShareOpen((prev) => !prev)}
+                    className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-2.5 py-2 text-sm text-gray-600 hover:bg-gray-50 sm:px-3"
                   >
-                    <Share2 size={16} strokeWidth={1.5} aria-hidden="true" />
-                    共有
+                    <Copy size={16} strokeWidth={1.5} aria-hidden="true" />
+                    <span className="hidden sm:inline">{coachCopied ? "コピーしました！" : "コピー"}</span>
                   </button>
                   {coachShareOpen && (
-                    <div className="absolute left-0 top-full z-10 mt-1 w-48 rounded-lg border border-gray-200 bg-white shadow-lg">
+                    <div className="absolute right-0 top-full z-10 mt-1 w-48 rounded-lg border border-gray-200 bg-white shadow-lg">
                       <button
                         type="button"
                         className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50"
@@ -1325,48 +1314,51 @@ export default function SettingsPage() {
                           setCoachShareOpen(false);
                         }}
                       >
-                        {coachCopied === "code" ? "コピーしました！" : "コードをコピー"}
+                        コードをコピー
                       </button>
                       <button
                         type="button"
                         className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50"
                         onClick={() => {
-                          copyToClipboard(`${window.location.origin}/signup?invite=${inviteCode}`).then(() => {
+                          copyToClipboard(`${origin}/signup?invite=${inviteCode}`).then(() => {
                             setCoachCopied("link");
                             setTimeout(() => setCoachCopied(null), 1500);
                           });
                           setCoachShareOpen(false);
                         }}
                       >
-                        {coachCopied === "link" ? "コピーしました！" : "リンクをコピー"}
-                      </button>
-                      <button
-                        type="button"
-                        className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50"
-                        onClick={() => {
-                          const origin = window.location.origin;
-                          const body = encodeURIComponent(
-                            `TeamBoard のチームへ招待します。\n\n以下のリンクからサインアップして参加してください：\n${origin}/signup?invite=${inviteCode}\n\nすでにアカウントをお持ちの場合は、ログイン後に\n招待コード「${inviteCode}」を入力してチームに参加できます。`
-                          );
-                          window.open(`mailto:?subject=${encodeURIComponent("TeamBoard チームへの招待")}&body=${body}`);
-                          setCoachShareOpen(false);
-                        }}
-                      >
-                        メールで共有
+                        招待リンクをコピー
                       </button>
                     </div>
                   )}
                 </div>
                 <button
                   type="button"
+                  aria-label="メールで共有"
+                  onClick={() => {
+                    const body = encodeURIComponent(
+                      `TeamBoard のチームへ招待します。\n\n以下のリンクからサインアップして参加してください：\n${origin}/signup?invite=${inviteCode}\n\nすでにアカウントをお持ちの場合は、ログイン後に\n招待コード「${inviteCode}」を入力してチームに参加できます。`
+                    );
+                    window.open(`mailto:?subject=${encodeURIComponent("TeamBoard チームへの招待")}&body=${body}`);
+                  }}
+                  className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-2.5 py-2 text-sm text-gray-600 hover:bg-gray-50 sm:px-3"
+                >
+                  <Mail size={16} strokeWidth={1.5} aria-hidden="true" />
+                  <span className="hidden sm:inline">メール</span>
+                </button>
+                <button
+                  type="button"
                   onClick={handleRegenerateCode}
                   disabled={regenerating}
-                  className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                  className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-2.5 py-2 text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50 sm:px-3"
                 >
                   <RefreshCw size={16} strokeWidth={1.5} aria-hidden="true" />
-                  {regenerating ? "再生成中..." : "再生成"}
+                  <span className="hidden sm:inline">{regenerating ? "再生成中..." : "再生成"}</span>
                 </button>
               </div>
+              {coachCopied && (
+                <p className="mt-1 text-xs text-green-600">コピーしました！</p>
+              )}
             </div>
 
             <div>
@@ -1374,32 +1366,21 @@ export default function SettingsPage() {
                 保護者用招待コード
               </label>
               <p className="mb-1.5 text-xs text-gray-400">保護者アカウントでチームに参加する際に使用します</p>
-              <code className="mb-2 block w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm font-mono">
-                {inviteCodeGuardian}
-              </code>
-              <div className="flex gap-2">
+              <div className="flex items-center gap-2">
+                <code className="flex-1 min-w-0 truncate rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm font-mono">
+                  {inviteCodeGuardian}
+                </code>
                 <div className="relative" ref={guardianShareRef}>
                   <button
                     type="button"
-                    aria-label="共有"
-                    onClick={() => {
-                      if (typeof navigator !== "undefined" && !!navigator.share) {
-                        navigator.share({
-                          title: "TeamBoard 招待",
-                          text: `招待コード: ${inviteCodeGuardian}`,
-                          url: `${window.location.origin}/signup?invite=${inviteCodeGuardian}`,
-                        });
-                      } else {
-                        setGuardianShareOpen((prev) => !prev);
-                      }
-                    }}
-                    className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
+                    onClick={() => setGuardianShareOpen((prev) => !prev)}
+                    className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-2.5 py-2 text-sm text-gray-600 hover:bg-gray-50 sm:px-3"
                   >
-                    <Share2 size={16} strokeWidth={1.5} aria-hidden="true" />
-                    共有
+                    <Copy size={16} strokeWidth={1.5} aria-hidden="true" />
+                    <span className="hidden sm:inline">{guardianCopied ? "コピーしました！" : "コピー"}</span>
                   </button>
                   {guardianShareOpen && (
-                    <div className="absolute left-0 top-full z-10 mt-1 w-48 rounded-lg border border-gray-200 bg-white shadow-lg">
+                    <div className="absolute right-0 top-full z-10 mt-1 w-48 rounded-lg border border-gray-200 bg-white shadow-lg">
                       <button
                         type="button"
                         className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50"
@@ -1411,7 +1392,7 @@ export default function SettingsPage() {
                           setGuardianShareOpen(false);
                         }}
                       >
-                        {guardianCopied === "code" ? "コピーしました！" : "コードをコピー"}
+                        コードをコピー
                       </button>
                       <button
                         type="button"
@@ -1424,33 +1405,34 @@ export default function SettingsPage() {
                           setGuardianShareOpen(false);
                         }}
                       >
-                        {guardianCopied === "link" ? "コピーしました！" : "リンクをコピー"}
-                      </button>
-                      <button
-                        type="button"
-                        className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50"
-                        onClick={() => {
-                          const origin = window.location.origin;
-                          const body = encodeURIComponent(
-                            `TeamBoard のチームへ招待します。\n\n以下のリンクからサインアップして参加してください：\n${origin}/signup?invite=${inviteCodeGuardian}\n\nすでにアカウントをお持ちの場合は、ログイン後に\n招待コード「${inviteCodeGuardian}」を入力してチームに参加できます。`
-                          );
-                          window.open(`mailto:?subject=${encodeURIComponent("TeamBoard チームへの招待")}&body=${body}`);
-                          setGuardianShareOpen(false);
-                        }}
-                      >
-                        メールで共有
+                        招待リンクをコピー
                       </button>
                     </div>
                   )}
                 </div>
                 <button
                   type="button"
+                  aria-label="メールで共有"
+                  onClick={() => {
+                    const origin = window.location.origin;
+                    const body = encodeURIComponent(
+                      `TeamBoard のチームへ招待します。\n\n以下のリンクからサインアップして参加してください：\n${origin}/signup?invite=${inviteCodeGuardian}\n\nすでにアカウントをお持ちの場合は、ログイン後に\n招待コード「${inviteCodeGuardian}」を入力してチームに参加できます。`
+                    );
+                    window.open(`mailto:?subject=${encodeURIComponent("TeamBoard チームへの招待")}&body=${body}`);
+                  }}
+                  className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-2.5 py-2 text-sm text-gray-600 hover:bg-gray-50 sm:px-3"
+                >
+                  <Mail size={16} strokeWidth={1.5} aria-hidden="true" />
+                  <span className="hidden sm:inline">メール</span>
+                </button>
+                <button
+                  type="button"
                   onClick={handleRegenerateGuardianCode}
                   disabled={regeneratingGuardian}
-                  className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                  className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-2.5 py-2 text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50 sm:px-3"
                 >
                   <RefreshCw size={16} strokeWidth={1.5} aria-hidden="true" />
-                  {regeneratingGuardian ? "再生成中..." : "再生成"}
+                  <span className="hidden sm:inline">{regeneratingGuardian ? "再生成中..." : "再生成"}</span>
                 </button>
               </div>
             </div>

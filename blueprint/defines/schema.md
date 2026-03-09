@@ -163,7 +163,9 @@ Supabase (PostgreSQL) のテーブル構成。RLSはすべて有効。
 | `is_member_of_team(tid)` | チームメンバーか判定（SECURITY DEFINER） |
 | `is_admin_of_team(tid)` | 管理者か判定 |
 | `add_profile_to_team(target_team_id, profile_name, profile_kind)` | プロファイル追加 |
-| `join_team_with_profile(code, profile_name, profile_kind)` | 招待コードでチーム参加 |
+| `join_team_with_profile(code, profile_name, profile_kind)` | 招待コードでチーム参加（種別はRPC内部で自動判定） |
+| `create_team_with_member(team_name, profile_name, profile_kind, team_account_type)` | チーム作成と同時にメンバー登録。`team_account_type` で `coach`/`guardian` を指定 |
+| `check_invite_code_type(code)` | 招待コードの種別を返す（`'coach'`/`'guardian'`/`null`）。認証不要（SECURITY DEFINER） |
 | `regenerate_invite_code(target_team_id)` | コーチ用招待コード再生成 |
 | `regenerate_guardian_invite_code(target_team_id)` | 保護者用招待コード再生成 |
 

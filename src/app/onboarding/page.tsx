@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -15,9 +15,36 @@ function OnboardingContent() {
   );
   const [inviteCode, setInviteCode] = useState(initialInvite);
   const [profileName, setProfileName] = useState("");
-  const [kind, setKind] = useState<"coach" | "player">("player");
+  const [detectedKind, setDetectedKind] = useState<"coach" | "guardian" | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // URLに invite がある場合、初期ロード時に種別を自動判定
+  useEffect(() => {
+    if (initialInvite) {
+      const supabase = createClient();
+      supabase
+        .rpc("check_invite_code_type", { code: initialInvite })
+        .then(({ data }) => {
+          if (data) setDetectedKind(data as "coach" | "guardian");
+        });
+    }
+  }, [initialInvite]);
+
+  const handleInviteCodeChange = async (value: string) => {
+    setInviteCode(value);
+    if (value.trim().length >= 6) {
+      const supabase = createClient();
+      const { data } = await supabase.rpc("check_invite_code_type", { code: value.trim() });
+      if (data) {
+        setDetectedKind(data as "coach" | "guardian");
+      } else {
+        setDetectedKind(null);
+      }
+    } else {
+      setDetectedKind(null);
+    }
+  };
 
   const handleJoin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,7 +56,7 @@ function OnboardingContent() {
     const { error: joinError } = await supabase.rpc("join_team_with_profile", {
       code: inviteCode.trim(),
       profile_name: profileName.trim(),
-      profile_kind: kind,
+      profile_kind: detectedKind ?? "coach",
     });
 
     if (joinError) {
@@ -64,6 +91,13 @@ function OnboardingContent() {
               {inviteCode}
             </div>
 
+            {detectedKind && (
+              <div className="mb-4 flex items-center gap-2 rounded-md bg-gray-50 px-4 py-3 text-sm text-gray-700">
+                <span className="text-gray-500">参加種別:</span>
+                <span className="font-medium">{detectedKind === "coach" ? "コーチ" : "保護者"}</span>
+              </div>
+            )}
+
             <form onSubmit={handleJoin} className="space-y-4">
               {error && (
                 <div className="rounded-md bg-red-50 p-3 text-sm text-red-600">
@@ -89,36 +123,6 @@ function OnboardingContent() {
                 />
               </div>
 
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">
-                  種別
-                </label>
-                <div className="flex gap-4">
-                  <label className="flex items-center gap-2 text-sm">
-                    <input
-                      type="radio"
-                      name="kind"
-                      value="player"
-                      checked={kind === "player"}
-                      onChange={() => setKind("player")}
-                      className="accent-blue-600"
-                    />
-                    プレイヤー
-                  </label>
-                  <label className="flex items-center gap-2 text-sm">
-                    <input
-                      type="radio"
-                      name="kind"
-                      value="coach"
-                      checked={kind === "coach"}
-                      onChange={() => setKind("coach")}
-                      className="accent-blue-600"
-                    />
-                    コーチ
-                  </label>
-                </div>
-              </div>
-
               <button
                 type="submit"
                 disabled={loading}
@@ -133,6 +137,7 @@ function OnboardingContent() {
                 type="button"
                 onClick={() => {
                   setInviteCode("");
+                  setDetectedKind(null);
                   setStep("input");
                 }}
                 className="w-full text-center text-sm text-blue-600 hover:underline"
@@ -186,10 +191,19 @@ function OnboardingContent() {
                 type="text"
                 required
                 value={inviteCode}
-                onChange={(e) => setInviteCode(e.target.value)}
+                onChange={(e) => handleInviteCodeChange(e.target.value)}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 placeholder="招待コードを入力"
               />
+              {detectedKind && (
+                <div className="mt-2 flex items-center gap-2 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-700">
+                  <span className="text-gray-500">参加種別（自動判定）:</span>
+                  <span className="font-medium">{detectedKind === "coach" ? "コーチ" : "保護者"}</span>
+                </div>
+              )}
+              {!detectedKind && inviteCode.trim().length >= 6 && (
+                <p className="mt-1 text-xs text-red-500">招待コードが見つかりません</p>
+              )}
             </div>
 
             <div>
@@ -208,36 +222,6 @@ function OnboardingContent() {
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 placeholder="山田太郎"
               />
-            </div>
-
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                種別
-              </label>
-              <div className="flex gap-4">
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="radio"
-                    name="kindInput"
-                    value="player"
-                    checked={kind === "player"}
-                    onChange={() => setKind("player")}
-                    className="accent-blue-600"
-                  />
-                  プレイヤー
-                </label>
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="radio"
-                    name="kindInput"
-                    value="coach"
-                    checked={kind === "coach"}
-                    onChange={() => setKind("coach")}
-                    className="accent-blue-600"
-                  />
-                  コーチ
-                </label>
-              </div>
             </div>
 
             <button

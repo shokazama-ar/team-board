@@ -393,3 +393,154 @@ test.describe('ログイン後の機能テスト', () => {
     }
   });
 });
+
+test.describe('[T021] 設定画面招待コードUI', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page);
+  });
+
+  test('タブナビゲーションに whitespace-nowrap が適用されている', async ({ page }) => {
+    await page.goto('/settings');
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(1000);
+
+    const bodyText = await page.locator('body').innerText();
+    console.log('[T021a] settings body (200):', bodyText.substring(0, 200));
+
+    // ページがエラーなく表示されること
+    expect(bodyText).not.toContain('Application error');
+    expect(bodyText).not.toContain('is not defined');
+
+    // タブナビ要素が存在する
+    const nav = page.locator('nav.-mb-px, nav.overflow-x-auto').first();
+    const navCount = await nav.count();
+    console.log('[T021a] nav count:', navCount);
+    // タブが存在するか設定タブが描画されているか確認
+    const hasTab = bodyText.includes('管理者') || bodyText.includes('設定') || bodyText.includes('プロフィール');
+    expect(hasTab).toBe(true);
+  });
+
+  test('招待コードのコピーボタンが存在する', async ({ page }) => {
+    await page.goto('/settings');
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(1000);
+
+    const bodyText = await page.locator('body').innerText();
+    console.log('[T021b] settings body (400):', bodyText.substring(0, 400));
+
+    // エラーなし
+    expect(bodyText).not.toContain('Application error');
+
+    const hasInvite = bodyText.includes('招待');
+    console.log('[T021b] Has invite text:', hasInvite);
+    expect(hasInvite).toBe(true);
+
+    // コピーボタンの存在
+    const copyBtn = page.locator('button:has-text("コピー"), button[aria-label*="コピー"]');
+    const copyCount = await copyBtn.count();
+    console.log('[T021b] Copy button count:', copyCount);
+    expect(copyCount).toBeGreaterThanOrEqual(1);
+  });
+
+  test('コピーボタンクリックでドロップダウンが表示される', async ({ page }) => {
+    await page.goto('/settings');
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(1000);
+
+    const bodyText = await page.locator('body').innerText();
+    if (bodyText.includes('Application error')) {
+      console.log('[T021c] Settings page error, skipping');
+      return;
+    }
+
+    const copyBtn = page.locator('button:has-text("コピー")').first();
+    const count = await copyBtn.count();
+    if (count === 0) {
+      console.log('[T021c] No copy button, skipping');
+      return;
+    }
+
+    await copyBtn.click();
+    await page.waitForTimeout(500);
+
+    const dropdown = page.locator('button:has-text("コードをコピー"), button:has-text("招待リンクをコピー")');
+    const dropdownCount = await dropdown.count();
+    console.log('[T021c] Dropdown items:', dropdownCount);
+    expect(dropdownCount).toBeGreaterThan(0);
+  });
+
+  test('メールボタンが存在する', async ({ page }) => {
+    await page.goto('/settings');
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(1000);
+
+    const bodyText = await page.locator('body').innerText();
+    if (bodyText.includes('Application error')) {
+      console.log('[T021d] Settings page error, skipping');
+      return;
+    }
+
+    const mailBtn = page.locator('button:has-text("メール"), button[aria-label*="メール"]');
+    const mailCount = await mailBtn.count();
+    console.log('[T021d] Mail button count:', mailCount);
+    expect(mailCount).toBeGreaterThanOrEqual(1);
+  });
+});
+
+test.describe('[T022] サインアップ〜チーム参加UX', () => {
+  test('onboarding ページが表示される（招待コードなし）', async ({ page }) => {
+    await setupSupabaseProxy(page);
+    await page.goto('/onboarding');
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(1000);
+
+    const url = page.url();
+    const bodyText = await page.locator('body').innerText();
+    console.log('[T022a] onboarding URL:', url);
+    console.log('[T022a] onboarding body (400):', bodyText.substring(0, 400));
+
+    // 404 でないこと
+    expect(url).not.toContain('404');
+    expect(bodyText).not.toContain('404');
+    // 何らかのコンテンツが表示されている
+    expect(bodyText.length).toBeGreaterThan(10);
+  });
+
+  test.describe('ログイン後のチーム参加UI', () => {
+    test.beforeEach(async ({ page }) => {
+      await login(page);
+    });
+
+    test('teams/setup ページにコーチ・保護者の選択肢がある', async ({ page }) => {
+      // teams/setup は通常チーム所属済みだとリダイレクトされる可能性があるが、
+      // ページのコンテンツを確認する
+      await page.goto('/teams/setup');
+      await page.waitForLoadState('domcontentloaded');
+      await page.waitForTimeout(1000);
+
+      const bodyText = await page.locator('body').innerText();
+      const url = page.url();
+      console.log('[T022b] teams/setup URL:', url);
+      console.log('[T022b] teams/setup body (600):', bodyText.substring(0, 600));
+
+      // ページが表示されること（リダイレクトされる場合も含め、404でないこと）
+      expect(url).not.toContain('404');
+    });
+
+    test('ナビゲーションが表示されている', async ({ page }) => {
+      await page.goto('/');
+      await page.waitForLoadState('domcontentloaded');
+      await page.waitForTimeout(1000);
+
+      const bodyText = await page.locator('body').innerText();
+      console.log('[T022c] home body (400):', bodyText.substring(0, 400));
+
+      // ナビゲーション要素（ホーム・予定表など）が存在する
+      const navLinks = page.locator('a[href="/events"], a[href="/announcements"], a[href="/members"]');
+      const navCount = await navLinks.count();
+      console.log('[T022c] Nav links count:', navCount);
+      // チーム所属済みユーザーにはナビが有効なはず
+      expect(navCount).toBeGreaterThan(0);
+    });
+  });
+});

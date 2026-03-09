@@ -12,7 +12,9 @@ const navItems: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/settings", label: "設定", icon: Settings },
 ];
 
-export function BottomNav() {
+const ALWAYS_ACTIVE = ["/", "/settings"];
+
+export function BottomNav({ hasTeam }: { hasTeam: boolean }) {
   const pathname = usePathname();
 
   return (
@@ -20,9 +22,21 @@ export function BottomNav() {
       <div className="flex justify-around">
         {navItems.map((item) => {
           const isActive =
-            item.href === "/"
-              ? pathname === "/"
-              : pathname.startsWith(item.href);
+            item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+          const isEnabled = hasTeam || ALWAYS_ACTIVE.includes(item.href);
+
+          if (!isEnabled) {
+            return (
+              <span
+                key={item.href}
+                aria-label={`${item.label}（チーム参加後に利用可能）`}
+                className="flex flex-1 flex-col items-center py-3 text-gray-300 cursor-not-allowed"
+              >
+                <item.icon size={24} strokeWidth={1.5} aria-hidden="true" />
+              </span>
+            );
+          }
+
           return (
             <Link
               key={item.href}
@@ -41,7 +55,7 @@ export function BottomNav() {
   );
 }
 
-export function SideNav() {
+export function SideNav({ hasTeam }: { hasTeam: boolean }) {
   const pathname = usePathname();
 
   return (
@@ -49,9 +63,23 @@ export function SideNav() {
       <ul className="space-y-1 p-4">
         {navItems.map((item) => {
           const isActive =
-            item.href === "/"
-              ? pathname === "/"
-              : pathname.startsWith(item.href);
+            item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+          const isEnabled = hasTeam || ALWAYS_ACTIVE.includes(item.href);
+
+          if (!isEnabled) {
+            return (
+              <li key={item.href}>
+                <span
+                  title={`${item.label}（チーム参加後に利用可能）`}
+                  className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 cursor-not-allowed"
+                >
+                  <item.icon size={20} strokeWidth={1.5} aria-hidden="true" />
+                  <span>{item.label}</span>
+                </span>
+              </li>
+            );
+          }
+
           return (
             <li key={item.href}>
               <Link

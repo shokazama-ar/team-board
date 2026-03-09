@@ -22,6 +22,7 @@ export default function RootLayout({
     <html lang="ja">
       <body
         className={`${notoSansJP.variable} font-sans antialiased`}
+        suppressHydrationWarning
       >
         {children}
       </body>
