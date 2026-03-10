@@ -32,10 +32,27 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const publicPaths = ["/login", "/signup", "/auth/callback", "/forgot-password", "/reset-password", "/contact"];
-  const isPublicPath = publicPaths.some((path) =>
+  // ログイン済みユーザーをリダイレクトする対象（認証系ページ）
+  const authOnlyPublicPaths = [
+    "/login",
+    "/signup",
+    "/auth/callback",
+    "/forgot-password",
+    "/reset-password",
+  ];
+
+  // 常時公開（ログイン状態に関わらずアクセス可能）
+  const alwaysPublicPaths = ["/contact"];
+
+  const isAuthOnlyPublicPath = authOnlyPublicPaths.some((path) =>
     request.nextUrl.pathname.startsWith(path)
   );
+
+  const isAlwaysPublicPath = alwaysPublicPaths.some((path) =>
+    request.nextUrl.pathname.startsWith(path)
+  );
+
+  const isPublicPath = isAuthOnlyPublicPath || isAlwaysPublicPath;
 
   if (!user && !isPublicPath) {
     const url = request.nextUrl.clone();
@@ -43,7 +60,9 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (user && isPublicPath) {
+  // ログイン済みで認証系公開パス（/login 等）→ トップへ
+  // ※ alwaysPublicPaths はリダイレクトしない
+  if (user && isAuthOnlyPublicPath) {
     const url = request.nextUrl.clone();
     url.pathname = "/";
     return NextResponse.redirect(url);

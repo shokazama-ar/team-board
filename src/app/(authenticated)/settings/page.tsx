@@ -171,7 +171,7 @@ function EventTypeSection({
               </>
             ) : (
               <>
-                <span className="flex-1 text-sm text-gray-900">{item.name}</span>
+                <span className="flex-1 min-w-0 text-sm text-gray-900">{item.name}</span>
                 <button
                   type="button"
                   onClick={() => { setEditingId(item.id); setEditingName(item.name); }}
@@ -199,7 +199,7 @@ function EventTypeSection({
 
       <form onSubmit={handleSubmit}>
         <div>
-          <div className="mb-1 flex items-center justify-between">
+          <div className="mb-1 flex flex-wrap items-center justify-between">
             <label className="text-sm font-medium text-gray-700">名前</label>
             <div className="flex flex-wrap gap-2">
               {colors.map((c) => (
@@ -479,6 +479,476 @@ function AddProfileForm({
         </div>
       </form>
     </div>
+  );
+}
+
+// ── 問い合わせ種別・フォーム項目の型定義 ────────────────────────────────────
+type InquiryType = {
+  id: string;
+  team_id: string;
+  name: string;
+  message_template: string | null;
+  sort_order: number;
+  is_active: boolean;
+};
+
+type InquiryFormField = {
+  id: string;
+  inquiry_type_id: string;
+  field_label: string;
+  field_type: 'text' | 'textarea' | 'tel' | 'email' | 'select' | 'checkbox' | 'radio';
+  placeholder: string | null;
+  options: { label: string; value: string }[] | null;
+  is_required: boolean;
+  sort_order: number;
+};
+
+const FIELD_TYPE_OPTIONS: { value: InquiryFormField['field_type']; label: string }[] = [
+  { value: 'text',     label: 'テキスト（1行）' },
+  { value: 'textarea', label: 'テキスト（複数行）' },
+  { value: 'tel',      label: '電話番号' },
+  { value: 'email',    label: 'メールアドレス' },
+  { value: 'select',   label: '選択肢（プルダウン）' },
+  { value: 'checkbox', label: 'チェックボックス（複数選択）' },
+  { value: 'radio',    label: 'ラジオボタン（単一選択）' },
+];
+
+// ── 問い合わせ種別管理セクション ──────────────────────────────────────────────
+type InquiryTypeSectionProps = {
+  teamId: string;
+};
+
+function InquiryTypeSection({ teamId }: InquiryTypeSectionProps) {
+  const supabase = createClient();
+  const [inquiryTypes, setInquiryTypes] = useState<InquiryType[]>([]);
+  const [formFields, setFormFields] = useState<Record<string, InquiryFormField[]>>({});
+  const [editingTypeId, setEditingTypeId] = useState<string | null | 'new'>(null);
+  const [isTypeFormOpen, setIsTypeFormOpen] = useState(false);
+
+  // フォーム state
+  const [editName, setEditName] = useState('');
+  const [editTemplate, setEditTemplate] = useState('');
+  const [editIsActive, setEditIsActive] = useState(true);
+  const [editFields, setEditFields] = useState<Omit<InquiryFormField, 'id' | 'inquiry_type_id'>[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [sectionMessage, setSectionMessage] = useState('');
+
+  const loadData = async () => {
+    const { data: types } = await supabase
+      .from('inquiry_types')
+      .select('*')
+      .eq('team_id', teamId)
+      .order('sort_order');
+
+    if (!types) return;
+    setInquiryTypes(types as InquiryType[]);
+
+    const typeIds = types.map((t) => t.id);
+    if (typeIds.length === 0) {
+      setFormFields({});
+      return;
+    }
+
+    const { data: fields } = await supabase
+      .from('inquiry_form_fields')
+      .select('*')
+      .in('inquiry_type_id', typeIds)
+      .order('sort_order');
+
+    const fieldMap: Record<string, InquiryFormField[]> = {};
+    for (const f of (fields ?? []) as InquiryFormField[]) {
+      if (!fieldMap[f.inquiry_type_id]) fieldMap[f.inquiry_type_id] = [];
+      fieldMap[f.inquiry_type_id].push(f);
+    }
+    setFormFields(fieldMap);
+  };
+
+  useEffect(() => {
+    loadData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [teamId]);
+
+  const openNewForm = () => {
+    setEditingTypeId('new');
+    setEditName('');
+    setEditTemplate('');
+    setEditIsActive(true);
+    setEditFields([]);
+    setIsTypeFormOpen(true);
+    setSectionMessage('');
+  };
+
+  const openEditForm = (t: InquiryType) => {
+    setEditingTypeId(t.id);
+    setEditName(t.name);
+    setEditTemplate(t.message_template ?? '');
+    setEditIsActive(t.is_active);
+    setEditFields(
+      (formFields[t.id] ?? []).map((f) => ({
+        field_label: f.field_label,
+        field_type: f.field_type,
+        placeholder: f.placeholder,
+        options: f.options,
+        is_required: f.is_required,
+        sort_order: f.sort_order,
+      }))
+    );
+    setIsTypeFormOpen(true);
+    setSectionMessage('');
+  };
+
+  const closeForm = () => {
+    setIsTypeFormOpen(false);
+    setEditingTypeId(null);
+    setSectionMessage('');
+  };
+
+  const addField = () => {
+    setEditFields((prev) => [
+      ...prev,
+      { field_label: '', field_type: 'text', placeholder: null, options: null, is_required: false, sort_order: prev.length },
+    ]);
+  };
+
+  const updateField = (index: number, patch: Partial<Omit<InquiryFormField, 'id' | 'inquiry_type_id'>>) => {
+    setEditFields((prev) => prev.map((f, i) => (i === index ? { ...f, ...patch } : f)));
+  };
+
+  const removeField = (index: number) => {
+    setEditFields((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSave = async () => {
+    if (!editName.trim()) {
+      setSectionMessage('種別名を入力してください');
+      return;
+    }
+    setSaving(true);
+    setSectionMessage('');
+
+    if (editingTypeId === 'new') {
+      const maxOrder = inquiryTypes.reduce((m, t) => Math.max(m, t.sort_order), -1);
+      const { data: newType, error } = await supabase
+        .from('inquiry_types')
+        .insert({
+          team_id: teamId,
+          name: editName.trim(),
+          message_template: editTemplate.trim() || null,
+          is_active: editIsActive,
+          sort_order: maxOrder + 1,
+        })
+        .select('*')
+        .single();
+
+      if (error || !newType) {
+        setSectionMessage('追加に失敗しました');
+        setSaving(false);
+        return;
+      }
+
+      // フォーム項目を追加
+      if (editFields.length > 0) {
+        await supabase.from('inquiry_form_fields').insert(
+          editFields.map((f, i) => ({
+            inquiry_type_id: newType.id,
+            field_label: f.field_label,
+            field_type: f.field_type,
+            placeholder: f.placeholder,
+            options: f.options,
+            is_required: f.is_required,
+            sort_order: i,
+          }))
+        );
+      }
+    } else {
+      const { error } = await supabase
+        .from('inquiry_types')
+        .update({
+          name: editName.trim(),
+          message_template: editTemplate.trim() || null,
+          is_active: editIsActive,
+        })
+        .eq('id', editingTypeId!);
+
+      if (error) {
+        setSectionMessage('更新に失敗しました');
+        setSaving(false);
+        return;
+      }
+
+      // フォーム項目を一旦全削除して再挿入
+      await supabase.from('inquiry_form_fields').delete().eq('inquiry_type_id', editingTypeId!);
+      if (editFields.length > 0) {
+        await supabase.from('inquiry_form_fields').insert(
+          editFields.map((f, i) => ({
+            inquiry_type_id: editingTypeId!,
+            field_label: f.field_label,
+            field_type: f.field_type,
+            placeholder: f.placeholder,
+            options: f.options,
+            is_required: f.is_required,
+            sort_order: i,
+          }))
+        );
+      }
+    }
+
+    await loadData();
+    setSaving(false);
+    closeForm();
+    setSectionMessage('保存しました');
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('この問い合わせ種別を削除しますか？関連するフォーム項目もすべて削除されます。')) return;
+    const { error } = await supabase.from('inquiry_types').delete().eq('id', id);
+    if (error) {
+      setSectionMessage('削除に失敗しました');
+    } else {
+      setInquiryTypes((prev) => prev.filter((t) => t.id !== id));
+      setFormFields((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+    }
+  };
+
+  const hasOptionsField = (ft: InquiryFormField['field_type']) =>
+    ft === 'select' || ft === 'radio' || ft === 'checkbox';
+
+  return (
+    <>
+      <hr className="my-8 border-gray-200" />
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold">問い合わせ種別</h2>
+          <p className="mt-1 text-sm text-gray-500">問い合わせフォームで選択できる種別を管理します</p>
+        </div>
+        {!isTypeFormOpen && (
+          <button
+            type="button"
+            onClick={openNewForm}
+            className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+          >
+            <Plus size={16} strokeWidth={1.5} aria-hidden="true" />
+            種別を追加
+          </button>
+        )}
+      </div>
+
+      {sectionMessage && !isTypeFormOpen && (
+        <div className={`mb-4 rounded-md p-3 text-sm ${sectionMessage.includes('失敗') ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>
+          {sectionMessage}
+        </div>
+      )}
+
+      {/* 種別一覧 */}
+      {!isTypeFormOpen && (
+        <div className="space-y-2">
+          {inquiryTypes.length === 0 && (
+            <p className="text-sm text-gray-400">種別が登録されていません</p>
+          )}
+          {inquiryTypes.map((t) => {
+            const fields = formFields[t.id] ?? [];
+            return (
+              <div key={t.id} className="rounded-lg border border-gray-200 bg-white px-4 py-3">
+                <div className="flex items-center gap-2">
+                  <span className="flex-1 min-w-0 text-sm font-medium text-gray-900">{t.name}</span>
+                  {!t.is_active && (
+                    <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">無効</span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => openEditForm(t)}
+                    className="text-gray-400 hover:text-gray-600"
+                    aria-label="編集"
+                  >
+                    <Pencil size={14} strokeWidth={1.5} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(t.id)}
+                    className="text-gray-400 hover:text-red-500"
+                    aria-label="削除"
+                  >
+                    <X size={16} strokeWidth={1.5} />
+                  </button>
+                </div>
+                {t.message_template && (
+                  <p className="mt-1 text-xs text-gray-400">テンプレート: {t.message_template.slice(0, 40)}{t.message_template.length > 40 ? '...' : ''}</p>
+                )}
+                {fields.length > 0 && (
+                  <p className="mt-0.5 text-xs text-gray-400">
+                    フォーム項目: {fields.map((f) => f.field_label).join('、')}
+                  </p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* 追加・編集フォーム */}
+      {isTypeFormOpen && (
+        <div className="rounded-lg border border-gray-200 bg-white p-4 space-y-4">
+          <h3 className="text-sm font-semibold text-gray-700">
+            {editingTypeId === 'new' ? '種別を追加' : '種別を編集'}
+          </h3>
+
+          {/* 種別名 */}
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              種別名 <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              placeholder="例: 体験・見学希望"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+
+          {/* テンプレート */}
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">テンプレート</label>
+            <p className="mb-1 text-xs text-gray-400">ここに入力したテキストが問い合わせフォームのメッセージ欄に挿入されます</p>
+            <textarea
+              value={editTemplate}
+              onChange={(e) => setEditTemplate(e.target.value)}
+              rows={3}
+              placeholder="例: 体験希望日: &#10;ご質問: "
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+
+          {/* 有効/無効 */}
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="editIsActive"
+              checked={editIsActive}
+              onChange={(e) => setEditIsActive(e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300 accent-blue-600"
+            />
+            <label htmlFor="editIsActive" className="text-sm text-gray-700">有効（問い合わせフォームに表示）</label>
+          </div>
+
+          {/* カスタムフォーム項目 */}
+          <div>
+            <div className="mb-2 flex items-center justify-between">
+              <span className="text-sm font-medium text-gray-700">カスタムフォーム項目</span>
+              <button
+                type="button"
+                onClick={addField}
+                className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800"
+              >
+                <Plus size={14} strokeWidth={2} />
+                項目を追加
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {editFields.map((f, i) => (
+                <div key={i} className="rounded-lg border border-gray-200 p-3 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={f.field_label}
+                      onChange={(e) => updateField(i, { field_label: e.target.value })}
+                      placeholder="ラベル（例: 希望日時）"
+                      className="flex-1 min-w-0 rounded border border-gray-300 px-2 py-1 text-sm focus:border-blue-500 focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeField(i)}
+                      className="text-gray-400 hover:text-red-500 shrink-0"
+                      aria-label="削除"
+                    >
+                      <X size={16} strokeWidth={1.5} />
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <select
+                      value={f.field_type}
+                      onChange={(e) => updateField(i, { field_type: e.target.value as InquiryFormField['field_type'] })}
+                      className="rounded border border-gray-300 px-2 py-1 text-sm focus:border-blue-500 focus:outline-none"
+                    >
+                      {FIELD_TYPE_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
+                    <label className="flex items-center gap-1 text-sm text-gray-600">
+                      <input
+                        type="checkbox"
+                        checked={f.is_required}
+                        onChange={(e) => updateField(i, { is_required: e.target.checked })}
+                        className="h-3.5 w-3.5 rounded border-gray-300 accent-blue-600"
+                      />
+                      必須
+                    </label>
+                  </div>
+                  <input
+                    type="text"
+                    value={f.placeholder ?? ''}
+                    onChange={(e) => updateField(i, { placeholder: e.target.value || null })}
+                    placeholder="プレースホルダ（任意）"
+                    className="w-full rounded border border-gray-300 px-2 py-1 text-sm focus:border-blue-500 focus:outline-none"
+                  />
+                  {hasOptionsField(f.field_type) && (
+                    <div>
+                      <label className="mb-0.5 block text-xs text-gray-500">選択肢（カンマ区切り）</label>
+                      <input
+                        type="text"
+                        value={(f.options ?? []).map((o) => o.label).join(', ')}
+                        onChange={(e) => {
+                          const opts = e.target.value
+                            .split(',')
+                            .map((s) => s.trim())
+                            .filter(Boolean)
+                            .map((s) => ({ label: s, value: s }));
+                          updateField(i, { options: opts.length > 0 ? opts : null });
+                        }}
+                        placeholder="例: 午前, 午後, 夕方"
+                        className="w-full rounded border border-gray-300 px-2 py-1 text-sm focus:border-blue-500 focus:outline-none"
+                      />
+                    </div>
+                  )}
+                </div>
+              ))}
+              {editFields.length === 0 && (
+                <p className="text-xs text-gray-400">カスタム項目なし</p>
+              )}
+            </div>
+          </div>
+
+          {sectionMessage && (
+            <div className={`rounded-md p-3 text-sm ${sectionMessage.includes('失敗') || sectionMessage.includes('入力') ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>
+              {sectionMessage}
+            </div>
+          )}
+
+          <div className="flex gap-2 pt-1">
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving}
+              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+            >
+              {saving ? '保存中...' : '保存'}
+            </button>
+            <button
+              type="button"
+              onClick={closeForm}
+              className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50"
+            >
+              キャンセル
+            </button>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -1114,7 +1584,7 @@ export default function SettingsPage() {
   const showGuardianTab = accountType === "guardian";
 
   return (
-    <div className="mx-auto max-w-lg">
+    <div className="mx-auto max-w-3xl">
       <h1 className="mb-6 text-2xl font-bold hidden md:block">設定</h1>
 
       {/* タブナビゲーション */}
@@ -1292,7 +1762,7 @@ export default function SettingsPage() {
                 <code className="flex-1 min-w-0 truncate rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm font-mono">
                   {inviteCode}
                 </code>
-                <div className="relative" ref={coachShareRef}>
+                <div className="relative shrink-0" ref={coachShareRef}>
                   <button
                     type="button"
                     onClick={() => setCoachShareOpen((prev) => !prev)}
@@ -1370,7 +1840,7 @@ export default function SettingsPage() {
                 <code className="flex-1 min-w-0 truncate rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm font-mono">
                   {inviteCodeGuardian}
                 </code>
-                <div className="relative" ref={guardianShareRef}>
+                <div className="relative shrink-0" ref={guardianShareRef}>
                   <button
                     type="button"
                     onClick={() => setGuardianShareOpen((prev) => !prev)}
@@ -1500,6 +1970,9 @@ export default function SettingsPage() {
             onAdd={(name, color) => addItem("category", name, color, eventCategories, setEventCategories)}
             onUpdate={(id, name) => updateItem(id, name, setEventCategories)}
           />
+
+          {/* 問い合わせ種別 */}
+          <InquiryTypeSection teamId={teamId} />
 
           {/* カテゴリ割り当て */}
           <hr className="my-8 border-gray-200" />
