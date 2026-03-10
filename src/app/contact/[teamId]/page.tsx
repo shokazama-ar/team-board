@@ -23,10 +23,7 @@ type FormField = {
 
 // ── フォールバック種別（チームに種別が未設定の場合） ──────────────────────────
 const DEFAULT_INQUIRY_TYPES: DisplayInquiryType[] = [
-  { id: 'trial',  name: '体験・見学希望',      message_template: null },
-  { id: 'join',   name: '入会依頼',            message_template: null },
-  { id: 'leave',  name: '退会依頼',            message_template: null },
-  { id: 'other',  name: 'その他のお問い合わせ', message_template: null },
+  { id: 'other',  name: 'その他・問い合わせ', message_template: null },
 ];
 
 const DEFAULT_TYPE_IDS = new Set(['trial', 'join', 'leave', 'other']);
