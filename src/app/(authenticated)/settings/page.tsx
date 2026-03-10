@@ -1693,6 +1693,30 @@ export default function SettingsPage() {
               )}
             </>
           )}
+          {/* 機能説明 */}
+          <hr className="my-8 border-gray-200" />
+          <h2 className="mb-1 text-lg font-semibold">機能説明</h2>
+          <p className="mb-4 text-sm text-gray-500">各機能の使い方を確認できます。</p>
+          <ul className="space-y-2">
+            {[
+              { href: "/help",               label: "ヘルプ一覧" },
+              { href: "/help/events",        label: "予定と出欠管理" },
+              { href: "/help/announcements", label: "お知らせ" },
+              { href: "/help/categories",    label: "カテゴリ機能" },
+            ].map(({ href, label }) => (
+              <li key={href}>
+                <a
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-sm text-blue-600 hover:underline"
+                >
+                  <ExternalLink size={14} strokeWidth={1.5} aria-hidden="true" />
+                  {label}
+                </a>
+              </li>
+            ))}
+          </ul>
         </>
       )}
 
@@ -1701,6 +1725,30 @@ export default function SettingsPage() {
         <>
           {profileFormJsx}
           {memberProfilesJsx}
+          {/* 機能説明 */}
+          <hr className="my-8 border-gray-200" />
+          <h2 className="mb-1 text-lg font-semibold">機能説明</h2>
+          <p className="mb-4 text-sm text-gray-500">各機能の使い方を確認できます。</p>
+          <ul className="space-y-2">
+            {[
+              { href: "/help",               label: "ヘルプ一覧" },
+              { href: "/help/events",        label: "予定と出欠管理" },
+              { href: "/help/announcements", label: "お知らせ" },
+              { href: "/help/members",       label: "メンバー管理" },
+            ].map(({ href, label }) => (
+              <li key={href}>
+                <a
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-sm text-blue-600 hover:underline"
+                >
+                  <ExternalLink size={14} strokeWidth={1.5} aria-hidden="true" />
+                  {label}
+                </a>
+              </li>
+            ))}
+          </ul>
         </>
       )}
 
