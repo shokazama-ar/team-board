@@ -168,6 +168,7 @@ Supabase (PostgreSQL) のテーブル構成。RLSはすべて有効。
 | `check_invite_code_type(code)` | 招待コードの種別を返す（`'coach'`/`'guardian'`/`null`）。認証不要（SECURITY DEFINER） |
 | `regenerate_invite_code(target_team_id)` | コーチ用招待コード再生成 |
 | `regenerate_guardian_invite_code(target_team_id)` | 保護者用招待コード再生成 |
+| `get_team_name(tid)` | チームIDからチーム名を返す。認証不要（SECURITY DEFINER）。公開問い合わせフォームから使用 |
 
 ---
 
@@ -178,14 +179,57 @@ Supabase (PostgreSQL) のテーブル構成。RLSはすべて有効。
 |---|---|---|
 | id | uuid | |
 | team_id | uuid | teams.id |
-| type | text | `trial`（体験・見学）/ `join`（入会）/ `leave`（退会）/ `other` |
+| type | text | 旧形式: `trial`/`join`/`leave`/`other`（後方互換のため残存） |
+| inquiry_type_id | uuid | inquiry_types.id（新形式。旧形式の場合は NULL） |
 | name | text | 問い合わせ者の氏名 |
-| email | text | メールアドレス（必須） |
+| email | text | メールアドレス |
 | phone | text | 電話番号（任意） |
 | message | text | メッセージ（任意） |
+| custom_fields | jsonb | カスタムフォーム項目の回答 `{"field_id": "value"}` |
 | status | text | `new`（未読）/ `read`（既読）/ `replied`（返信済み） |
 | created_at | timestamptz | |
 
 RLSポリシー:
 - INSERT: 誰でも可（公開フォームから送信）
 - SELECT/UPDATE: `is_admin_of_team(team_id)` を満たす管理者のみ
+
+---
+
+### `inquiry_types`
+チームごとにカスタマイズ可能な問い合わせ種別。管理者が設定画面から管理する。
+
+| カラム | 型 | 備考 |
+|---|---|---|
+| id | uuid | |
+| team_id | uuid | teams.id |
+| name | text | 種別名（例: 体験・見学希望） |
+| message_template | text | フォームのメッセージ欄に自動挿入されるテンプレート |
+| sort_order | int | 表示順 |
+| is_active | boolean | false の場合フォームに表示しない |
+| created_at | timestamptz | |
+| updated_at | timestamptz | |
+
+RLSポリシー:
+- SELECT: 誰でも可（公開フォームから取得するため）
+- INSERT/UPDATE/DELETE: `is_admin_of_team(team_id)` を満たす管理者のみ
+
+---
+
+### `inquiry_form_fields`
+問い合わせ種別ごとのカスタムフォーム項目。
+
+| カラム | 型 | 備考 |
+|---|---|---|
+| id | uuid | |
+| inquiry_type_id | uuid | inquiry_types.id（CASCADE DELETE） |
+| field_label | text | 表示ラベル |
+| field_type | text | `text`/`textarea`/`tel`/`email`/`select`/`checkbox`/`radio` |
+| placeholder | text | プレースホルダ（任意） |
+| options | jsonb | select/radio/checkbox 用: `[{"label":"...","value":"..."}]` |
+| is_required | boolean | 必須項目かどうか |
+| sort_order | int | 表示順 |
+| created_at | timestamptz | |
+
+RLSポリシー:
+- SELECT: 誰でも可
+- INSERT/UPDATE/DELETE: 親 `inquiry_types` のチームの管理者のみ
