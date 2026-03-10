@@ -1019,16 +1019,44 @@ export default function SettingsPage() {
     avatar_url: string | null;
     number: string | null;
     role: string;
+    share_code?: string | null;
+    accessors?: { id: string; user_id: string; name: string | null; created_at: string }[];
+  };
+  type LinkedProfileItem = {
+    profile_id: string;
+    kind: "coach" | "player";
+    profile_name: string | null;
+    avatar_url: string | null;
+    number: string | null;
+    owner_user_id: string;
   };
   const [myProfiles, setMyProfiles] = useState<MemberProfileItem[]>([]);
+  const [linkedProfiles, setLinkedProfiles] = useState<LinkedProfileItem[]>([]);
 
   const reloadMyProfiles = useCallback(async (tid: string, uid: string) => {
     const { data: myMemberships } = await supabase
       .from("team_members")
-      .select("id, role, member_profile_id, member_profiles!inner(user_id, kind, name, avatar_url, number)")
+      .select("id, role, member_profile_id, member_profiles!inner(user_id, kind, name, avatar_url, number, share_code, member_profile_access(id, user_id, created_at))")
       .eq("team_id", tid)
       .eq("member_profiles.user_id", uid);
     if (myMemberships) {
+      // accessor の名前を別途 profiles テーブルから取得
+      const allAccessorUserIds = myMemberships.flatMap((m) => {
+        const mp = m.member_profiles as unknown as {
+          member_profile_access: { user_id: string }[] | null;
+        } | null;
+        return (mp?.member_profile_access ?? []).map((a) => a.user_id);
+      });
+      const uniqueAccessorIds = [...new Set(allAccessorUserIds)];
+      const accessorNameMap: Record<string, string | null> = {};
+      if (uniqueAccessorIds.length > 0) {
+        const { data: accessorProfiles } = await supabase
+          .from("profiles")
+          .select("id, name")
+          .in("id", uniqueAccessorIds);
+        (accessorProfiles ?? []).forEach((p) => { accessorNameMap[p.id] = p.name; });
+      }
+
       setMyProfiles(
         myMemberships.map((m) => {
           const mp = m.member_profiles as unknown as {
@@ -1037,7 +1065,15 @@ export default function SettingsPage() {
             name: string | null;
             avatar_url: string | null;
             number: string | null;
+            share_code: string | null;
+            member_profile_access: { id: string; user_id: string; created_at: string }[] | null;
           } | null;
+          const accessors = (mp?.member_profile_access ?? []).map((a) => ({
+            id: a.id,
+            user_id: a.user_id,
+            name: accessorNameMap[a.user_id] ?? null,
+            created_at: a.created_at,
+          }));
           return {
             id: m.id,
             member_profile_id: m.member_profile_id,
@@ -1046,6 +1082,36 @@ export default function SettingsPage() {
             avatar_url: mp?.avatar_url ?? null,
             number: mp?.number ?? null,
             role: m.role,
+            share_code: mp?.share_code ?? null,
+            accessors,
+          };
+        })
+      );
+    }
+
+    // リンク済みプロファイル（自分がオーナーでないが access 権限を持つプロファイル）
+    const { data: accessEntries } = await supabase
+      .from("member_profile_access")
+      .select("member_profile_id, member_profiles(id, kind, name, avatar_url, number, user_id)")
+      .eq("user_id", uid);
+    if (accessEntries) {
+      setLinkedProfiles(
+        accessEntries.map((a) => {
+          const mp = a.member_profiles as unknown as {
+            id: string;
+            kind: "coach" | "player";
+            name: string | null;
+            avatar_url: string | null;
+            number: string | null;
+            user_id: string;
+          } | null;
+          return {
+            profile_id: a.member_profile_id,
+            kind: mp?.kind ?? "player",
+            profile_name: mp?.name ?? null,
+            avatar_url: mp?.avatar_url ?? null,
+            number: mp?.number ?? null,
+            owner_user_id: mp?.user_id ?? "",
           };
         })
       );
@@ -1538,45 +1604,162 @@ export default function SettingsPage() {
       </p>
       <div className="space-y-3 mb-4">
         {myProfiles.filter((p) => accountType !== "coach" || p.kind === "player").map((p) => (
-          <MemberProfileRow
-            key={p.id}
-            profile={p}
-            onUpdated={async (newName, newNumber) => {
-              await supabase
-                .from("member_profiles")
-                .update({ name: newName, number: newNumber || null })
-                .eq("id", p.member_profile_id);
-              setMyProfiles((prev) =>
-                prev.map((mp) =>
-                  mp.id === p.id
-                    ? { ...mp, profile_name: newName, number: newNumber || null }
-                    : mp
-                )
-              );
-            }}
-            onAvatarUploaded={async (url) => {
-              await supabase
-                .from("member_profiles")
-                .update({ avatar_url: url })
-                .eq("id", p.member_profile_id);
-              setMyProfiles((prev) =>
-                prev.map((mp) => (mp.id === p.id ? { ...mp, avatar_url: url } : mp))
-              );
-            }}
-            canDelete={myProfiles.filter((mp) => accountType !== "coach" || mp.kind === "player").length > 1}
-            onDeleted={async () => {
-              if (!window.confirm("このプロファイルをチームから削除しますか？")) return;
-              await supabase.from("team_members").delete().eq("id", p.id);
-              setMyProfiles((prev) => prev.filter((mp) => mp.id !== p.id));
-            }}
-          />
+          <div key={p.id}>
+            <MemberProfileRow
+              profile={p}
+              onUpdated={async (newName, newNumber) => {
+                await supabase
+                  .from("member_profiles")
+                  .update({ name: newName, number: newNumber || null })
+                  .eq("id", p.member_profile_id);
+                setMyProfiles((prev) =>
+                  prev.map((mp) =>
+                    mp.id === p.id
+                      ? { ...mp, profile_name: newName, number: newNumber || null }
+                      : mp
+                  )
+                );
+              }}
+              onAvatarUploaded={async (url) => {
+                await supabase
+                  .from("member_profiles")
+                  .update({ avatar_url: url })
+                  .eq("id", p.member_profile_id);
+                setMyProfiles((prev) =>
+                  prev.map((mp) => (mp.id === p.id ? { ...mp, avatar_url: url } : mp))
+                );
+              }}
+              canDelete={myProfiles.filter((mp) => accountType !== "coach" || mp.kind === "player").length > 1}
+              onDeleted={async () => {
+                if (!window.confirm("このプロファイルをチームから削除しますか？")) return;
+                await supabase.from("team_members").delete().eq("id", p.id);
+                setMyProfiles((prev) => prev.filter((mp) => mp.id !== p.id));
+              }}
+            />
+            {/* プロファイル共有セクション（プレイヤーかつ自分がオーナーのみ） */}
+            {p.kind === "player" && (
+              <div className="rounded-b-lg border-x border-b border-gray-200 bg-gray-50 px-4 py-3 -mt-1">
+                <p className="mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">プロファイル共有</p>
+                <div className="flex flex-wrap items-center gap-2 mb-3">
+                  <code className="flex-1 min-w-0 truncate rounded border border-gray-200 bg-white px-2 py-1 text-sm font-mono text-gray-700">
+                    {p.share_code ?? "—"}
+                  </code>
+                  {p.share_code && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        copyToClipboard(p.share_code!);
+                      }}
+                      className="flex items-center gap-1 rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-600 hover:bg-gray-50"
+                    >
+                      <Copy size={12} strokeWidth={1.5} />
+                      コピー
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!window.confirm("共有コードを再生成すると、以前のコードは無効になります。よろしいですか？")) return;
+                      const { data, error } = await supabase.rpc("regenerate_profile_share_code", {
+                        target_profile_id: p.member_profile_id,
+                      });
+                      if (!error && data) {
+                        setMyProfiles((prev) =>
+                          prev.map((mp) => (mp.id === p.id ? { ...mp, share_code: data as string } : mp))
+                        );
+                      }
+                    }}
+                    className="flex items-center gap-1 rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-600 hover:bg-gray-50"
+                  >
+                    <RefreshCw size={12} strokeWidth={1.5} />
+                    再生成
+                  </button>
+                </div>
+                {(p.accessors ?? []).length > 0 ? (
+                  <div>
+                    <p className="mb-1 text-xs text-gray-500">共有済みアカウント:</p>
+                    <ul className="space-y-1">
+                      {(p.accessors ?? []).map((acc) => (
+                        <li key={acc.id} className="flex items-center justify-between gap-2">
+                          <span className="text-sm text-gray-700">{acc.name ?? "名前未設定"}</span>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (!window.confirm(`${acc.name ?? "このユーザー"}のアクセスを解除しますか？`)) return;
+                              await supabase.rpc("revoke_profile_access", {
+                                target_profile_id: p.member_profile_id,
+                                target_user_id: acc.user_id,
+                              });
+                              await reloadMyProfiles(teamId, userId);
+                            }}
+                            className="rounded border border-red-200 px-2 py-0.5 text-xs text-red-500 hover:bg-red-50"
+                          >
+                            解除
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-400">（共有なし）</p>
+                )}
+              </div>
+            )}
+          </div>
         ))}
       </div>
-      <AddProfileForm
-        teamId={teamId}
-        showKindSelector={false}
-        onAdded={() => reloadMyProfiles(teamId, userId)}
-      />
+
+      {/* リンク済みプロファイル（他のアカウントが作成、自分がアクセス権を持つ） */}
+      {linkedProfiles.length > 0 && (
+        <>
+          <hr className="my-6 border-gray-200" />
+          <h3 className="mb-1 text-base font-semibold text-gray-700">リンク済みプロファイル</h3>
+          <p className="mb-3 text-sm text-gray-500">このアカウントで管理しているプロファイル（他のアカウントが作成）:</p>
+          <div className="space-y-2 mb-4">
+            {linkedProfiles.map((lp) => (
+              <div key={lp.profile_id} className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white px-4 py-3">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-base">👦</span>
+                  <span className="text-sm font-medium text-gray-900 truncate">
+                    {lp.profile_name ?? "名前未設定"}
+                    {lp.number && <span className="ml-1.5 text-xs text-gray-400">#{lp.number}</span>}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!window.confirm(`「${lp.profile_name ?? "このプロファイル"}」へのリンクを解除しますか？`)) return;
+                    await supabase.rpc("revoke_profile_access", {
+                      target_profile_id: lp.profile_id,
+                      target_user_id: userId,
+                    });
+                    await reloadMyProfiles(teamId, userId);
+                  }}
+                  className="shrink-0 rounded border border-red-200 px-2 py-1 text-xs text-red-500 hover:bg-red-50"
+                >
+                  リンクを解除
+                </button>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      <div className="flex flex-wrap gap-2">
+        <AddProfileForm
+          teamId={teamId}
+          showKindSelector={false}
+          onAdded={() => reloadMyProfiles(teamId, userId)}
+        />
+        <button
+          type="button"
+          onClick={() => router.push("/teams/join-profile")}
+          className="flex items-center gap-1.5 rounded-lg border border-dashed border-gray-300 px-4 py-2 text-sm text-gray-500 hover:border-gray-400 hover:text-gray-700"
+        >
+          <Plus size={16} strokeWidth={1.5} aria-hidden="true" />
+          共有コードでプロファイルにリンク
+        </button>
+      </div>
     </>
   ) : null;
 
