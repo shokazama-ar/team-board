@@ -63,6 +63,47 @@ export default function HelpEventsPage() {
         </MockupFrame>
       </Section>
 
+      <Section title="カテゴリフィルタ">
+        <ul className="list-disc space-y-1.5 pl-5 text-sm text-gray-700">
+          <li>予定一覧の右上にある「自分のカテゴリのみ ◯—◯ すべて」トグルで表示を絞り込めます。</li>
+          <li>自分のプレイヤープロファイルが所属するカテゴリの予定のみ表示します。</li>
+          <li>カテゴリが未設定の場合はトグルが表示されず、すべての予定が表示されます。</li>
+        </ul>
+        <MockupFrame title="予定 — TeamBoard">
+          <div className="text-xs">
+            <div className="mb-3 flex items-center justify-between">
+              <p className="text-base font-bold text-gray-900">予定</p>
+              <div className="flex items-center gap-2">
+                <span className="text-gray-500">自分のカテゴリのみ</span>
+                <div className="relative inline-flex h-4 w-7 items-center rounded-full bg-gray-300">
+                  <span className="inline-block h-3 w-3 translate-x-0.5 rounded-full bg-white shadow" />
+                </div>
+                <span className="text-gray-400">すべて</span>
+              </div>
+            </div>
+            <div className="space-y-2">
+              {[
+                { title: "第10回練習", cat: "A組", color: "#2563eb" },
+                { title: "春季合宿", cat: "A組", color: "#2563eb" },
+              ].map(({ title, cat, color }) => (
+                <div key={title} className="rounded-lg border border-gray-200 bg-white p-2.5">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-gray-900">{title}</span>
+                    <span
+                      className="rounded-full px-1.5 py-0.5 text-[9px] font-medium text-white"
+                      style={{ backgroundColor: color }}
+                    >
+                      {cat}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="mt-2 text-[10px] text-blue-500">↑ 自分のA組カテゴリの予定のみ表示中</p>
+          </div>
+        </MockupFrame>
+      </Section>
+
       <Section title="出欠回答">
         <ul className="list-disc space-y-1.5 pl-5 text-sm text-gray-700">
           <li>予定の詳細ページでプレイヤーごとに「参加 / 欠席 / 未定」を選択します。</li>

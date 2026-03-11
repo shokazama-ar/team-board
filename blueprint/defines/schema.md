@@ -41,6 +41,7 @@ Supabase (PostgreSQL) のテーブル構成。RLSはすべて有効。
 | name | text | プロファイル表示名 |
 | avatar_url | text | |
 | number | text | 背番号（任意） |
+| share_code | text | プロファイル共有コード（UUID形式）。`/profile/[share_code]` で公開ページを表示 |
 
 ---
 
@@ -52,10 +53,27 @@ Supabase (PostgreSQL) のテーブル構成。RLSはすべて有効。
 | id | uuid | |
 | team_id | uuid | teams.id |
 | member_profile_id | uuid | member_profiles.id |
+| user_id | uuid | auth.users.id。RLS高速化のため member_profiles.user_id を非正規化して格納 |
 | role | enum | `admin` / `member` |
 | account_type | enum | `coach` / `guardian` |
 
-> ⚠️ `user_id` カラムは存在しない。ユーザー特定は `member_profiles!inner(user_id)` 経由で行う。
+---
+
+### `member_profile_access`
+プレイヤープロファイルへのアクセス権限テーブル。保護者アカウントが子供のプロファイルを管理できるようリンクを保持する。
+
+| カラム | 型 | 備考 |
+|---|---|---|
+| id | uuid | |
+| member_profile_id | uuid | member_profiles.id |
+| user_id | uuid | アクセスを許可されたユーザー（auth.users.id） |
+| granted_by | uuid | アクセス権を付与したユーザー（auth.users.id） |
+| created_at | timestamptz | |
+
+RLSポリシー:
+- SELECT: `user_id = auth.uid()` または `owns_member_profile_by_id(member_profile_id)`
+- INSERT: プロファイルオーナーのみ（`owns_member_profile_by_id(member_profile_id)` かつ `granted_by = auth.uid()`）
+- DELETE: `user_id = auth.uid()` または `owns_member_profile_by_id(member_profile_id)`
 
 ---
 
@@ -152,8 +170,9 @@ Supabase (PostgreSQL) のテーブル構成。RLSはすべて有効。
 
 ## RLS重要事項
 
-- `team_members` の SELECT ポリシーで同テーブルを自己参照すると無限ループになる
-- 回避策: `SECURITY DEFINER` 関数 `is_member_of_team(tid)` を経由する
+- `team_members` の SELECT ポリシーで `member_profiles` を JOIN すると無限ループになる場合がある
+- 回避策: `team_members.user_id` を直接参照するか、`SECURITY DEFINER` 関数 (`is_member_of_team` 等) を経由する
+- `member_profile_access` ポリシーで `member_profiles` を直接参照すると再帰的 RLS 評価が発生する。`SECURITY DEFINER` 関数 `owns_member_profile_by_id(profile_id)` 経由で回避する
 
 ## 主要RPC関数
 
@@ -169,6 +188,7 @@ Supabase (PostgreSQL) のテーブル構成。RLSはすべて有効。
 | `regenerate_invite_code(target_team_id)` | コーチ用招待コード再生成 |
 | `regenerate_guardian_invite_code(target_team_id)` | 保護者用招待コード再生成 |
 | `get_team_name(tid)` | チームIDからチーム名を返す。認証不要（SECURITY DEFINER）。公開問い合わせフォームから使用 |
+| `owns_member_profile_by_id(profile_id)` | プロファイルのオーナーか判定（SECURITY DEFINER）。`member_profile_access` のRLSから呼ばれる |
 
 ---
 

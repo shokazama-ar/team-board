@@ -70,6 +70,49 @@ export default function HelpAnnouncementsPage() {
         </MockupFrame>
       </Section>
 
+      <Section title="カテゴリフィルタ">
+        <ul className="list-disc space-y-1.5 pl-5 text-sm text-gray-700">
+          <li>お知らせ一覧の右上にある「自分のカテゴリのみ ◯—◯ すべて」トグルで表示を絞り込めます。</li>
+          <li>自分のプレイヤープロファイルが所属するカテゴリのお知らせのみ表示します。</li>
+          <li>カテゴリが未設定のお知らせ（全員向け）は、フィルタ設定に関わらず常に表示されます。</li>
+        </ul>
+        <MockupFrame title="お知らせ — TeamBoard">
+          <div className="text-xs">
+            <div className="mb-3 flex items-center justify-between">
+              <p className="text-base font-bold text-gray-900">お知らせ</p>
+              <div className="flex items-center gap-2">
+                <span className="text-gray-500">自分のカテゴリのみ</span>
+                <div className="relative inline-flex h-4 w-7 items-center rounded-full bg-gray-300">
+                  <span className="inline-block h-3 w-3 translate-x-0.5 rounded-full bg-white shadow" />
+                </div>
+                <span className="text-gray-400">すべて</span>
+              </div>
+            </div>
+            <div className="space-y-2">
+              {[
+                { title: "A組 3月練習スケジュール", cat: "A組", color: "#2563eb" },
+                { title: "全体ミーティングのご案内", cat: null, color: null },
+              ].map(({ title, cat, color }) => (
+                <div key={title} className="rounded-lg border border-gray-200 bg-white p-2.5">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-gray-900">{title}</span>
+                    {cat && (
+                      <span
+                        className="rounded-full px-1.5 py-0.5 text-[9px] font-medium text-white"
+                        style={{ backgroundColor: color ?? undefined }}
+                      >
+                        {cat}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="mt-2 text-[10px] text-blue-500">↑ 全員向けは常に表示、A組のみのものもフィルタに一致</p>
+          </div>
+        </MockupFrame>
+      </Section>
+
       <Section title="ダッシュボードでの表示">
         <ul className="list-disc space-y-1.5 pl-5 text-sm text-gray-700">
           <li>ダッシュボードには最新のお知らせが最大5件表示されます。</li>

@@ -50,7 +50,7 @@ export default function HelpCategoriesPage() {
 
       <Section title="プレイヤーへのカテゴリ割り当て">
         <ul className="list-disc space-y-1.5 pl-5 text-sm text-gray-700">
-          <li>管理者は設定画面の「プレイヤーカテゴリ」から、各選手にカテゴリを割り当てます。</li>
+          <li>コーチは設定画面の「コーチ」タブの「カテゴリ割り当て」から、各選手にカテゴリを割り当てます。</li>
           <li>1人の選手に複数カテゴリを設定できます。</li>
         </ul>
         <MockupFrame title="設定 — TeamBoard">
@@ -59,7 +59,7 @@ export default function HelpCategoriesPage() {
               {["管理者", "コーチ", "保護者"].map((tab) => (
                 <span
                   key={tab}
-                  className={`rounded-t px-3 py-1 ${tab === "管理者" ? "border-b-2 border-blue-600 font-medium text-blue-600" : "text-gray-500"}`}
+                  className={`rounded-t px-3 py-1 ${tab === "コーチ" ? "border-b-2 border-blue-600 font-medium text-blue-600" : "text-gray-500"}`}
                 >
                   {tab}
                 </span>
@@ -89,11 +89,12 @@ export default function HelpCategoriesPage() {
         </MockupFrame>
       </Section>
 
-      <Section title="ダッシュボードのフィルタ">
+      <Section title="フィルタ機能（ダッシュボード・予定表・お知らせ）">
         <ul className="list-disc space-y-1.5 pl-5 text-sm text-gray-700">
           <li>ダッシュボードには、自分のプレイヤープロファイルが所属するカテゴリに関係する予定・お知らせだけが表示されます。</li>
           <li>トグルスイッチを「すべて」にするとフィルタを解除して全件表示できます。</li>
           <li>カテゴリ未設定の予定・お知らせは、フィルタに関係なく常に全員に表示されます。</li>
+          <li>「予定表」と「お知らせ」ページにも同じトグルがあります。自分のカテゴリに関係する内容だけに絞り込めます。</li>
         </ul>
         <MockupFrame title="ダッシュボード — TeamBoard">
           <div className="text-xs">

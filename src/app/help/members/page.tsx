@@ -52,8 +52,8 @@ export default function HelpMembersPage() {
 
       <Section title="プロファイルの追加">
         <ul className="list-disc space-y-1.5 pl-5 text-sm text-gray-700">
-          <li><b>コーチアカウント</b>は設定画面の「コーチ」タブからコーチ・選手プロファイルを追加できます。</li>
-          <li><b>保護者アカウント</b>は設定画面の「保護者」タブから選手プロファイルを追加・管理します。</li>
+          <li><b>コーチアカウント</b>は設定画面の「保護者」タブからプレイヤープロファイルを追加・管理できます。</li>
+          <li><b>保護者アカウント</b>も設定画面の「保護者」タブから選手プロファイルを追加・管理します。</li>
         </ul>
         <MockupFrame title="設定 — TeamBoard">
           <div className="text-xs">
@@ -86,7 +86,7 @@ export default function HelpMembersPage() {
             <div className="rounded-lg border-2 border-dashed border-blue-300 bg-blue-50 p-2 text-center">
               <span className="font-medium text-blue-600">+ 選手プロファイルを追加</span>
             </div>
-            <p className="mt-1.5 text-[10px] text-blue-500">↑ 保護者タブからお子さんのプロファイルを追加できます</p>
+            <p className="mt-1.5 text-[10px] text-blue-500">↑ コーチ・保護者どちらも「保護者」タブからプロファイルを追加できます</p>
           </div>
         </MockupFrame>
       </Section>
@@ -95,6 +95,7 @@ export default function HelpMembersPage() {
         <ul className="list-disc space-y-1.5 pl-5 text-sm text-gray-700">
           <li>メンバーページではチーム全員のプロファイル（コーチ・選手）を確認できます。</li>
           <li>ダッシュボードのチームカードに、アカウント数・コーチ数・選手数のサマリーが表示されます。</li>
+          <li>プレイヤーセクションはカテゴリで絞り込めます。カテゴリが設定されている場合、一覧上部にフィルタボタンが表示されます。</li>
         </ul>
         <MockupFrame title="メンバー — TeamBoard">
           <div className="text-xs">
