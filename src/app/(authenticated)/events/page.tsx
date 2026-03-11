@@ -42,7 +42,8 @@ export default function EventsPage() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [filterTypeIds, setFilterTypeIds] = useState<Set<string>>(new Set());
-  const [filterCategoryIds, setFilterCategoryIds] = useState<Set<string>>(new Set());
+  const [showOnlyMyCategories, setShowOnlyMyCategories] = useState(true);
+  const [myCategoryIds, setMyCategoryIds] = useState<string[]>([]);
 
   const loadData = useCallback(async () => {
     const {
@@ -56,12 +57,32 @@ export default function EventsPage() {
 
     const { data: myMembership } = await supabase
       .from("team_members")
-      .select("role, member_profiles!inner(user_id)")
+      .select("role, member_profiles!inner(id, user_id)")
       .eq("team_id", teamId)
       .eq("member_profiles.user_id", user.id)
       .limit(1)
       .single();
     setCurrentUserRole(myMembership?.role ?? "");
+
+    // 自分のカテゴリIDを取得（リンク済みプロファイルも含む）
+    const myProfileIds = (myMembership as any)?.member_profiles
+      ? [(myMembership as any).member_profiles.id]
+      : [];
+
+    // リンク済みプロファイルIDを取得（保護者が子プロファイルにアクセスできるケース）
+    const { data: linkedAccess } = await supabase
+      .from("member_profile_access")
+      .select("member_profile_id");
+    const linkedProfileIds = (linkedAccess ?? []).map((r: any) => r.member_profile_id);
+    const allMyProfileIds = [...new Set([...myProfileIds, ...linkedProfileIds])];
+
+    if (allMyProfileIds.length > 0) {
+      const { data: myCategories } = await supabase
+        .from("member_profile_categories")
+        .select("event_type_id")
+        .in("member_profile_id", allMyProfileIds);
+      setMyCategoryIds((myCategories ?? []).map((c: any) => c.event_type_id));
+    }
 
     const { data: eventsData } = await supabase
       .from("events")
@@ -101,22 +122,20 @@ export default function EventsPage() {
     loadData();
   }, [loadData]);
 
-  // フィルタ用: 全イベントから利用可能な種別・カテゴリを収集
-  const { availableTypes, availableCategories } = useMemo(() => {
+  // フィルタ用: 全イベントから利用可能な種別を収集
+  const availableTypes = useMemo(() => {
     const typeMap = new Map<string, EventType>();
-    const categoryMap = new Map<string, EventType>();
     for (const event of events) {
       for (const et of event.event_event_types) {
         if (!et.event_types) continue;
         if (et.event_types.kind === "type") typeMap.set(et.event_types.id, et.event_types);
-        else if (et.event_types.kind === "category") categoryMap.set(et.event_types.id, et.event_types);
       }
     }
-    return {
-      availableTypes: Array.from(typeMap.values()),
-      availableCategories: Array.from(categoryMap.values()),
-    };
+    return Array.from(typeMap.values());
   }, [events]);
+
+  // カテゴリが存在するかどうか
+  const hasCategories = myCategoryIds.length > 0;
 
   // フィルタ適用後のイベント一覧
   const filteredEvents = useMemo(() => {
@@ -125,10 +144,14 @@ export default function EventsPage() {
       const typeIds = types.filter((t) => t.kind === "type").map((t) => t.id);
       const categoryIds = types.filter((t) => t.kind === "category").map((t) => t.id);
       const typeMatch = filterTypeIds.size === 0 || typeIds.some((id) => filterTypeIds.has(id));
-      const categoryMatch = filterCategoryIds.size === 0 || categoryIds.some((id) => filterCategoryIds.has(id));
+      const categoryMatch =
+        !showOnlyMyCategories ||
+        !hasCategories ||
+        categoryIds.length === 0 ||
+        categoryIds.some((id) => myCategoryIds.includes(id));
       return typeMatch && categoryMatch;
     });
-  }, [events, filterTypeIds, filterCategoryIds]);
+  }, [events, filterTypeIds, showOnlyMyCategories, myCategoryIds, hasCategories]);
 
   function toggleTypeFilter(id: string) {
     setFilterTypeIds((prev) => {
@@ -138,17 +161,8 @@ export default function EventsPage() {
     });
   }
 
-  function toggleCategoryFilter(id: string) {
-    setFilterCategoryIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
-  }
-
   function clearFilters() {
     setFilterTypeIds(new Set());
-    setFilterCategoryIds(new Set());
   }
 
   function toJSTString(date: Date): string {
@@ -232,7 +246,7 @@ export default function EventsPage() {
     return <div className="text-sm text-gray-500">チームが見つかりません</div>;
   }
 
-  const hasFilter = filterTypeIds.size > 0 || filterCategoryIds.size > 0;
+  const hasFilter = filterTypeIds.size > 0;
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -317,52 +331,28 @@ export default function EventsPage() {
       </div>
 
       {/* フィルタバー */}
-      {(availableTypes.length > 0 || availableCategories.length > 0) && (
+      {availableTypes.length > 0 && (
         <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border border-gray-200 bg-white px-3 py-2">
-          {availableTypes.length > 0 && (
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-xs text-gray-400 shrink-0">種別</span>
-              {availableTypes.map((t) => {
-                const active = filterTypeIds.size === 0 || filterTypeIds.has(t.id);
-                return (
-                  <button
-                    key={t.id}
-                    onClick={() => toggleTypeFilter(t.id)}
-                    className="rounded-full px-2.5 py-0.5 text-xs font-medium transition-opacity"
-                    style={{
-                      color: t.color,
-                      backgroundColor: t.color + "20",
-                      opacity: active ? 1 : 0.3,
-                    }}
-                  >
-                    {t.name}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-          {availableCategories.length > 0 && (
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-xs text-gray-400 shrink-0">カテゴリ</span>
-              {availableCategories.map((c) => {
-                const active = filterCategoryIds.size === 0 || filterCategoryIds.has(c.id);
-                return (
-                  <button
-                    key={c.id}
-                    onClick={() => toggleCategoryFilter(c.id)}
-                    className="rounded border px-2.5 py-0.5 text-xs font-medium transition-opacity"
-                    style={{
-                      borderColor: c.color,
-                      color: c.color,
-                      opacity: active ? 1 : 0.3,
-                    }}
-                  >
-                    {c.name}
-                  </button>
-                );
-              })}
-            </div>
-          )}
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-xs text-gray-400 shrink-0">種別</span>
+            {availableTypes.map((t) => {
+              const active = filterTypeIds.size === 0 || filterTypeIds.has(t.id);
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => toggleTypeFilter(t.id)}
+                  className="rounded-full px-2.5 py-0.5 text-xs font-medium transition-opacity"
+                  style={{
+                    color: t.color,
+                    backgroundColor: t.color + "20",
+                    opacity: active ? 1 : 0.3,
+                  }}
+                >
+                  {t.name}
+                </button>
+              );
+            })}
+          </div>
           {hasFilter && (
             <button
               onClick={clearFilters}
@@ -371,6 +361,29 @@ export default function EventsPage() {
               クリア
             </button>
           )}
+        </div>
+      )}
+
+      {/* カテゴリトグル */}
+      {hasCategories && (
+        <div className="mb-4 flex items-center justify-end gap-2">
+          <span className="text-xs text-gray-500">
+            {showOnlyMyCategories ? "自分のカテゴリのみ" : "すべてのカテゴリを表示中"}
+          </span>
+          <button
+            onClick={() => setShowOnlyMyCategories((v) => !v)}
+            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+              !showOnlyMyCategories ? "bg-blue-600" : "bg-gray-300"
+            }`}
+            aria-label="すべてのカテゴリを表示"
+          >
+            <span
+              className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${
+                !showOnlyMyCategories ? "translate-x-4" : "translate-x-1"
+              }`}
+            />
+          </button>
+          <span className="text-xs text-gray-400">すべて</span>
         </div>
       )}
 

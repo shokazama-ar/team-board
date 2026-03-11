@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { RefreshCw, Trash2, AlertTriangle, Plus, X, ChevronUp, ChevronDown, Pencil, Check, UserPlus, ExternalLink, Copy, Mail } from "lucide-react";
+import { RefreshCw, Trash2, AlertTriangle, Plus, X, ChevronUp, ChevronDown, Pencil, Check, UserPlus, ExternalLink, Copy } from "lucide-react";
 import { AvatarUpload } from "@/components/ui/AvatarUpload";
 
 function copyToClipboard(text: string): Promise<void> {
@@ -984,6 +984,7 @@ export default function SettingsPage() {
   const [guardianShareOpen, setGuardianShareOpen] = useState(false);
   const [coachCopied, setCoachCopied] = useState<"code" | "link" | null>(null);
   const [guardianCopied, setGuardianCopied] = useState<"code" | "link" | null>(null);
+  const [copiedShareCodeId, setCopiedShareCodeId] = useState<string | null>(null);
 
   // Refs for share panels (outside click)
   const coachShareRef = useRef<HTMLDivElement>(null);
@@ -1594,14 +1595,8 @@ export default function SettingsPage() {
   const memberProfilesJsx = teamId ? (
     <>
       <hr className="my-8 border-gray-200" />
-      <h2 className="mb-1 text-lg font-semibold">
-        {accountType === "guardian" ? "選手プロファイル" : "プレイヤープロファイル"}
-      </h2>
-      <p className="mb-4 text-sm text-gray-500">
-        {accountType === "guardian"
-          ? "お子様などのプロファイルを管理します。"
-          : "プレイヤーのプロファイルを登録してください。"}
-      </p>
+      <h2 className="mb-1 text-lg font-semibold">プレイヤープロファイル</h2>
+      <p className="mb-4 text-sm text-gray-500">プレイヤープロファイルを管理します。</p>
       <div className="space-y-3 mb-4">
         {myProfiles.filter((p) => accountType !== "coach" || p.kind === "player").map((p) => (
           <div key={p.id}>
@@ -1629,10 +1624,10 @@ export default function SettingsPage() {
                   prev.map((mp) => (mp.id === p.id ? { ...mp, avatar_url: url } : mp))
                 );
               }}
-              canDelete={myProfiles.filter((mp) => accountType !== "coach" || mp.kind === "player").length > 1}
+              canDelete={true}
               onDeleted={async () => {
-                if (!window.confirm("このプロファイルをチームから削除しますか？")) return;
-                await supabase.from("team_members").delete().eq("id", p.id);
+                if (!window.confirm("このプロファイルを削除しますか？この操作は取り消せません。")) return;
+                await supabase.from("member_profiles").delete().eq("id", p.member_profile_id);
                 setMyProfiles((prev) => prev.filter((mp) => mp.id !== p.id));
               }}
             />
@@ -1648,12 +1643,18 @@ export default function SettingsPage() {
                     <button
                       type="button"
                       onClick={() => {
-                        copyToClipboard(p.share_code!);
+                        copyToClipboard(p.share_code!).then(() => {
+                          setCopiedShareCodeId(p.member_profile_id);
+                          setTimeout(() => setCopiedShareCodeId(null), 1000);
+                        });
                       }}
                       className="flex items-center gap-1 rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-600 hover:bg-gray-50"
                     >
-                      <Copy size={12} strokeWidth={1.5} />
-                      コピー
+                      {copiedShareCodeId === p.member_profile_id ? (
+                        <><Check size={12} strokeWidth={1.5} /> コピー済み</>
+                      ) : (
+                        <><Copy size={12} strokeWidth={1.5} /> コピー</>
+                      )}
                     </button>
                   )}
                   <button
@@ -1764,7 +1765,7 @@ export default function SettingsPage() {
   ) : null;
 
   const showCoachTab = accountType === "coach";
-  const showGuardianTab = accountType === "guardian";
+  const showGuardianTab = accountType === "guardian" || accountType === "coach";
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -1786,18 +1787,6 @@ export default function SettingsPage() {
                 管理者
               </button>
             )}
-            {showGuardianTab && (
-              <button
-                onClick={() => setActiveTab("guardian")}
-                className={`px-4 pb-3 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === "guardian"
-                    ? "border-blue-500 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700"
-                }`}
-              >
-                保護者
-              </button>
-            )}
             {showCoachTab && (
               <button
                 onClick={() => setActiveTab("coach")}
@@ -1810,6 +1799,18 @@ export default function SettingsPage() {
                 コーチ
               </button>
             )}
+            {showGuardianTab && (
+              <button
+                onClick={() => setActiveTab("guardian")}
+                className={`px-4 pb-3 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === "guardian"
+                    ? "border-blue-500 text-blue-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                保護者
+              </button>
+            )}
           </nav>
         </div>
       )}
@@ -1817,10 +1818,8 @@ export default function SettingsPage() {
       {/* コーチタブ */}
       {(activeTab === "coach" || !teamId) && showCoachTab && (
         <>
-          {profileFormJsx}
           {teamId && (
             <>
-              <hr className="my-8 border-gray-200" />
               <h2 className="mb-1 text-lg font-semibold">担当カテゴリ</h2>
               <p className="mb-4 text-sm text-gray-500">
                 担当するカテゴリを設定すると、関連する予定・お知らせのみダッシュボードに表示されます。未設定の場合は全件表示されます。
@@ -1874,6 +1873,26 @@ export default function SettingsPage() {
                   )}
                 </>
               )}
+            </>
+          )}
+          {/* カテゴリ割り当て */}
+          {teamId && (
+            <>
+              <hr className="my-8 border-gray-200" />
+              <div className="mb-1 flex items-center justify-between">
+                <h2 className="text-lg font-semibold">カテゴリ割り当て</h2>
+                <button
+                  type="button"
+                  onClick={openPlayerCategoryModal}
+                  className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
+                >
+                  <Pencil size={14} strokeWidth={1.5} aria-hidden="true" />
+                  編集
+                </button>
+              </div>
+              <p className="text-sm text-gray-500">
+                コーチ・選手プロファイルごとに担当カテゴリを設定します。予定やお知らせの対象絞り込みに使用します。
+              </p>
             </>
           )}
           {/* 機能説明 */}
@@ -1999,8 +2018,8 @@ export default function SettingsPage() {
                     onClick={() => setCoachShareOpen((prev) => !prev)}
                     className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-2.5 py-2 text-sm text-gray-600 hover:bg-gray-50 sm:px-3"
                   >
-                    <Copy size={16} strokeWidth={1.5} aria-hidden="true" />
-                    <span className="hidden sm:inline">{coachCopied ? "コピーしました！" : "コピー"}</span>
+                    {coachCopied ? <Check size={16} strokeWidth={1.5} aria-hidden="true" /> : <Copy size={16} strokeWidth={1.5} aria-hidden="true" />}
+                    <span className="hidden sm:inline">{coachCopied ? "コピー済み" : "コピー"}</span>
                   </button>
                   {coachShareOpen && (
                     <div className="absolute right-0 top-full z-10 mt-1 w-48 rounded-lg border border-gray-200 bg-white shadow-lg">
@@ -2010,7 +2029,7 @@ export default function SettingsPage() {
                         onClick={() => {
                           copyToClipboard(inviteCode).then(() => {
                             setCoachCopied("code");
-                            setTimeout(() => setCoachCopied(null), 1500);
+                            setTimeout(() => setCoachCopied(null), 1000);
                           });
                           setCoachShareOpen(false);
                         }}
@@ -2023,7 +2042,7 @@ export default function SettingsPage() {
                         onClick={() => {
                           copyToClipboard(`${origin}/signup?invite=${inviteCode}`).then(() => {
                             setCoachCopied("link");
-                            setTimeout(() => setCoachCopied(null), 1500);
+                            setTimeout(() => setCoachCopied(null), 1000);
                           });
                           setCoachShareOpen(false);
                         }}
@@ -2035,20 +2054,6 @@ export default function SettingsPage() {
                 </div>
                 <button
                   type="button"
-                  aria-label="メールで共有"
-                  onClick={() => {
-                    const body = encodeURIComponent(
-                      `TeamBoard のチームへ招待します。\n\n以下のリンクからサインアップして参加してください：\n${origin}/signup?invite=${inviteCode}\n\nすでにアカウントをお持ちの場合は、ログイン後に\n招待コード「${inviteCode}」を入力してチームに参加できます。`
-                    );
-                    window.open(`mailto:?subject=${encodeURIComponent("TeamBoard チームへの招待")}&body=${body}`);
-                  }}
-                  className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-2.5 py-2 text-sm text-gray-600 hover:bg-gray-50 sm:px-3"
-                >
-                  <Mail size={16} strokeWidth={1.5} aria-hidden="true" />
-                  <span className="hidden sm:inline">メール</span>
-                </button>
-                <button
-                  type="button"
                   onClick={handleRegenerateCode}
                   disabled={regenerating}
                   className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-2.5 py-2 text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50 sm:px-3"
@@ -2057,9 +2062,6 @@ export default function SettingsPage() {
                   <span className="hidden sm:inline">{regenerating ? "再生成中..." : "再生成"}</span>
                 </button>
               </div>
-              {coachCopied && (
-                <p className="mt-1 text-xs text-green-600">コピーしました！</p>
-              )}
             </div>
 
             <div>
@@ -2077,8 +2079,8 @@ export default function SettingsPage() {
                     onClick={() => setGuardianShareOpen((prev) => !prev)}
                     className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-2.5 py-2 text-sm text-gray-600 hover:bg-gray-50 sm:px-3"
                   >
-                    <Copy size={16} strokeWidth={1.5} aria-hidden="true" />
-                    <span className="hidden sm:inline">{guardianCopied ? "コピーしました！" : "コピー"}</span>
+                    {guardianCopied ? <Check size={16} strokeWidth={1.5} aria-hidden="true" /> : <Copy size={16} strokeWidth={1.5} aria-hidden="true" />}
+                    <span className="hidden sm:inline">{guardianCopied ? "コピー済み" : "コピー"}</span>
                   </button>
                   {guardianShareOpen && (
                     <div className="absolute right-0 top-full z-10 mt-1 w-48 rounded-lg border border-gray-200 bg-white shadow-lg">
@@ -2088,7 +2090,7 @@ export default function SettingsPage() {
                         onClick={() => {
                           copyToClipboard(inviteCodeGuardian).then(() => {
                             setGuardianCopied("code");
-                            setTimeout(() => setGuardianCopied(null), 1500);
+                            setTimeout(() => setGuardianCopied(null), 1000);
                           });
                           setGuardianShareOpen(false);
                         }}
@@ -2101,7 +2103,7 @@ export default function SettingsPage() {
                         onClick={() => {
                           copyToClipboard(`${window.location.origin}/signup?invite=${inviteCodeGuardian}`).then(() => {
                             setGuardianCopied("link");
-                            setTimeout(() => setGuardianCopied(null), 1500);
+                            setTimeout(() => setGuardianCopied(null), 1000);
                           });
                           setGuardianShareOpen(false);
                         }}
@@ -2111,21 +2113,6 @@ export default function SettingsPage() {
                     </div>
                   )}
                 </div>
-                <button
-                  type="button"
-                  aria-label="メールで共有"
-                  onClick={() => {
-                    const origin = window.location.origin;
-                    const body = encodeURIComponent(
-                      `TeamBoard のチームへ招待します。\n\n以下のリンクからサインアップして参加してください：\n${origin}/signup?invite=${inviteCodeGuardian}\n\nすでにアカウントをお持ちの場合は、ログイン後に\n招待コード「${inviteCodeGuardian}」を入力してチームに参加できます。`
-                    );
-                    window.open(`mailto:?subject=${encodeURIComponent("TeamBoard チームへの招待")}&body=${body}`);
-                  }}
-                  className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-2.5 py-2 text-sm text-gray-600 hover:bg-gray-50 sm:px-3"
-                >
-                  <Mail size={16} strokeWidth={1.5} aria-hidden="true" />
-                  <span className="hidden sm:inline">メール</span>
-                </button>
                 <button
                   type="button"
                   onClick={handleRegenerateGuardianCode}
@@ -2204,23 +2191,6 @@ export default function SettingsPage() {
 
           {/* 問い合わせ種別 */}
           <InquiryTypeSection teamId={teamId} />
-
-          {/* カテゴリ割り当て */}
-          <hr className="my-8 border-gray-200" />
-          <div className="mb-1 flex items-center justify-between">
-            <h2 className="text-lg font-semibold">カテゴリ割り当て</h2>
-            <button
-              type="button"
-              onClick={openPlayerCategoryModal}
-              className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
-            >
-              <Pencil size={14} strokeWidth={1.5} aria-hidden="true" />
-              編集
-            </button>
-          </div>
-          <p className="text-sm text-gray-500">
-            コーチ・選手プロファイルごとに担当カテゴリを設定します。予定やお知らせの対象絞り込みに使用します。
-          </p>
 
           <div className="mt-8 rounded-lg border border-red-200 bg-red-50 p-4">
             <h3 className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-red-700">

@@ -4,8 +4,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-type CreateKind = "coach" | "guardian";
-
 export default function TeamSetupPage() {
   const router = useRouter();
   const supabase = createClient();
@@ -13,7 +11,6 @@ export default function TeamSetupPage() {
   // Create team form
   const [teamName, setTeamName] = useState("");
   const [createProfileName, setCreateProfileName] = useState("");
-  const [createAccountType, setCreateAccountType] = useState<CreateKind>("coach");
   const [creating, setCreating] = useState(false);
 
   // Join team form
@@ -49,8 +46,8 @@ export default function TeamSetupPage() {
       {
         team_name: teamName.trim(),
         profile_name: createProfileName.trim(),
-        profile_kind: createAccountType === "coach" ? "coach" : "player",
-        team_account_type: createAccountType,
+        profile_kind: "coach",
+        team_account_type: "coach",
       }
     );
 
@@ -133,29 +130,6 @@ export default function TeamSetupPage() {
                 placeholder="例: 田中コーチ"
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
-            </div>
-            <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700">
-                参加種別
-              </label>
-              <div className="flex gap-3">
-                {(["coach", "guardian"] as CreateKind[]).map((k) => (
-                  <button
-                    key={k}
-                    type="button"
-                    onClick={() => setCreateAccountType(k)}
-                    className={`flex-1 rounded-lg border py-2 text-sm font-medium transition-colors ${
-                      createAccountType === k
-                        ? k === "coach"
-                          ? "border-blue-500 bg-blue-50 text-blue-700"
-                          : "border-green-500 bg-green-50 text-green-700"
-                        : "border-gray-300 text-gray-600 hover:bg-gray-50"
-                    }`}
-                  >
-                    {k === "coach" ? "コーチ（指導者）" : "保護者"}
-                  </button>
-                ))}
-              </div>
             </div>
             <button
               type="submit"

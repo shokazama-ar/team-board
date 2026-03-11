@@ -215,6 +215,19 @@ npm run start  # プロダクションサーバーの起動
 npm run lint   # ESLint の実行
 ```
 
+バックグラウンドで起動する場合（EC2 などリモート環境向け）:
+
+```bash
+node_modules/.bin/next dev --hostname 0.0.0.0 > /tmp/nextjs.log 2>&1 &
+```
+
+ログの確認・停止:
+
+```bash
+tail -f /tmp/nextjs.log   # ログをリアルタイム確認
+kill %1                   # バックグラウンドジョブを停止（またはジョブ番号を指定）
+```
+
 ### Supabase
 
 ```bash

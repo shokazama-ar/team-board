@@ -24,6 +24,12 @@ type Team = {
   icon_url: string | null;
 };
 
+type Category = {
+  id: string;
+  name: string;
+  color: string;
+};
+
 function ProfileAvatar({ name, avatarUrl, size = 40 }: { name: string | null; avatarUrl: string | null; size?: number }) {
   const initials = name ? name.charAt(0).toUpperCase() : "?";
   if (avatarUrl) {
@@ -66,6 +72,9 @@ export default function MembersPage() {
   const [currentUserRole, setCurrentUserRole] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [availableCategories, setAvailableCategories] = useState<Category[]>([]);
+  const [playerCategoryMap, setPlayerCategoryMap] = useState<Map<string, Category[]>>(new Map());
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     const {
@@ -131,7 +140,39 @@ export default function MembersPage() {
       // 保護者: account_type="guardian"（プレイヤーセクションと重複させない）
       setGuardians(enriched.filter((m) => m.account_type === "guardian"));
       setCoaches(enriched.filter((m) => m.kind === "coach" && m.account_type === "coach"));
-      setPlayers(enriched.filter((m) => m.kind === "player" && m.account_type === "coach"));
+      const playerList = enriched.filter((m) => m.kind === "player");
+      setPlayers(playerList);
+
+      // Fetch category info for players
+      const playerProfileIds = playerList.map((p) => p.member_profile_id);
+      if (playerProfileIds.length > 0) {
+        const { data: profileCategories } = await supabase
+          .from("member_profile_categories")
+          .select("member_profile_id, event_types(id, name, color)")
+          .in("member_profile_id", playerProfileIds);
+
+        if (profileCategories) {
+          const catMap = new Map<string, Category[]>();
+          const catIndex = new Map<string, Category>();
+
+          for (const row of profileCategories) {
+            const et = row.event_types as unknown as { id: string; name: string; color: string } | null;
+            if (!et) continue;
+            const profileId = row.member_profile_id;
+            if (!catMap.has(profileId)) catMap.set(profileId, []);
+            catMap.get(profileId)!.push({ id: et.id, name: et.name, color: et.color });
+            if (!catIndex.has(et.id)) {
+              catIndex.set(et.id, { id: et.id, name: et.name, color: et.color });
+            }
+          }
+
+          setPlayerCategoryMap(catMap);
+          setAvailableCategories(Array.from(catIndex.values()));
+        }
+      } else {
+        setPlayerCategoryMap(new Map());
+        setAvailableCategories([]);
+      }
     }
 
     setLoading(false);
@@ -258,7 +299,115 @@ export default function MembersPage() {
       </div>
 
       {/* Player Section */}
-      {renderSection("プレイヤー", players, "bg-green-50 text-green-700")}
+      <div className="rounded-lg border border-gray-200 bg-white mb-4">
+        <div className="border-b border-gray-200 px-6 py-3 flex items-center gap-2">
+          <span className="rounded-full px-2 py-0.5 text-xs font-medium bg-green-50 text-green-700">
+            プレイヤー
+          </span>
+          <span className="text-sm text-gray-500">
+            {selectedCategoryId === null
+              ? players.length
+              : players.filter((p) => {
+                  const cats = playerCategoryMap.get(p.member_profile_id) ?? [];
+                  return cats.some((c) => c.id === selectedCategoryId);
+                }).length}
+            人
+          </span>
+        </div>
+        <div className="px-6 pt-4">
+          {/* カテゴリフィルタ */}
+          {availableCategories.length > 0 && (
+            <div className="mb-4 flex flex-wrap gap-2">
+              <button
+                onClick={() => setSelectedCategoryId(null)}
+                className={`rounded-full border px-3 py-1 text-sm font-medium transition-colors ${
+                  selectedCategoryId === null
+                    ? "bg-blue-600 text-white border-blue-600"
+                    : "border-gray-300 text-gray-600 hover:border-gray-400"
+                }`}
+              >
+                すべて
+              </button>
+              {availableCategories.map((cat) => (
+                <button
+                  key={cat.id}
+                  onClick={() => setSelectedCategoryId(cat.id)}
+                  className="rounded-full border-2 px-3 py-1 text-sm font-medium transition-colors"
+                  style={
+                    selectedCategoryId === cat.id
+                      ? { backgroundColor: cat.color + "20", borderColor: cat.color, color: cat.color }
+                      : { borderColor: "#e5e7eb", color: "#4b5563" }
+                  }
+                >
+                  {cat.name}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        <ul className="divide-y divide-gray-100">
+          {(() => {
+            const filtered =
+              selectedCategoryId === null
+                ? players
+                : players.filter((p) => {
+                    const cats = playerCategoryMap.get(p.member_profile_id) ?? [];
+                    return cats.some((c) => c.id === selectedCategoryId);
+                  });
+            if (filtered.length === 0) {
+              return <li className="px-6 py-4 text-sm text-gray-400">なし</li>;
+            }
+            return filtered.map((member) => (
+              <li key={member.id} className="flex items-center justify-between px-6 py-4">
+                <div className="flex min-w-0 flex-1 items-center gap-3">
+                  <ProfileAvatar name={member.name} avatarUrl={member.avatar_url} size={40} />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-900">
+                      {member.name || "名前未設定"}
+                      {member.number && (
+                        <span className="ml-1.5 text-xs text-gray-400">#{member.number}</span>
+                      )}
+                      {member.owner_user_id === currentUserId && (
+                        <span className="ml-2 text-xs text-gray-400">(あなた)</span>
+                      )}
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      参加日: {new Date(member.created_at).toLocaleDateString("ja-JP", { timeZone: "Asia/Tokyo" })}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {member.role === "admin" && (
+                    <span className="flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">
+                      <Shield size={12} strokeWidth={1.5} aria-hidden="true" />
+                      管理者
+                    </span>
+                  )}
+                  {isAdmin && member.owner_user_id !== currentUserId && (
+                    <>
+                      <button
+                        onClick={() => toggleRole(member.id, member.role)}
+                        disabled={actionLoading === member.id}
+                        className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                      >
+                        {member.role === "admin" ? "メンバーに変更" : "管理者に変更"}
+                      </button>
+                      <button
+                        onClick={() => removeMember(member.id, member.name ?? "")}
+                        disabled={actionLoading === member.id}
+                        className="flex items-center gap-1 rounded border border-red-300 px-2 py-1 text-xs text-red-600 hover:bg-red-50 disabled:opacity-50"
+                      >
+                        <Trash2 size={12} strokeWidth={1.5} aria-hidden="true" />
+                        削除
+                      </button>
+                    </>
+                  )}
+                </div>
+              </li>
+            ));
+          })()}
+        </ul>
+      </div>
 
       {/* Coach Section */}
       {renderSection("コーチ", coaches, "bg-blue-50 text-blue-700")}

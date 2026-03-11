@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
+import { ChevronRight } from "lucide-react";
 import DashboardFilteredContent, {
   type EventWithCategories,
   type AnnouncementWithCategories,
@@ -80,20 +81,27 @@ export default async function DashboardContent({ userId }: { userId: string }) {
 
   const myProfileIds = (myProfilesResult.data ?? []).map((m) => m.member_profile_id);
 
+  // リンク済みプロファイルIDを取得（保護者が子プロファイルにアクセスできるケース）
+  const { data: linkedAccess } = await supabase
+    .from("member_profile_access")
+    .select("member_profile_id");
+  const linkedProfileIds = (linkedAccess ?? []).map((r) => r.member_profile_id);
+  const allMyProfileIds = [...new Set([...myProfileIds, ...linkedProfileIds])];
+
   // ユーザーのカテゴリ取得 + 出欠回答済みイベント取得 を並列実行
   const eventIds = (allUpcomingEventsResult.data ?? []).map((e) => e.id);
   const [userCategoriesResult, userAttendancesResult] = await Promise.all([
-    myProfileIds.length > 0
+    allMyProfileIds.length > 0
       ? supabase
           .from("member_profile_categories")
           .select("event_type_id")
-          .in("member_profile_id", myProfileIds)
+          .in("member_profile_id", allMyProfileIds)
       : Promise.resolve({ data: [] as { event_type_id: string }[] }),
-    myProfileIds.length > 0 && eventIds.length > 0
+    allMyProfileIds.length > 0 && eventIds.length > 0
       ? supabase
           .from("attendances")
           .select("event_id")
-          .in("member_profile_id", myProfileIds)
+          .in("member_profile_id", allMyProfileIds)
           .in("event_id", eventIds)
       : Promise.resolve({ data: [] as { event_id: string }[] }),
   ]);
@@ -134,8 +142,8 @@ export default async function DashboardContent({ userId }: { userId: string }) {
         <div className="rounded-lg border border-gray-200 bg-white p-6">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-lg font-semibold">{team.name}</h2>
-            <Link href="/members" className="text-sm text-blue-600 hover:underline">
-              メンバー一覧 ›
+            <Link href="/members" className="text-sm text-blue-600 hover:text-blue-700">
+              メンバー一覧 <ChevronRight size={16} strokeWidth={1.5} className="inline" aria-hidden="true" />
             </Link>
           </div>
           <div className="grid grid-cols-3 gap-2 text-center">

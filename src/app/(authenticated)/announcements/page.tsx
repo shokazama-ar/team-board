@@ -71,6 +71,8 @@ export default function AnnouncementsPage() {
   const [currentUserRole, setCurrentUserRole] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>("member");
+  const [showOnlyMyCategories, setShowOnlyMyCategories] = useState(true);
+  const [myCategoryIds, setMyCategoryIds] = useState<string[]>([]);
 
   const isAdmin = currentUserRole === "admin";
 
@@ -85,7 +87,7 @@ export default function AnnouncementsPage() {
 
     const { data: membership } = await supabase
       .from("team_members")
-      .select("team_id, role, member_profiles!inner(user_id)")
+      .select("team_id, role, member_profiles!inner(id, user_id)")
       .eq("team_id", teamId)
       .eq("member_profiles.user_id", user.id)
       .limit(1)
@@ -94,6 +96,26 @@ export default function AnnouncementsPage() {
     if (!membership) return;
     setTeamId(membership.team_id);
     setCurrentUserRole(membership.role);
+
+    // 自分のカテゴリIDを取得（リンク済みプロファイルも含む）
+    const myProfileIds = (membership as any)?.member_profiles
+      ? [(membership as any).member_profiles.id]
+      : [];
+
+    // リンク済みプロファイルIDを取得（保護者が子プロファイルにアクセスできるケース）
+    const { data: linkedAccess } = await supabase
+      .from("member_profile_access")
+      .select("member_profile_id");
+    const linkedProfileIds = (linkedAccess ?? []).map((r: any) => r.member_profile_id);
+    const allMyProfileIds = [...new Set([...myProfileIds, ...linkedProfileIds])];
+
+    if (allMyProfileIds.length > 0) {
+      const { data: myCategories } = await supabase
+        .from("member_profile_categories")
+        .select("event_type_id")
+        .in("member_profile_id", allMyProfileIds);
+      setMyCategoryIds((myCategories ?? []).map((c: any) => c.event_type_id));
+    }
 
     const { data: announcementsData } = await supabase
       .from("announcements")
@@ -157,13 +179,24 @@ export default function AnnouncementsPage() {
     return <div className="text-sm text-gray-500">チームが見つかりません</div>;
   }
 
-  const filteredAnnouncements = isAdmin
+  const hasCategories = myCategoryIds.length > 0;
+
+  const tabFilteredAnnouncements = isAdmin
     ? announcements.filter((a) =>
         activeTab === "admin"
           ? a.target_role === "admin"
           : a.target_role == null || a.target_role === "member"
       )
     : announcements;
+
+  const filteredAnnouncements =
+    showOnlyMyCategories && hasCategories
+      ? tabFilteredAnnouncements.filter(
+          (a) =>
+            a.categories.length === 0 ||
+            a.categories.some((cat) => myCategoryIds.includes(cat.id))
+        )
+      : tabFilteredAnnouncements;
 
   const unreadCount = inquiries.filter((i) => i.status === "new").length;
 
@@ -206,6 +239,29 @@ export default function AnnouncementsPage() {
               管理者向け
             </button>
           </nav>
+        </div>
+      )}
+
+      {/* カテゴリトグル */}
+      {hasCategories && (
+        <div className="mb-4 flex items-center justify-end gap-2">
+          <span className="text-xs text-gray-500">
+            {showOnlyMyCategories ? "自分のカテゴリのみ" : "すべてのカテゴリを表示中"}
+          </span>
+          <button
+            onClick={() => setShowOnlyMyCategories((v) => !v)}
+            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+              !showOnlyMyCategories ? "bg-blue-600" : "bg-gray-300"
+            }`}
+            aria-label="すべてのカテゴリを表示"
+          >
+            <span
+              className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${
+                !showOnlyMyCategories ? "translate-x-4" : "translate-x-1"
+              }`}
+            />
+          </button>
+          <span className="text-xs text-gray-400">すべて</span>
         </div>
       )}
 
