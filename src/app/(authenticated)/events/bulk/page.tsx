@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
-import DateTimePicker from "@/components/ui/DateTimePicker";
 import { Copy, Trash2, Plus, ChevronDown, ChevronUp } from "lucide-react";
 
 type EventType = {
@@ -120,6 +119,14 @@ function CategorySelect({
   );
 }
 
+const HOURS = Array.from({ length: 24 }, (_, i) => i);
+const MINUTES = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
+const pad = (n: number) => String(n).padStart(2, "0");
+const getDatePart = (dt: string) => dt.includes("T") ? dt.split("T")[0] : "";
+const getTimePart = (dt: string) => dt.includes("T") ? dt.split("T")[1] : "00:00";
+const getHour = (time: string) => time ? parseInt(time.split(":")[0], 10) : 0;
+const getMinute = (time: string) => time ? parseInt(time.split(":")[1], 10) : 0;
+
 function EventCard({
   draft,
   index,
@@ -127,6 +134,7 @@ function EventCard({
   types,
   categories,
   failed,
+  locationSuggestions,
   onChange,
   onDuplicate,
   onDelete,
@@ -138,6 +146,7 @@ function EventCard({
   types: EventType[];
   categories: EventType[];
   failed: boolean;
+  locationSuggestions: string[];
   onChange: (updated: DraftEvent) => void;
   onDuplicate: () => void;
   onDelete: () => void;
@@ -160,8 +169,8 @@ function EventCard({
           failed ? "border-red-400 bg-red-50" : "border-gray-200"
         }`}
       >
-        {/* Row 1: タイトル | 種別 | アクション */}
-        <div className="mb-2 flex items-center gap-2">
+        {/* Row 1: タイトル | 複製ボタン | 削除ボタン */}
+        <div className="mb-2 flex items-end gap-2">
           <input
             type="text"
             value={draft.title}
@@ -169,28 +178,6 @@ function EventCard({
             placeholder="タイトル *"
             className="min-w-0 flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
-          {types.length > 0 ? (
-            <select
-              value={draft.selectedTypeId ?? ""}
-              onChange={(e) => update({ selectedTypeId: e.target.value || null })}
-              className="shrink-0 rounded-lg border border-gray-300 px-2 py-1.5 text-sm text-gray-700 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            >
-              <option value="">種別なし</option>
-              {types.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <a
-              href="/settings"
-              className="shrink-0 rounded-lg border border-dashed border-gray-300 px-2 py-1.5 text-xs text-gray-400 hover:border-blue-400 hover:text-blue-500 whitespace-nowrap"
-              title="設定から種別を追加できます"
-            >
-              種別を設定
-            </a>
-          )}
           <button
             type="button"
             onClick={onDuplicate}
@@ -213,26 +200,31 @@ function EventCard({
           )}
         </div>
 
-        {/* Row 2: 開始日時 | 終了日時 | カテゴリ | 場所 */}
-        <div className="flex flex-wrap items-end gap-x-3 gap-y-2">
-          <div className="flex flex-col gap-0.5">
-            <span className="text-xs text-gray-400">開始 *</span>
-            <DateTimePicker
-              value={draft.date}
-              onChange={(val) => update({ date: val })}
-              required
-            />
-          </div>
-          <div className="flex flex-col gap-0.5">
-            <span className="text-xs text-gray-400">終了</span>
-            <DateTimePicker
-              value={draft.endDate}
-              onChange={(val) => update({ endDate: val })}
-              min={draft.date}
-            />
-          </div>
+        {/* Row 2: イベント種別 | カテゴリ（存在する場合のみ） */}
+        <div className="mb-2 flex gap-2 items-end">
+          {types.length > 0 ? (
+            <select
+              value={draft.selectedTypeId ?? ""}
+              onChange={(e) => update({ selectedTypeId: e.target.value || null })}
+              className="flex-1 rounded-lg border border-gray-300 px-2 py-1.5 text-sm text-gray-700 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            >
+              {types.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <a
+              href="/settings"
+              className="flex-1 rounded-lg border border-dashed border-gray-300 px-2 py-1.5 text-xs text-gray-400 hover:border-blue-400 hover:text-blue-500 whitespace-nowrap text-center"
+              title="設定から種別を追加できます"
+            >
+              種別を設定
+            </a>
+          )}
           {categories.length > 0 && (
-            <div className="flex flex-col gap-0.5">
+            <div className="flex flex-1 flex-col gap-0.5">
               <span className="text-xs text-gray-400">カテゴリ</span>
               <CategorySelect
                 items={categories}
@@ -241,16 +233,104 @@ function EventCard({
               />
             </div>
           )}
-          <div className="flex min-w-[120px] flex-1 flex-col gap-0.5">
-            <span className="text-xs text-gray-400">場所</span>
+        </div>
+
+        {/* Row 3: 日付 | 開始時間 | 終了時間 */}
+        <div className="mb-2 flex gap-2 items-end flex-wrap">
+          {/* 日付（共通） */}
+          <div className="flex flex-col gap-0.5">
+            <span className="text-xs text-gray-400">日付 *</span>
             <input
-              type="text"
-              value={draft.location}
-              onChange={(e) => update({ location: e.target.value })}
-              placeholder="場所（任意）"
-              className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              type="date"
+              value={getDatePart(draft.date)}
+              required
+              onChange={(e) => {
+                const d = e.target.value;
+                const startTime = getTimePart(draft.date);
+                const endTime = getTimePart(draft.endDate);
+                update({
+                  date: d ? `${d}T${startTime}` : "",
+                  endDate: d ? `${d}T${endTime}` : "",
+                });
+              }}
+              className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
             />
           </div>
+
+          {/* 開始時間 */}
+          <div className="flex flex-col gap-0.5">
+            <span className="text-xs text-gray-400">開始</span>
+            <div className="flex gap-1">
+              <select
+                value={getHour(getTimePart(draft.date))}
+                onChange={(e) => {
+                  const d = getDatePart(draft.date);
+                  const m = getMinute(getTimePart(draft.date));
+                  update({ date: d ? `${d}T${pad(+e.target.value)}:${pad(m)}` : `T${pad(+e.target.value)}:${pad(m)}` });
+                }}
+                className="rounded-lg border border-gray-300 px-1.5 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
+              >
+                {HOURS.map(h => <option key={h} value={h}>{pad(h)}</option>)}
+              </select>
+              <select
+                value={getMinute(getTimePart(draft.date))}
+                onChange={(e) => {
+                  const d = getDatePart(draft.date);
+                  const h = getHour(getTimePart(draft.date));
+                  update({ date: d ? `${d}T${pad(h)}:${pad(+e.target.value)}` : `T${pad(h)}:${pad(+e.target.value)}` });
+                }}
+                className="rounded-lg border border-gray-300 px-1.5 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
+              >
+                {MINUTES.map(m => <option key={m} value={m}>{pad(m)}</option>)}
+              </select>
+            </div>
+          </div>
+
+          {/* 終了時間 */}
+          <div className="flex flex-col gap-0.5">
+            <span className="text-xs text-gray-400">終了</span>
+            <div className="flex gap-1">
+              <select
+                value={getHour(getTimePart(draft.endDate))}
+                onChange={(e) => {
+                  const d = getDatePart(draft.date);
+                  const m = getMinute(getTimePart(draft.endDate));
+                  update({ endDate: d ? `${d}T${pad(+e.target.value)}:${pad(m)}` : `T${pad(+e.target.value)}:${pad(m)}` });
+                }}
+                className="rounded-lg border border-gray-300 px-1.5 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
+              >
+                {HOURS.map(h => <option key={h} value={h}>{pad(h)}</option>)}
+              </select>
+              <select
+                value={getMinute(getTimePart(draft.endDate))}
+                onChange={(e) => {
+                  const d = getDatePart(draft.date);
+                  const h = getHour(getTimePart(draft.endDate));
+                  update({ endDate: d ? `${d}T${pad(h)}:${pad(+e.target.value)}` : `T${pad(h)}:${pad(+e.target.value)}` });
+                }}
+                className="rounded-lg border border-gray-300 px-1.5 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
+              >
+                {MINUTES.map(m => <option key={m} value={m}>{pad(m)}</option>)}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Row 4: 場所 */}
+        <div className="mb-2">
+          <input
+            type="text"
+            value={draft.location}
+            onChange={(e) => update({ location: e.target.value })}
+            list={`location-suggestions-${draft.localId}`}
+            placeholder="場所（任意）"
+            className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          />
+          <datalist id={`location-suggestions-${draft.localId}`}>
+            {locationSuggestions.map(loc => (
+              <option key={loc} value={loc} />
+            ))}
+          </datalist>
         </div>
 
         {/* メモ（折りたたみ） */}
@@ -308,6 +388,7 @@ export default function BulkEventsPage() {
   const [drafts, setDrafts] = useState<DraftEvent[]>([newDraft()]);
   const [saving, setSaving] = useState(false);
   const [failedIds, setFailedIds] = useState<Set<string>>(new Set());
+  const [locationSuggestions, setLocationSuggestions] = useState<string[]>([]);
 
   useEffect(() => {
     (async () => {
@@ -346,6 +427,21 @@ export default function BulkEventsPage() {
       setLoading(false);
     })();
   }, [supabase]);
+
+  useEffect(() => {
+    if (!teamId) return;
+    supabase
+      .from("events")
+      .select("location")
+      .eq("team_id", teamId)
+      .not("location", "is", null)
+      .neq("location", "")
+      .then(({ data }) => {
+        if (!data) return;
+        const unique = [...new Set(data.map(d => d.location as string).filter(Boolean))].sort();
+        setLocationSuggestions(unique);
+      });
+  }, [teamId, supabase]);
 
   const types = eventTypes.filter((t) => t.kind === "type");
   const categories = eventTypes.filter((t) => t.kind === "category");
@@ -486,6 +582,7 @@ export default function BulkEventsPage() {
             types={types}
             categories={categories}
             failed={failedIds.has(draft.localId)}
+            locationSuggestions={locationSuggestions}
             onChange={(updated) => updateDraft(draft.localId, updated)}
             onDuplicate={() => duplicateDraft(index)}
             onDelete={() => deleteDraft(draft.localId)}

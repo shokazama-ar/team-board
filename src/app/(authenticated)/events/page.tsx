@@ -260,70 +260,67 @@ export default function EventsPage() {
       )}
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <h1 className="text-2xl font-bold hidden md:block">予定表</h1>
           <div className="flex gap-1 rounded-lg bg-gray-100 p-1">
             <button
               onClick={() => setView("list")}
+              title="一覧"
               aria-label="一覧"
-              className={`flex items-center gap-1 rounded-md px-3 py-1 text-sm font-medium transition-colors ${
+              className={`flex items-center rounded-md px-3 py-1 text-sm font-medium transition-colors ${
                 view === "list"
                   ? "bg-white text-gray-900 shadow-sm"
                   : "text-gray-500 hover:text-gray-700"
               }`}
             >
               <List size={16} strokeWidth={1.5} aria-hidden="true" />
-              <span className="hidden sm:inline">一覧</span>
             </button>
             <button
               onClick={() => setView("calendar")}
+              title="カレンダー"
               aria-label="カレンダー"
-              className={`flex items-center gap-1 rounded-md px-3 py-1 text-sm font-medium transition-colors ${
+              className={`flex items-center rounded-md px-3 py-1 text-sm font-medium transition-colors ${
                 view === "calendar"
                   ? "bg-white text-gray-900 shadow-sm"
                   : "text-gray-500 hover:text-gray-700"
               }`}
             >
               <CalendarDays size={16} strokeWidth={1.5} aria-hidden="true" />
-              <span className="hidden sm:inline">カレンダー</span>
             </button>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={handleExport}
-            aria-label="CSVエクスポート"
-            className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50"
-            title="CSVエクスポート"
+            title="エクスポート"
+            aria-label="エクスポート"
+            className="flex items-center rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50"
           >
             <Download size={15} strokeWidth={1.5} aria-hidden="true" />
-            <span className="hidden sm:inline">エクスポート</span>
           </button>
           {currentUserRole === "admin" && (
             <>
               <button
                 onClick={() => setShowImportModal(true)}
-                aria-label="CSVインポート"
-                className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50"
-                title="CSVインポート"
+                title="インポート"
+                aria-label="インポート"
+                className="flex items-center rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50"
               >
                 <Upload size={15} strokeWidth={1.5} aria-hidden="true" />
-                <span className="hidden sm:inline">インポート</span>
               </button>
               <Link
                 href="/events/bulk"
+                title="一括追加"
                 aria-label="一括追加"
-                className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                className="flex items-center rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
               >
                 <LayoutList size={16} strokeWidth={1.5} aria-hidden="true" />
-                <span className="hidden sm:inline">一括追加</span>
               </Link>
               <Link
                 href="/events/new"
-                aria-label="新規作成"
+                aria-label="追加"
                 className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
               >
                 <Plus size={16} strokeWidth={1.5} aria-hidden="true" />
-                <span className="hidden sm:inline">新規作成</span>
+                追加
               </Link>
             </>
           )}
@@ -388,11 +385,18 @@ export default function EventsPage() {
       )}
 
       {view === "calendar" ? (
-        <CalendarView
-          events={filteredEvents}
-          date={currentMonth}
-          onNavigate={setCurrentMonth}
-        />
+        <div className="pb-20">
+          <CalendarView
+            events={filteredEvents.map(e => ({
+              ...e,
+              color: (e.event_event_types
+                .map(et => et.event_types)
+                .filter((t): t is NonNullable<typeof t> => t !== null && t.kind === "type")[0]?.color) ?? undefined,
+            }))}
+            date={currentMonth}
+            onNavigate={setCurrentMonth}
+          />
+        </div>
       ) : filteredEvents.length === 0 ? (
         <div className="rounded-lg border border-gray-200 bg-white p-6">
           <p className="text-sm text-gray-500">

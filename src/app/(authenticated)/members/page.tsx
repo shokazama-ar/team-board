@@ -254,10 +254,11 @@ export default function MembersPage() {
                   <button
                     onClick={() => removeMember(member.id, member.name ?? "")}
                     disabled={actionLoading === member.id}
-                    className="flex items-center gap-1 rounded border border-red-300 px-2 py-1 text-xs text-red-600 hover:bg-red-50 disabled:opacity-50"
+                    title="削除"
+                    aria-label="削除"
+                    className="flex items-center rounded border border-red-300 px-2 py-1 text-xs text-red-600 hover:bg-red-50 disabled:opacity-50"
                   >
                     <Trash2 size={12} strokeWidth={1.5} aria-hidden="true" />
-                    削除
                   </button>
                 </>
               )}
@@ -270,7 +271,6 @@ export default function MembersPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <h1 className="mb-6 text-2xl font-bold hidden md:block">メンバー</h1>
 
       {/* Team Info & Invite Code */}
       <div className="mb-6 rounded-lg border border-gray-200 bg-white p-6">

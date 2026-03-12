@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 import { Home, Calendar, Megaphone, Users, Settings, type LucideIcon } from "lucide-react";
 
 const navItems: { href: string; label: string; icon: LucideIcon }[] = [
@@ -16,9 +17,28 @@ const ALWAYS_ACTIVE = ["/", "/settings"];
 
 export function BottomNav({ hasTeam }: { hasTeam: boolean }) {
   const pathname = usePathname();
+  const [hidden, setHidden] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const onScroll = () => {
+      setHidden(true);
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => setHidden(false), 300);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 border-t border-gray-200 bg-white md:hidden">
+    <nav
+      className={`fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white md:hidden transition-transform duration-200 ${
+        hidden ? "translate-y-full" : "translate-y-0"
+      }`}
+    >
       <div className="flex justify-around">
         {navItems.map((item) => {
           const isActive =

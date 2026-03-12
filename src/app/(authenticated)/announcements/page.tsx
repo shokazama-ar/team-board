@@ -202,18 +202,17 @@ export default function AnnouncementsPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold hidden md:block">お知らせ</h1>
-        {isAdmin && (
+      {isAdmin && (
+        <div className="mb-6 flex items-center justify-end">
           <Link
             href="/announcements/new"
             className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
           >
             <Plus size={16} strokeWidth={1.5} aria-hidden="true" />
-            新規作成
+            追加
           </Link>
-        )}
-      </div>
+        </div>
+      )}
 
       {isAdmin && (
         <div className="mb-6 border-b border-gray-200">

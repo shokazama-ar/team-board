@@ -26,7 +26,7 @@ const messages = {
 };
 
 // カスタムツールバー: 「＜ 2026年2月 ＞」の並びで、今日ボタンは左端
-type CalEvent = { id: string; title: string; event_type: string; start: Date; end: Date };
+type CalEvent = { id: string; title: string; event_type: string; start: Date; end: Date; color?: string };
 
 function CustomToolbar({ date, onNavigate }: ToolbarProps<CalEvent>) {
   return (
@@ -75,6 +75,18 @@ function CustomHeader({ date }: { date: Date }) {
 }
 
 const eventPropGetter = (event: CalEvent) => {
+  if (event.color) {
+    return {
+      style: {
+        backgroundColor: event.color + "25",
+        color: event.color,
+        border: "none",
+        borderRadius: "4px",
+        padding: "1px 4px",
+        fontSize: "12px",
+      },
+    };
+  }
   const colorMap: Record<string, { backgroundColor: string; color: string }> = {
     practice: { backgroundColor: "#f0fdf4", color: "#15803d" },
     game: { backgroundColor: "#fef2f2", color: "#b91c1c" },
@@ -100,6 +112,7 @@ type EventInput = {
   event_type: string;
   date: string;
   end_at: string | null;
+  color?: string;
 };
 
 export function CalendarView({
@@ -117,10 +130,9 @@ export function CalendarView({
     id: e.id,
     title: e.title,
     event_type: e.event_type,
+    color: e.color,
     start: new Date(e.date),
-    end: e.end_at
-      ? new Date(e.end_at)
-      : new Date(new Date(e.date).getTime() + 60 * 60 * 1000),
+    end: e.end_at ? new Date(e.end_at) : new Date(new Date(e.date).getTime() + 60 * 60 * 1000),
   }));
 
   return (

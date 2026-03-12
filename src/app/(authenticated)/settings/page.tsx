@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { RefreshCw, Trash2, AlertTriangle, Plus, X, ChevronUp, ChevronDown, Pencil, Check, UserPlus, ExternalLink, Copy } from "lucide-react";
+import { RefreshCw, Trash2, AlertTriangle, Plus, X, ChevronUp, ChevronDown, Pencil, Check, UserPlus, ExternalLink, Copy, Share2 } from "lucide-react";
 import { AvatarUpload } from "@/components/ui/AvatarUpload";
 
 function copyToClipboard(text: string): Promise<void> {
@@ -32,23 +32,15 @@ type EventType = {
   kind: EventTypeKind;
 };
 
-// イベント種別用：暖色系
-const TYPE_PRESET_COLORS = [
+const PRESET_COLORS = [
   { label: "赤",       value: "#dc2626" },
   { label: "オレンジ", value: "#ea580c" },
   { label: "アンバー", value: "#d97706" },
-  { label: "ピンク",   value: "#db2777" },
-  { label: "紫",       value: "#9333ea" },
-  { label: "マゼンタ", value: "#c026d3" },
-];
-
-// 対象カテゴリ用：寒色系
-const CATEGORY_PRESET_COLORS = [
+  { label: "緑",       value: "#16a34a" },
   { label: "青",       value: "#2563eb" },
   { label: "インジゴ", value: "#4f46e5" },
-  { label: "水色",     value: "#0891b2" },
-  { label: "ティール", value: "#0d9488" },
-  { label: "緑",       value: "#16a34a" },
+  { label: "紫",       value: "#9333ea" },
+  { label: "ピンク",   value: "#db2777" },
   { label: "スレート", value: "#64748b" },
 ];
 
@@ -115,6 +107,7 @@ function EventTypeSection({
                 disabled={index === 0}
                 className="text-gray-300 hover:text-gray-600 disabled:opacity-20"
                 aria-label="上へ"
+                title="上へ"
               >
                 <ChevronUp size={14} strokeWidth={2} />
               </button>
@@ -124,6 +117,7 @@ function EventTypeSection({
                 disabled={index === items.length - 1}
                 className="text-gray-300 hover:text-gray-600 disabled:opacity-20"
                 aria-label="下へ"
+                title="下へ"
               >
                 <ChevronDown size={14} strokeWidth={2} />
               </button>
@@ -157,6 +151,7 @@ function EventTypeSection({
                   }}
                   className="text-blue-500 hover:text-blue-700"
                   aria-label="保存"
+                  title="保存"
                 >
                   <Check size={16} strokeWidth={2} />
                 </button>
@@ -177,6 +172,7 @@ function EventTypeSection({
                   onClick={() => { setEditingId(item.id); setEditingName(item.name); }}
                   className="text-gray-400 hover:text-gray-600"
                   aria-label="編集"
+                  title="編集"
                 >
                   <Pencil size={14} strokeWidth={1.5} />
                 </button>
@@ -185,6 +181,7 @@ function EventTypeSection({
                   onClick={() => onDelete(item.id)}
                   className="text-gray-400 hover:text-red-500"
                   aria-label="削除"
+                  title="削除"
                 >
                   <X size={16} strokeWidth={1.5} />
                 </button>
@@ -423,7 +420,7 @@ function AddProfileForm({
         className="flex items-center gap-1.5 rounded-lg border border-dashed border-gray-300 px-4 py-2 text-sm text-gray-500 hover:border-gray-400 hover:text-gray-700"
       >
         <UserPlus size={16} strokeWidth={1.5} aria-hidden="true" />
-        プロファイルを追加
+        追加
       </button>
     );
   }
@@ -720,21 +717,9 @@ function InquiryTypeSection({ teamId }: InquiryTypeSectionProps) {
   return (
     <>
       <hr className="my-8 border-gray-200" />
-      <div className="mb-4 flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold">問い合わせ種別</h2>
-          <p className="mt-1 text-sm text-gray-500">問い合わせフォームで選択できる種別を管理します</p>
-        </div>
-        {!isTypeFormOpen && (
-          <button
-            type="button"
-            onClick={openNewForm}
-            className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
-          >
-            <Plus size={16} strokeWidth={1.5} aria-hidden="true" />
-            種別を追加
-          </button>
-        )}
+      <div className="mb-4">
+        <h2 className="text-lg font-semibold">問い合わせ種別</h2>
+        <p className="mt-1 text-sm text-gray-500">問い合わせフォームで選択できる種別を管理します</p>
       </div>
 
       {sectionMessage && !isTypeFormOpen && (
@@ -763,6 +748,7 @@ function InquiryTypeSection({ teamId }: InquiryTypeSectionProps) {
                     onClick={() => openEditForm(t)}
                     className="text-gray-400 hover:text-gray-600"
                     aria-label="編集"
+                    title="編集"
                   >
                     <Pencil size={14} strokeWidth={1.5} />
                   </button>
@@ -771,6 +757,7 @@ function InquiryTypeSection({ teamId }: InquiryTypeSectionProps) {
                     onClick={() => handleDelete(t.id)}
                     className="text-gray-400 hover:text-red-500"
                     aria-label="削除"
+                    title="削除"
                   >
                     <X size={16} strokeWidth={1.5} />
                   </button>
@@ -786,6 +773,14 @@ function InquiryTypeSection({ teamId }: InquiryTypeSectionProps) {
               </div>
             );
           })}
+          <button
+            type="button"
+            onClick={openNewForm}
+            className="flex items-center gap-1.5 rounded-lg border border-dashed border-gray-300 px-4 py-2 text-sm text-gray-500 hover:border-gray-400 hover:text-gray-700"
+          >
+            <Plus size={16} strokeWidth={1.5} aria-hidden="true" />
+            追加
+          </button>
         </div>
       )}
 
@@ -845,7 +840,7 @@ function InquiryTypeSection({ teamId }: InquiryTypeSectionProps) {
                 className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800"
               >
                 <Plus size={14} strokeWidth={2} />
-                項目を追加
+                追加
               </button>
             </div>
 
@@ -980,18 +975,17 @@ export default function SettingsPage() {
   const [regenerating, setRegenerating] = useState(false);
   const [regeneratingGuardian, setRegeneratingGuardian] = useState(false);
   const [contactUrlCopied, setContactUrlCopied] = useState(false);
-  const [coachShareOpen, setCoachShareOpen] = useState(false);
-  const [guardianShareOpen, setGuardianShareOpen] = useState(false);
   const [coachCopied, setCoachCopied] = useState<"code" | "link" | null>(null);
   const [guardianCopied, setGuardianCopied] = useState<"code" | "link" | null>(null);
   const [copiedShareCodeId, setCopiedShareCodeId] = useState<string | null>(null);
-
-  // Refs for share panels (outside click)
-  const coachShareRef = useRef<HTMLDivElement>(null);
-  const guardianShareRef = useRef<HTMLDivElement>(null);
+  const [shareDialogProfileId, setShareDialogProfileId] = useState<string | null>(null);
 
   // Tab state
   const [activeTab, setActiveTab] = useState<"coach" | "guardian" | "admin">("coach");
+
+  // Invite share dialog state
+  const [coachShareDialogOpen, setCoachShareDialogOpen] = useState(false);
+  const [guardianShareDialogOpen, setGuardianShareDialogOpen] = useState(false);
 
   // Event types / categories state
   const [eventTypes, setEventTypes] = useState<EventType[]>([]);
@@ -1000,7 +994,9 @@ export default function SettingsPage() {
   // Coach category state (self-managed)
   const [coachProfileIds, setCoachProfileIds] = useState<string[]>([]);
   const [coachCategoryIds, setCoachCategoryIds] = useState<Set<string>>(new Set());
+  const [originalCoachCategoryIds, setOriginalCoachCategoryIds] = useState<Set<string>>(new Set());
   const [savingCoachCategories, setSavingCoachCategories] = useState(false);
+  const [editingCoachCategories, setEditingCoachCategories] = useState(false);
   const [coachCategoryMessage, setCoachCategoryMessage] = useState("");
 
   // Player/profile category modal state (admin)
@@ -1009,7 +1005,7 @@ export default function SettingsPage() {
   const [playerCategoryPlayers, setPlayerCategoryPlayers] = useState<PlayerForCategory[]>([]);
   const [playerCategoryAssignments, setPlayerCategoryAssignments] = useState<Set<string>>(new Set());
   const [savingPlayerCategories, setSavingPlayerCategories] = useState(false);
-  const [playerCategoryModalTab, setPlayerCategoryModalTab] = useState<"coach" | "player">("coach");
+  const [playerCategoryModalTab, setPlayerCategoryModalTab] = useState<"coach" | "player">("player");
 
   // Member profiles state
   type MemberProfileItem = {
@@ -1215,20 +1211,6 @@ export default function SettingsPage() {
     };
     loadData();
   }, [supabase, reloadMyProfiles]);
-
-  // ── Share panel outside-click handlers ──────────────────────────────────
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (coachShareRef.current && !coachShareRef.current.contains(e.target as Node)) {
-        setCoachShareOpen(false);
-      }
-      if (guardianShareRef.current && !guardianShareRef.current.contains(e.target as Node)) {
-        setGuardianShareOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
 
   // ── Generic helpers ─────────────────────────────────────────────────────
   const moveItem = async (
@@ -1485,7 +1467,7 @@ export default function SettingsPage() {
     setPlayerCategoryAssignments(
       new Set((existing ?? []).map((a) => `${a.member_profile_id}:${a.event_type_id}`))
     );
-    setPlayerCategoryModalTab("coach");
+    setPlayerCategoryModalTab("player");
     setPlayerCategoryModalOpen(true);
   };
 
@@ -1639,41 +1621,14 @@ export default function SettingsPage() {
                   <code className="flex-1 min-w-0 truncate rounded border border-gray-200 bg-white px-2 py-1 text-sm font-mono text-gray-700">
                     {p.share_code ?? "—"}
                   </code>
-                  {p.share_code && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        copyToClipboard(p.share_code!).then(() => {
-                          setCopiedShareCodeId(p.member_profile_id);
-                          setTimeout(() => setCopiedShareCodeId(null), 1000);
-                        });
-                      }}
-                      className="flex items-center gap-1 rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-600 hover:bg-gray-50"
-                    >
-                      {copiedShareCodeId === p.member_profile_id ? (
-                        <><Check size={12} strokeWidth={1.5} /> コピー済み</>
-                      ) : (
-                        <><Copy size={12} strokeWidth={1.5} /> コピー</>
-                      )}
-                    </button>
-                  )}
                   <button
                     type="button"
-                    onClick={async () => {
-                      if (!window.confirm("共有コードを再生成すると、以前のコードは無効になります。よろしいですか？")) return;
-                      const { data, error } = await supabase.rpc("regenerate_profile_share_code", {
-                        target_profile_id: p.member_profile_id,
-                      });
-                      if (!error && data) {
-                        setMyProfiles((prev) =>
-                          prev.map((mp) => (mp.id === p.id ? { ...mp, share_code: data as string } : mp))
-                        );
-                      }
-                    }}
-                    className="flex items-center gap-1 rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-600 hover:bg-gray-50"
+                    onClick={() => setShareDialogProfileId(p.member_profile_id)}
+                    title="共有コードを共有"
+                    aria-label="共有コードを共有"
+                    className="flex items-center rounded-lg border border-gray-300 bg-white p-2 text-gray-600 hover:bg-gray-50"
                   >
-                    <RefreshCw size={12} strokeWidth={1.5} />
-                    再生成
+                    <Share2 size={16} strokeWidth={1.5} aria-hidden="true" />
                   </button>
                 </div>
                 {(p.accessors ?? []).length > 0 ? (
@@ -1769,7 +1724,6 @@ export default function SettingsPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <h1 className="mb-6 text-2xl font-bold hidden md:block">設定</h1>
 
       {/* タブナビゲーション */}
       {teamId && (
@@ -1820,56 +1774,99 @@ export default function SettingsPage() {
         <>
           {teamId && (
             <>
-              <h2 className="mb-1 text-lg font-semibold">担当カテゴリ</h2>
-              <p className="mb-4 text-sm text-gray-500">
-                担当するカテゴリを設定すると、関連する予定・お知らせのみダッシュボードに表示されます。未設定の場合は全件表示されます。
-              </p>
+              <div className="mb-3 flex items-start justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold">自分の担当カテゴリ</h2>
+                  <p className="text-sm text-gray-500">自分が担当するカテゴリを設定します。</p>
+                </div>
+                {!editingCoachCategories && eventCategories.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOriginalCoachCategoryIds(new Set(coachCategoryIds));
+                      setEditingCoachCategories(true);
+                    }}
+                    className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
+                  >
+                    <Pencil size={14} strokeWidth={1.5} aria-hidden="true" />
+                    編集
+                  </button>
+                )}
+              </div>
               {eventCategories.length === 0 ? (
                 <p className="text-sm text-gray-400">カテゴリが登録されていません（管理者に依頼してください）</p>
               ) : (
                 <>
-                  <div className="mb-4 flex flex-wrap gap-2">
-                    {eventCategories.map((cat) => {
-                      const selected = coachCategoryIds.has(cat.id);
-                      return (
-                        <button
-                          key={cat.id}
-                          type="button"
-                          onClick={() => toggleCoachCategory(cat.id)}
-                          className={`rounded-full border-2 px-3 py-1 text-sm font-medium transition-all ${
-                            selected
-                              ? "shadow-sm"
-                              : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
-                          }`}
-                          style={
-                            selected
-                              ? { backgroundColor: cat.color + "20", color: cat.color, borderColor: cat.color }
-                              : {}
-                          }
-                        >
-                          {cat.name}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleSaveCoachCategories}
-                    disabled={savingCoachCategories}
-                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-                  >
-                    {savingCoachCategories ? "保存中..." : "保存"}
-                  </button>
-                  {coachCategoryMessage && (
-                    <div
-                      className={`mt-3 rounded-md p-3 text-sm ${
-                        coachCategoryMessage.includes("失敗")
-                          ? "bg-red-50 text-red-600"
-                          : "bg-green-50 text-green-600"
-                      }`}
-                    >
-                      {coachCategoryMessage}
+                  {!editingCoachCategories && (
+                    <div className="flex flex-wrap gap-2">
+                      {eventCategories.filter(cat => coachCategoryIds.has(cat.id)).length === 0 ? (
+                        <p className="text-sm text-gray-400">担当カテゴリ未設定</p>
+                      ) : (
+                        eventCategories
+                          .filter(cat => coachCategoryIds.has(cat.id))
+                          .map(cat => (
+                            <span
+                              key={cat.id}
+                              className="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium text-white"
+                              style={{ backgroundColor: cat.color }}
+                            >
+                              {cat.name}
+                            </span>
+                          ))
+                      )}
                     </div>
+                  )}
+                  {editingCoachCategories && (
+                    <>
+                      <div className="flex flex-wrap gap-2">
+                        {eventCategories.map(cat => {
+                          const selected = coachCategoryIds.has(cat.id);
+                          return (
+                            <button
+                              key={cat.id}
+                              type="button"
+                              onClick={() => toggleCoachCategory(cat.id)}
+                              className={`rounded-full px-3 py-1 text-sm font-medium border-2 transition-all ${
+                                selected
+                                  ? "text-white border-transparent"
+                                  : "bg-white text-gray-600 border-gray-300 hover:border-gray-400"
+                              }`}
+                              style={selected ? { backgroundColor: cat.color, borderColor: cat.color } : {}}
+                            >
+                              {cat.name}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <div className="mt-3 flex gap-2">
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            await handleSaveCoachCategories();
+                            setEditingCoachCategories(false);
+                          }}
+                          disabled={savingCoachCategories}
+                          className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                        >
+                          {savingCoachCategories ? "保存中..." : "保存"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCoachCategoryIds(new Set(originalCoachCategoryIds));
+                            setEditingCoachCategories(false);
+                          }}
+                          className="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50"
+                        >
+                          キャンセル
+                        </button>
+                      </div>
+                      {coachCategoryMessage && (
+                        <p className={`mt-2 text-sm ${coachCategoryMessage.includes("失敗") ? "text-red-600" : "text-green-600"}`}>
+                          {coachCategoryMessage}
+                        </p>
+                      )}
+                    </>
                   )}
                 </>
               )}
@@ -1880,7 +1877,7 @@ export default function SettingsPage() {
             <>
               <hr className="my-8 border-gray-200" />
               <div className="mb-1 flex items-center justify-between">
-                <h2 className="text-lg font-semibold">カテゴリ割り当て</h2>
+                <h2 className="text-lg font-semibold">選手・コーチのカテゴリ割り当て</h2>
                 <button
                   type="button"
                   onClick={openPlayerCategoryModal}
@@ -1951,6 +1948,19 @@ export default function SettingsPage() {
               </li>
             ))}
           </ul>
+          <div className="mt-8 rounded-lg border border-gray-200 bg-white p-4">
+            <h3 className="mb-1 text-sm font-semibold text-gray-700">管理者へ問い合わせ</h3>
+            <p className="mb-3 text-xs text-gray-500">チームの管理者に質問・連絡をする場合はこちらから。</p>
+            <a
+              href={`/contact/${teamId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 text-sm text-blue-600 hover:underline"
+            >
+              <ExternalLink size={14} strokeWidth={1.5} aria-hidden="true" />
+              問い合わせフォーム
+            </a>
+          </div>
         </>
       )}
 
@@ -2012,46 +2022,15 @@ export default function SettingsPage() {
                 <code className="flex-1 min-w-0 truncate rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm font-mono">
                   {inviteCode}
                 </code>
-                <div className="relative shrink-0" ref={coachShareRef}>
-                  <button
-                    type="button"
-                    onClick={() => setCoachShareOpen((prev) => !prev)}
-                    className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-2.5 py-2 text-sm text-gray-600 hover:bg-gray-50 sm:px-3"
-                  >
-                    {coachCopied ? <Check size={16} strokeWidth={1.5} aria-hidden="true" /> : <Copy size={16} strokeWidth={1.5} aria-hidden="true" />}
-                    <span className="hidden sm:inline">{coachCopied ? "コピー済み" : "コピー"}</span>
-                  </button>
-                  {coachShareOpen && (
-                    <div className="absolute right-0 top-full z-10 mt-1 w-48 rounded-lg border border-gray-200 bg-white shadow-lg">
-                      <button
-                        type="button"
-                        className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50"
-                        onClick={() => {
-                          copyToClipboard(inviteCode).then(() => {
-                            setCoachCopied("code");
-                            setTimeout(() => setCoachCopied(null), 1000);
-                          });
-                          setCoachShareOpen(false);
-                        }}
-                      >
-                        コードをコピー
-                      </button>
-                      <button
-                        type="button"
-                        className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50"
-                        onClick={() => {
-                          copyToClipboard(`${origin}/signup?invite=${inviteCode}`).then(() => {
-                            setCoachCopied("link");
-                            setTimeout(() => setCoachCopied(null), 1000);
-                          });
-                          setCoachShareOpen(false);
-                        }}
-                      >
-                        招待リンクをコピー
-                      </button>
-                    </div>
-                  )}
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setCoachShareDialogOpen(true)}
+                  title="招待コードを共有"
+                  aria-label="招待コードを共有"
+                  className="flex items-center rounded-lg border border-gray-300 bg-white p-2 text-gray-600 hover:bg-gray-50"
+                >
+                  <Share2 size={16} strokeWidth={1.5} aria-hidden="true" />
+                </button>
                 <button
                   type="button"
                   onClick={handleRegenerateCode}
@@ -2073,46 +2052,15 @@ export default function SettingsPage() {
                 <code className="flex-1 min-w-0 truncate rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm font-mono">
                   {inviteCodeGuardian}
                 </code>
-                <div className="relative shrink-0" ref={guardianShareRef}>
-                  <button
-                    type="button"
-                    onClick={() => setGuardianShareOpen((prev) => !prev)}
-                    className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-2.5 py-2 text-sm text-gray-600 hover:bg-gray-50 sm:px-3"
-                  >
-                    {guardianCopied ? <Check size={16} strokeWidth={1.5} aria-hidden="true" /> : <Copy size={16} strokeWidth={1.5} aria-hidden="true" />}
-                    <span className="hidden sm:inline">{guardianCopied ? "コピー済み" : "コピー"}</span>
-                  </button>
-                  {guardianShareOpen && (
-                    <div className="absolute right-0 top-full z-10 mt-1 w-48 rounded-lg border border-gray-200 bg-white shadow-lg">
-                      <button
-                        type="button"
-                        className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50"
-                        onClick={() => {
-                          copyToClipboard(inviteCodeGuardian).then(() => {
-                            setGuardianCopied("code");
-                            setTimeout(() => setGuardianCopied(null), 1000);
-                          });
-                          setGuardianShareOpen(false);
-                        }}
-                      >
-                        コードをコピー
-                      </button>
-                      <button
-                        type="button"
-                        className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50"
-                        onClick={() => {
-                          copyToClipboard(`${window.location.origin}/signup?invite=${inviteCodeGuardian}`).then(() => {
-                            setGuardianCopied("link");
-                            setTimeout(() => setGuardianCopied(null), 1000);
-                          });
-                          setGuardianShareOpen(false);
-                        }}
-                      >
-                        招待リンクをコピー
-                      </button>
-                    </div>
-                  )}
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setGuardianShareDialogOpen(true)}
+                  title="招待コードを共有"
+                  aria-label="招待コードを共有"
+                  className="flex items-center rounded-lg border border-gray-300 bg-white p-2 text-gray-600 hover:bg-gray-50"
+                >
+                  <Share2 size={16} strokeWidth={1.5} aria-hidden="true" />
+                </button>
                 <button
                   type="button"
                   onClick={handleRegenerateGuardianCode}
@@ -2130,22 +2078,25 @@ export default function SettingsPage() {
                 問い合わせフォームURL
               </label>
               <p className="mb-1.5 text-xs text-gray-400">外部公開用の問い合わせフォームです。未ログインでもアクセスできます</p>
-              <code className="mb-2 block w-full truncate rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm font-mono">
-                {origin ? `${origin}/contact/${teamId}` : `/contact/${teamId}`}
-              </code>
-              <button
-                type="button"
-                onClick={() => {
-                  const url = `${window.location.origin}/contact/${teamId}`;
-                  copyToClipboard(url).then(() => {
-                    setContactUrlCopied(true);
-                    setTimeout(() => setContactUrlCopied(false), 1500);
-                  });
-                }}
-                className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
-              >
-                {contactUrlCopied ? "コピーしました！" : "コピー"}
-              </button>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 min-w-0 truncate rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm font-mono">
+                  {origin ? `${origin}/contact/${teamId}` : `/contact/${teamId}`}
+                </code>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const url = `${window.location.origin}/contact/${teamId}`;
+                    copyToClipboard(url).then(() => {
+                      setContactUrlCopied(true);
+                      setTimeout(() => setContactUrlCopied(false), 1500);
+                    });
+                  }}
+                  className="shrink-0 flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
+                >
+                  {contactUrlCopied ? <Check size={16} strokeWidth={1.5} aria-hidden="true" /> : <Copy size={16} strokeWidth={1.5} aria-hidden="true" />}
+                  {contactUrlCopied ? "コピー済み" : "コピー"}
+                </button>
+              </div>
             </div>
 
             {teamMessage && (
@@ -2167,7 +2118,7 @@ export default function SettingsPage() {
             description="予定作成時に選択できる種別（例: 練習・試合）を管理します"
             addLabel="例: 合宿"
             items={eventTypes}
-            colors={TYPE_PRESET_COLORS}
+            colors={PRESET_COLORS}
             onMoveUp={(i) => moveItem(eventTypes, setEventTypes, i, "up")}
             onMoveDown={(i) => moveItem(eventTypes, setEventTypes, i, "down")}
             onDelete={(id) => deleteItem(id, setEventTypes)}
@@ -2181,7 +2132,7 @@ export default function SettingsPage() {
             description="予定の対象（例: 全体・男子・女子）を管理します"
             addLabel="例: OB"
             items={eventCategories}
-            colors={CATEGORY_PRESET_COLORS}
+            colors={PRESET_COLORS}
             onMoveUp={(i) => moveItem(eventCategories, setEventCategories, i, "up")}
             onMoveDown={(i) => moveItem(eventCategories, setEventCategories, i, "down")}
             onDelete={(id) => deleteItem(id, setEventCategories)}
@@ -2191,23 +2142,6 @@ export default function SettingsPage() {
 
           {/* 問い合わせ種別 */}
           <InquiryTypeSection teamId={teamId} />
-
-          <div className="mt-8 rounded-lg border border-red-200 bg-red-50 p-4">
-            <h3 className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-red-700">
-              <AlertTriangle size={16} strokeWidth={1.5} aria-hidden="true" />
-              危険な操作
-            </h3>
-            <p className="mb-3 text-xs text-red-600">
-              チームを削除すると、すべてのデータが失われます。
-            </p>
-            <button
-              onClick={handleDeleteTeam}
-              className="flex items-center gap-1.5 rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
-            >
-              <Trash2 size={16} strokeWidth={1.5} aria-hidden="true" />
-              チームを削除
-            </button>
-          </div>
 
           {/* 機能説明 */}
           <hr className="my-8 border-gray-200" />
@@ -2235,15 +2169,239 @@ export default function SettingsPage() {
               </li>
             ))}
           </ul>
+
+          <div className="mt-8 rounded-lg border border-red-200 bg-red-50 p-4">
+            <h3 className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-red-700">
+              <AlertTriangle size={16} strokeWidth={1.5} aria-hidden="true" />
+              危険な操作
+            </h3>
+            <p className="mb-3 text-xs text-red-600">
+              チームを削除すると、すべてのデータが失われます。
+            </p>
+            <button
+              onClick={handleDeleteTeam}
+              className="flex items-center gap-1.5 rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+            >
+              <Trash2 size={16} strokeWidth={1.5} aria-hidden="true" />
+              チームを削除
+            </button>
+          </div>
+
+          {/* コーチ用招待コード共有ダイアログ */}
+          {coachShareDialogOpen && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+              onClick={() => setCoachShareDialogOpen(false)}
+            >
+              <div
+                className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="mb-4 flex items-center justify-between">
+                  <h3 className="text-base font-semibold text-gray-800">コーチ用招待コードを共有</h3>
+                  <button
+                    type="button"
+                    onClick={() => setCoachShareDialogOpen(false)}
+                    className="rounded-lg p-1 text-gray-400 hover:bg-gray-100"
+                    aria-label="閉じる"
+                  >
+                    <X size={18} strokeWidth={1.5} />
+                  </button>
+                </div>
+                <div className="mb-3">
+                  <p className="mb-1.5 text-xs font-medium text-gray-500">招待コード</p>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 min-w-0 truncate rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-mono">
+                      {inviteCode}
+                    </code>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        copyToClipboard(inviteCode).then(() => {
+                          setCoachCopied("code");
+                          setTimeout(() => setCoachCopied(null), 1500);
+                        });
+                      }}
+                      className="shrink-0 flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
+                    >
+                      {coachCopied === "code" ? <Check size={16} strokeWidth={1.5} aria-hidden="true" /> : <Copy size={16} strokeWidth={1.5} aria-hidden="true" />}
+                      {coachCopied === "code" ? "コピー済み" : "コピー"}
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <p className="mb-1.5 text-xs font-medium text-gray-500">招待リンク</p>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 min-w-0 truncate rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-mono">
+                      {origin}/signup?invite={inviteCode}
+                    </code>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        copyToClipboard(`${origin}/signup?invite=${inviteCode}`).then(() => {
+                          setCoachCopied("link");
+                          setTimeout(() => setCoachCopied(null), 1500);
+                        });
+                      }}
+                      className="shrink-0 flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
+                    >
+                      {coachCopied === "link" ? <Check size={16} strokeWidth={1.5} aria-hidden="true" /> : <Copy size={16} strokeWidth={1.5} aria-hidden="true" />}
+                      {coachCopied === "link" ? "コピー済み" : "コピー"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 保護者用招待コード共有ダイアログ */}
+          {guardianShareDialogOpen && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+              onClick={() => setGuardianShareDialogOpen(false)}
+            >
+              <div
+                className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="mb-4 flex items-center justify-between">
+                  <h3 className="text-base font-semibold text-gray-800">保護者用招待コードを共有</h3>
+                  <button
+                    type="button"
+                    onClick={() => setGuardianShareDialogOpen(false)}
+                    className="rounded-lg p-1 text-gray-400 hover:bg-gray-100"
+                    aria-label="閉じる"
+                  >
+                    <X size={18} strokeWidth={1.5} />
+                  </button>
+                </div>
+                <div className="mb-3">
+                  <p className="mb-1.5 text-xs font-medium text-gray-500">招待コード</p>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 min-w-0 truncate rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-mono">
+                      {inviteCodeGuardian}
+                    </code>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        copyToClipboard(inviteCodeGuardian).then(() => {
+                          setGuardianCopied("code");
+                          setTimeout(() => setGuardianCopied(null), 1500);
+                        });
+                      }}
+                      className="shrink-0 flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
+                    >
+                      {guardianCopied === "code" ? <Check size={16} strokeWidth={1.5} aria-hidden="true" /> : <Copy size={16} strokeWidth={1.5} aria-hidden="true" />}
+                      {guardianCopied === "code" ? "コピー済み" : "コピー"}
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <p className="mb-1.5 text-xs font-medium text-gray-500">招待リンク</p>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 min-w-0 truncate rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-mono">
+                      {origin}/signup?invite={inviteCodeGuardian}
+                    </code>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        copyToClipboard(`${origin}/signup?invite=${inviteCodeGuardian}`).then(() => {
+                          setGuardianCopied("link");
+                          setTimeout(() => setGuardianCopied(null), 1500);
+                        });
+                      }}
+                      className="shrink-0 flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
+                    >
+                      {guardianCopied === "link" ? <Check size={16} strokeWidth={1.5} aria-hidden="true" /> : <Copy size={16} strokeWidth={1.5} aria-hidden="true" />}
+                      {guardianCopied === "link" ? "コピー済み" : "コピー"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </>
       )}
+
+      {/* プロファイル共有ダイアログ */}
+      {shareDialogProfileId !== null && (() => {
+        const sp = myProfiles.find((p) => p.member_profile_id === shareDialogProfileId);
+        if (!sp) return null;
+        return (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+            onClick={() => setShareDialogProfileId(null)}
+          >
+            <div
+              className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-base font-semibold text-gray-800">プロファイル共有</h3>
+                <button
+                  type="button"
+                  onClick={() => setShareDialogProfileId(null)}
+                  className="rounded-lg p-1 text-gray-400 hover:bg-gray-100"
+                  aria-label="閉じる"
+                >
+                  <X size={18} strokeWidth={1.5} />
+                </button>
+              </div>
+              <div className="mb-4">
+                <p className="mb-1.5 text-xs font-medium text-gray-500">共有コード</p>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 min-w-0 truncate rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-mono">
+                    {sp.share_code ?? "—"}
+                  </code>
+                  {sp.share_code && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        copyToClipboard(sp.share_code!).then(() => {
+                          setCopiedShareCodeId(sp.member_profile_id);
+                          setTimeout(() => setCopiedShareCodeId(null), 1500);
+                        });
+                      }}
+                      className="shrink-0 flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
+                    >
+                      {copiedShareCodeId === sp.member_profile_id ? (
+                        <><Check size={16} strokeWidth={1.5} aria-hidden="true" /> コピー済み</>
+                      ) : (
+                        <><Copy size={16} strokeWidth={1.5} aria-hidden="true" /> コピー</>
+                      )}
+                    </button>
+                  )}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!window.confirm("共有コードを再生成すると、以前のコードは無効になります。よろしいですか？")) return;
+                  const { data, error } = await supabase.rpc("regenerate_profile_share_code", {
+                    target_profile_id: sp.member_profile_id,
+                  });
+                  if (!error && data) {
+                    setMyProfiles((prev) =>
+                      prev.map((mp) => (mp.id === sp.id ? { ...mp, share_code: data as string } : mp))
+                    );
+                  }
+                }}
+                className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
+              >
+                <RefreshCw size={14} strokeWidth={1.5} aria-hidden="true" />
+                再生成
+              </button>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* プレイヤーカテゴリ編集モーダル */}
       {playerCategoryModalOpen && (
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 pt-12">
           <div className="w-full max-w-2xl rounded-2xl bg-white shadow-xl">
             <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
-              <h2 className="text-base font-semibold">カテゴリ割り当て</h2>
+              <h2 className="text-base font-semibold">選手・コーチのカテゴリ割り当て</h2>
               <button
                 type="button"
                 onClick={() => setPlayerCategoryModalOpen(false)}
@@ -2256,7 +2414,7 @@ export default function SettingsPage() {
             {/* モーダル内タブ */}
             <div className="border-b border-gray-200 px-6">
               <nav className="-mb-px flex gap-6">
-                {(["coach", "player"] as const).map((tab) => {
+                {(["player", "coach"] as const).map((tab) => {
                   const label = tab === "coach" ? "コーチ" : "選手";
                   const count = playerCategoryPlayers.filter((p) => p.kind === tab).length;
                   return (
@@ -2298,7 +2456,7 @@ export default function SettingsPage() {
                   <table className="w-full text-sm">
                     <thead>
                       <tr>
-                        <th className="pb-3 pr-6 text-left text-sm font-medium text-gray-500">
+                        <th className="sticky left-0 z-10 bg-white min-w-[8rem] pb-3 pr-6 text-left text-sm font-medium text-gray-500">
                           {playerCategoryModalTab === "coach" ? "コーチ" : "選手"}
                         </th>
                         {eventCategories.map((cat) => (
@@ -2316,7 +2474,7 @@ export default function SettingsPage() {
                     <tbody className="divide-y divide-gray-100">
                       {visibleProfiles.map((player) => (
                         <tr key={player.member_profile_id}>
-                          <td className="py-3 pr-6 font-medium text-gray-900">
+                          <td className="sticky left-0 z-10 bg-white py-3 pr-6 font-medium text-gray-900">
                             {player.name || "名前未設定"}
                           </td>
                           {eventCategories.map((cat) => (

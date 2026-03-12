@@ -119,6 +119,7 @@ export default function NewEventPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [eventTypes, setEventTypes] = useState<EventType[]>([]);
+  const [locationSuggestions, setLocationSuggestions] = useState<string[]>([]);
 
   useEffect(() => {
     (async () => {
@@ -141,6 +142,21 @@ export default function NewEventPage() {
       if (types) setEventTypes(types as EventType[]);
     })();
   }, [supabase]);
+
+  useEffect(() => {
+    if (!teamId) return;
+    supabase
+      .from("events")
+      .select("location")
+      .eq("team_id", teamId)
+      .not("location", "is", null)
+      .neq("location", "")
+      .then(({ data }) => {
+        if (!data) return;
+        const unique = [...new Set(data.map(d => d.location as string).filter(Boolean))].sort();
+        setLocationSuggestions(unique);
+      });
+  }, [teamId, supabase]);
 
   const toggleCategory = (id: string) => {
     setSelectedCategoryIds((prev) =>
@@ -265,9 +281,15 @@ export default function NewEventPage() {
             type="text"
             value={location}
             onChange={(e) => setLocation(e.target.value)}
+            list="location-suggestions"
             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             placeholder="例: 市民体育館"
           />
+          <datalist id="location-suggestions">
+            {locationSuggestions.map(loc => (
+              <option key={loc} value={loc} />
+            ))}
+          </datalist>
         </div>
 
         <div className="mb-6">
