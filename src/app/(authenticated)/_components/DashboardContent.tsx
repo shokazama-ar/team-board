@@ -33,7 +33,13 @@ export default async function DashboardContent({ userId }: { userId: string }) {
     );
   }
 
-  const today = new Date().toISOString();
+  // JSTで「今日の00:00」〜「7日後の23:59:59」をUTCで計算
+  const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
+  const nowUtcMs = Date.now();
+  const nowJstMs = nowUtcMs + JST_OFFSET_MS;
+  const jstMidnightMs = nowJstMs - (nowJstMs % (24 * 60 * 60 * 1000));
+  const todayStart = new Date(jstMidnightMs - JST_OFFSET_MS).toISOString();
+  const sevenDaysLaterEnd = new Date(jstMidnightMs - JST_OFFSET_MS + 8 * 24 * 60 * 60 * 1000 - 1).toISOString();
 
   const [teamResult, memberCountResult, allUpcomingEventsResult, announcementsResult, myProfilesResult] =
     await Promise.all([
@@ -50,7 +56,8 @@ export default async function DashboardContent({ userId }: { userId: string }) {
         .from("events")
         .select("id, title, event_type, date, location, event_event_types(event_types(id, name, color, kind))")
         .eq("team_id", membership.team_id)
-        .gte("date", today)
+        .gte("date", todayStart)
+        .lte("date", sevenDaysLaterEnd)
         .order("date", { ascending: true })
         .limit(100),
       supabase

@@ -12,6 +12,7 @@ type EventType = {
   name: string;
   color: string;
   kind: string;
+  sort_order: number;
 };
 
 type Event = {
@@ -86,7 +87,7 @@ export default function EventsPage() {
 
     const { data: eventsData } = await supabase
       .from("events")
-      .select("id, title, event_type, date, end_at, location, created_by, event_event_types(event_types(id, name, color, kind))")
+      .select("id, title, event_type, date, end_at, location, created_by, event_event_types(event_types(id, name, color, kind, sort_order))")
       .eq("team_id", teamId)
       .order("date", { ascending: false });
 
@@ -121,6 +122,41 @@ export default function EventsPage() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // 日時フォーマット: YYYY/MM/DD(aaa) HH:mm ~ HH:mm（同日なら終了日付省略）
+  const WEEKDAYS = ["日", "月", "火", "水", "木", "金", "土"];
+  function formatEventDateTime(dateStr: string, endAtStr: string | null): string {
+    const start = new Date(dateStr);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const toJst = (d: Date) => new Date(d.getTime() + 9 * 60 * 60 * 1000);
+    const s = toJst(start);
+    const yyyy = s.getUTCFullYear();
+    const mm = pad(s.getUTCMonth() + 1);
+    const dd = pad(s.getUTCDate());
+    const day = WEEKDAYS[s.getUTCDay()];
+    const hh = pad(s.getUTCHours());
+    const min = pad(s.getUTCMinutes());
+    let result = `${yyyy}/${mm}/${dd}(${day}) ${hh}:${min}`;
+    if (endAtStr) {
+      const end = new Date(endAtStr);
+      const e = toJst(end);
+      const ehh = pad(e.getUTCHours());
+      const emin = pad(e.getUTCMinutes());
+      const sameDay = s.getUTCFullYear() === e.getUTCFullYear() &&
+        s.getUTCMonth() === e.getUTCMonth() &&
+        s.getUTCDate() === e.getUTCDate();
+      if (sameDay) {
+        result += ` ~ ${ehh}:${emin}`;
+      } else {
+        const eyyyy = e.getUTCFullYear();
+        const emm = pad(e.getUTCMonth() + 1);
+        const edd = pad(e.getUTCDate());
+        const eday = WEEKDAYS[e.getUTCDay()];
+        result += ` ~ ${eyyyy}/${emm}/${edd}(${eday}) ${ehh}:${emin}`;
+      }
+    }
+    return result;
+  }
 
   // フィルタ用: 全イベントから利用可能な種別を収集
   const availableTypes = useMemo(() => {
@@ -410,6 +446,7 @@ export default function EventsPage() {
             const types = event.event_event_types
               .map((e) => e.event_types)
               .filter(Boolean) as EventType[];
+            const sortedTypes = [...types].sort((a, b) => a.sort_order - b.sort_order);
             return (
               <Link
                 key={event.id}
@@ -422,8 +459,8 @@ export default function EventsPage() {
                       <h2 className="text-sm font-semibold text-gray-900">
                         {event.title}
                       </h2>
-                      {types.length > 0
-                        ? types.map((et) => (
+                      {sortedTypes.length > 0
+                        ? sortedTypes.map((et) => (
                             <span
                               key={et.id}
                               className={et.kind === "category" ? "rounded border px-2 py-0.5 text-xs font-medium" : "rounded-full px-2 py-0.5 text-xs font-medium"}
@@ -441,25 +478,7 @@ export default function EventsPage() {
                           )}
                     </div>
                     <p className="mt-1 text-xs text-gray-500">
-                      {new Date(event.date).toLocaleDateString("ja-JP", {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                        weekday: "short",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        timeZone: "Asia/Tokyo",
-                      })}
-                      {event.end_at && (
-                        <span>
-                          {" 〜 "}
-                          {new Date(event.end_at).toLocaleDateString("ja-JP", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                            timeZone: "Asia/Tokyo",
-                          })}
-                        </span>
-                      )}
+                      {formatEventDateTime(event.date, event.end_at)}
                     </p>
                     {event.location && (
                       <p className="mt-0.5 flex items-center gap-1 text-xs text-gray-400">
