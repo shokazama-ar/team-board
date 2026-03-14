@@ -35,7 +35,7 @@ export function Header() {
   };
 
   return (
-    <header className="border-b border-gray-200 bg-white">
+    <header className="shrink-0 border-b border-gray-200 bg-white">
       <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
         <Link href="/" className="text-lg font-bold text-gray-900">
           TeamBoard

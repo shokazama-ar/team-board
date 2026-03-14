@@ -79,7 +79,7 @@ export function SideNav({ hasTeam }: { hasTeam: boolean }) {
   const pathname = usePathname();
 
   return (
-    <nav className="hidden w-56 shrink-0 border-r border-gray-200 bg-white md:block">
+    <nav className="hidden w-56 shrink-0 border-r border-gray-200 bg-white overflow-y-auto md:block">
       <ul className="space-y-1 p-4">
         {navItems.map((item) => {
           const isActive =

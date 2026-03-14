@@ -212,7 +212,7 @@ export default function MembersPage() {
         </span>
         <span className="text-sm text-gray-500">{members.length}人</span>
       </div>
-      <ul className="divide-y divide-gray-100">
+      <ul className="divide-y divide-gray-100 max-h-64 overflow-y-auto">
         {members.length === 0 && (
           <li className="px-6 py-4 text-sm text-gray-400">なし</li>
         )}
@@ -345,7 +345,7 @@ export default function MembersPage() {
             </div>
           )}
         </div>
-        <ul className="divide-y divide-gray-100">
+        <ul className="divide-y divide-gray-100 max-h-96 overflow-y-auto">
           {(() => {
             const filtered =
               selectedCategoryId === null

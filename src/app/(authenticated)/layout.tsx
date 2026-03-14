@@ -24,11 +24,11 @@ export default async function AuthenticatedLayout({
   }
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex h-screen flex-col overflow-hidden">
       <Header />
-      <div className="flex flex-1">
+      <div className="flex flex-1 overflow-hidden">
         <SideNav hasTeam={hasTeam} />
-        <main className="flex-1 overflow-x-hidden p-4 pb-20 md:pb-4">{children}</main>
+        <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 pb-20 md:pb-4">{children}</main>
       </div>
       <BottomNav hasTeam={hasTeam} />
     </div>
