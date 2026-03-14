@@ -45,6 +45,7 @@ export default function ContactPage({
   const supabase = createClient();
 
   const [teamName, setTeamName] = useState<string | null>(null);
+  const [teamSlug, setTeamSlug] = useState<string | null | undefined>(undefined);
   const [teamNotFound, setTeamNotFound] = useState(false);
   const [loadingTeam, setLoadingTeam] = useState(true);
 
@@ -68,15 +69,17 @@ export default function ContactPage({
 
   useEffect(() => {
     (async () => {
-      const { data, error: teamError } = await supabase.rpc('get_team_name', {
-        tid: teamId,
-      });
+      const [{ data, error: teamError }, { data: slugData }] = await Promise.all([
+        supabase.rpc('get_team_name', { tid: teamId }),
+        supabase.rpc('get_team_slug', { tid: teamId }),
+      ]);
       if (teamError || data === null) {
         setTeamNotFound(true);
         setLoadingTeam(false);
         return;
       }
       setTeamName(data as string);
+      setTeamSlug(slugData ?? null);
 
       // inquiry_types を取得（is_active=true のみ）
       const { data: types } = await supabase
@@ -179,10 +182,15 @@ export default function ContactPage({
       custom_fields: Object.keys(customFieldValues).length > 0 ? customFieldValues : null,
     };
 
-    const { error: insertError } = await supabase.from('inquiries').insert(submitData);
+    const res = await fetch("/api/contact", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(submitData),
+    });
 
-    if (insertError) {
-      setError('送信に失敗しました。しばらく経ってから再度お試しください。');
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setError(data.error ?? "送信に失敗しました。しばらく経ってから再度お試しください。");
       setSubmitting(false);
       return;
     }
@@ -212,6 +220,13 @@ export default function ContactPage({
             <div className="rounded-lg border border-red-200 bg-white p-6 text-center shadow-sm">
               <p className="text-gray-600">お探しのチームは見つかりませんでした。</p>
               <p className="mt-1 text-sm text-gray-400">URLをご確認ください。</p>
+            </div>
+          )}
+
+          {/* Slug not set state */}
+          {!loadingTeam && !teamNotFound && teamSlug === null && (
+            <div className="rounded-lg border border-gray-200 bg-white p-8 text-center shadow-sm">
+              <p className="text-gray-600">お問い合わせフォームは現在ご利用いただけません。</p>
             </div>
           )}
 
@@ -275,7 +290,7 @@ export default function ContactPage({
           )}
 
           {/* Form */}
-          {!loadingTeam && !teamNotFound && !submitted && (
+          {!loadingTeam && !teamNotFound && teamSlug !== null && teamSlug !== undefined && !submitted && (
             <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
               <h2 className="mb-6 text-lg font-semibold text-gray-900">お問い合わせ</h2>
 

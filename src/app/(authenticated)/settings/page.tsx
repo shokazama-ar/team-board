@@ -965,6 +965,7 @@ export default function SettingsPage() {
   const [teamId, setTeamId] = useState<string | null>(null);
   const [origin, setOrigin] = useState("");
   const [teamName, setTeamName] = useState("");
+  const [slug, setSlug] = useState("");
   const [teamIconUrl, setTeamIconUrl] = useState<string | null>(null);
   const [inviteCode, setInviteCode] = useState("");
   const [inviteCodeGuardian, setInviteCodeGuardian] = useState("");
@@ -1161,12 +1162,13 @@ export default function SettingsPage() {
 
         const { data: team } = await supabase
           .from("teams")
-          .select("name, invite_code, invite_code_guardian, icon_url")
+          .select("name, slug, invite_code, invite_code_guardian, icon_url")
           .eq("id", membership.team_id)
           .single();
 
         if (team) {
           setTeamName(team.name);
+          setSlug(team.slug ?? "");
           setInviteCode(team.invite_code);
           setInviteCodeGuardian(team.invite_code_guardian);
           setTeamIconUrl(team.icon_url ?? null);
@@ -1322,7 +1324,7 @@ export default function SettingsPage() {
 
     const { error } = await supabase
       .from("teams")
-      .update({ name: teamName.trim() })
+      .update({ name: teamName.trim(), slug: slug.trim() || null })
       .eq("id", teamId);
 
     setTeamMessage(error ? "保存に失敗しました" : "保存しました");
@@ -1996,22 +1998,58 @@ export default function SettingsPage() {
               >
                 チーム名
               </label>
-              <div className="flex flex-wrap items-center gap-2">
+              <div>
                 <input
                   id="teamName"
                   type="text"
                   value={teamName}
                   onChange={(e) => setTeamName(e.target.value)}
-                  className="flex-1 min-w-0 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
-                <button
-                  type="submit"
-                  disabled={savingTeam || !teamName.trim()}
-                  className="shrink-0 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-                >
-                  {savingTeam ? "保存中..." : "保存"}
-                </button>
               </div>
+            </div>
+
+            <div>
+              <label htmlFor="teamSlug" className="mb-1 block text-sm font-medium text-gray-700">
+                問い合わせフォームID
+              </label>
+              <div className="flex items-center gap-2">
+                <span className="shrink-0 text-sm text-gray-400">contact-</span>
+                <input
+                  id="teamSlug"
+                  type="text"
+                  value={slug}
+                  onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+                  placeholder="team-name"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+                <span className="shrink-0 text-sm text-gray-400">@minibas.ballershub.net</span>
+              </div>
+              <p className="mt-1 text-xs text-gray-400">
+                小文字英数字とハイフンのみ使用可。設定するとお問い合わせフォームが有効になります。
+              </p>
+            </div>
+
+            {teamMessage && (
+              <div
+                className={`rounded-md p-3 text-sm ${
+                  teamMessage.includes("失敗")
+                    ? "bg-red-50 text-red-600"
+                    : "bg-green-50 text-green-600"
+                }`}
+              >
+                {teamMessage}
+              </div>
+            )}
+
+            <div className="flex justify-end">
+              <button
+                type="submit"
+                disabled={savingTeam || !teamName.trim()}
+                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                {savingTeam ? "保存中..." : "保存する"}
+              </button>
             </div>
 
             <div>
@@ -2099,17 +2137,6 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            {teamMessage && (
-              <div
-                className={`rounded-md p-3 text-sm ${
-                  teamMessage.includes("失敗")
-                    ? "bg-red-50 text-red-600"
-                    : "bg-green-50 text-green-600"
-                }`}
-              >
-                {teamMessage}
-              </div>
-            )}
           </form>
 
           {/* イベント種別 */}
