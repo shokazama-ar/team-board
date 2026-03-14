@@ -62,13 +62,14 @@ export default function TeamSetupPage() {
 
   const handleJoin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inviteCode.trim() || !joinProfileName.trim()) return;
+    if (!inviteCode.trim()) return;
+    if (detectedJoinKind !== "guardian" && !joinProfileName.trim()) return;
     setJoining(true);
     setError("");
 
     const { error: joinError } = await supabase.rpc("join_team_with_profile", {
       code: inviteCode.trim(),
-      profile_name: joinProfileName.trim(),
+      profile_name: detectedJoinKind === "guardian" ? "" : joinProfileName.trim(),
       profile_kind: detectedJoinKind ?? "coach",
     });
 
@@ -176,22 +177,24 @@ export default function TeamSetupPage() {
                 <p className="mt-1 text-xs text-red-500">招待コードが見つかりません</p>
               )}
             </div>
-            <div>
-              <label htmlFor="joinProfileName" className="mb-1 block text-sm font-medium text-gray-700">
-                参加者の名前（チーム内表示名）
-              </label>
-              <input
-                id="joinProfileName"
-                type="text"
-                value={joinProfileName}
-                onChange={(e) => setJoinProfileName(e.target.value)}
-                placeholder="例: 田中"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              />
-            </div>
+            {detectedJoinKind !== "guardian" && (
+              <div>
+                <label htmlFor="joinProfileName" className="mb-1 block text-sm font-medium text-gray-700">
+                  参加者の名前（チーム内表示名）
+                </label>
+                <input
+                  id="joinProfileName"
+                  type="text"
+                  value={joinProfileName}
+                  onChange={(e) => setJoinProfileName(e.target.value)}
+                  placeholder="例: 田中"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+            )}
             <button
               type="submit"
-              disabled={joining || !inviteCode.trim() || !joinProfileName.trim()}
+              disabled={joining || !inviteCode.trim() || (detectedJoinKind !== "guardian" && !joinProfileName.trim())}
               className="w-full rounded-lg border border-blue-600 bg-white px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 disabled:opacity-50"
             >
               {joining ? "参加中..." : "チームに参加"}

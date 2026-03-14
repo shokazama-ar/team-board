@@ -27,16 +27,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "問い合わせフォームは現在利用できません" }, { status: 403 });
   }
 
-  const { error: insertError } = await supabase.from("inquiries").insert({
-    team_id,
-    type: type ?? "other",
-    inquiry_type_id: inquiry_type_id ?? null,
-    name: name.trim(),
-    email: email.trim(),
-    phone: phone?.trim() || null,
-    message: message?.trim() || null,
-    custom_fields: custom_fields ?? null,
-  });
+  const { data: inserted, error: insertError } = await supabase
+    .from("inquiries")
+    .insert({
+      team_id,
+      type: type ?? "other",
+      inquiry_type_id: inquiry_type_id ?? null,
+      name: name.trim(),
+      email: email.trim(),
+      phone: phone?.trim() || null,
+      message: message?.trim() || null,
+      custom_fields: custom_fields ?? null,
+    })
+    .select("id")
+    .single();
 
   if (insertError) {
     console.error("inquiry insert error:", insertError);
@@ -58,10 +62,21 @@ export async function POST(req: NextRequest) {
   if (phone) lines.push(`電話番号: ${phone}`);
   if (message) lines.push("", "メッセージ:", message);
   if (custom_fields && Object.keys(custom_fields).length > 0) {
+    const fieldIds = Object.keys(custom_fields);
+    const { data: fieldDefs } = await supabase
+      .from("inquiry_form_fields")
+      .select("id, field_label")
+      .in("id", fieldIds);
+
+    const labelMap = new Map(
+      (fieldDefs ?? []).map((f) => [f.id, f.field_label])
+    );
+
     lines.push("", "その他の項目:");
     for (const [key, val] of Object.entries(custom_fields)) {
+      const label = labelMap.get(key) ?? key;
       const display = Array.isArray(val) ? (val as string[]).join(", ") : String(val);
-      lines.push(`  ${key}: ${display}`);
+      lines.push(`  ${label}: ${display}`);
     }
   }
   lines.push("━━━━━━━━━━━━━━━━━━━━━━━━━━");
@@ -69,6 +84,7 @@ export async function POST(req: NextRequest) {
   const { error: emailError } = await resend.emails.send({
     from,
     to: email,
+    replyTo: `reply+${inserted.id}@minibas.ballershub.net`,
     subject,
     text: lines.join("\n"),
   });

@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { href: "/help/announcements", label: "お知らせ" },
   { href: "/help/categories", label: "カテゴリ機能" },
   { href: "/help/invite", label: "招待コード" },
+  { href: "/help/inquiries", label: "問い合わせ管理" },
   { href: "/help/members", label: "メンバー管理" },
 ];
 

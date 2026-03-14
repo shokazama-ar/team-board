@@ -253,3 +253,20 @@ RLSポリシー:
 RLSポリシー:
 - SELECT: 誰でも可
 - INSERT/UPDATE/DELETE: 親 `inquiry_types` のチームの管理者のみ
+
+---
+
+### `inquiry_replies`
+問い合わせへの返信・受信メール履歴。
+
+| カラム | 型 | 備考 |
+|---|---|---|
+| id | uuid PK | |
+| inquiry_id | uuid FK→inquiries | CASCADE DELETE |
+| direction | text | outbound / inbound |
+| from_name | text | nullable |
+| from_email | text | nullable |
+| body | text | |
+| created_at | timestamptz | |
+
+RLS: SELECT は自チームの問い合わせに紐づくもののみ。INSERT はサービスロール（API ルート経由）のみ。

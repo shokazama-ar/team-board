@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { Home, Calendar, Megaphone, Users, Settings, type LucideIcon } from "lucide-react";
+import { Home, Calendar, Megaphone, Users, Mail, Settings, type LucideIcon } from "lucide-react";
 
 const navItems: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/", label: "ホーム", icon: Home },
   { href: "/events", label: "予定表", icon: Calendar },
   { href: "/announcements", label: "お知らせ", icon: Megaphone },
   { href: "/members", label: "メンバー", icon: Users },
+  { href: "/inquiries", label: "問い合わせ", icon: Mail },
   { href: "/settings", label: "設定", icon: Settings },
 ];
 

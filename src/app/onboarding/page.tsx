@@ -48,14 +48,15 @@ function OnboardingContent() {
 
   const handleJoin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inviteCode.trim() || !profileName.trim()) return;
+    if (!inviteCode.trim()) return;
+    if (detectedKind !== "guardian" && !profileName.trim()) return;
     setLoading(true);
     setError("");
 
     const supabase = createClient();
     const { error: joinError } = await supabase.rpc("join_team_with_profile", {
       code: inviteCode.trim(),
-      profile_name: profileName.trim(),
+      profile_name: detectedKind === "guardian" ? "" : profileName.trim(),
       profile_kind: detectedKind ?? "coach",
     });
 
@@ -105,23 +106,25 @@ function OnboardingContent() {
                 </div>
               )}
 
-              <div>
-                <label
-                  htmlFor="profileName"
-                  className="mb-1 block text-sm font-medium text-gray-700"
-                >
-                  お名前（プロフィール表示名）
-                </label>
-                <input
-                  id="profileName"
-                  type="text"
-                  required
-                  value={profileName}
-                  onChange={(e) => setProfileName(e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  placeholder="山田太郎"
-                />
-              </div>
+              {detectedKind !== "guardian" && (
+                <div>
+                  <label
+                    htmlFor="profileName"
+                    className="mb-1 block text-sm font-medium text-gray-700"
+                  >
+                    お名前（プロフィール表示名）
+                  </label>
+                  <input
+                    id="profileName"
+                    type="text"
+                    required
+                    value={profileName}
+                    onChange={(e) => setProfileName(e.target.value)}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    placeholder="山田太郎"
+                  />
+                </div>
+              )}
 
               <button
                 type="submit"
@@ -206,23 +209,25 @@ function OnboardingContent() {
               )}
             </div>
 
-            <div>
-              <label
-                htmlFor="profileNameInput"
-                className="mb-1 block text-sm font-medium text-gray-700"
-              >
-                お名前（プロフィール表示名）
-              </label>
-              <input
-                id="profileNameInput"
-                type="text"
-                required
-                value={profileName}
-                onChange={(e) => setProfileName(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                placeholder="山田太郎"
-              />
-            </div>
+            {detectedKind !== "guardian" && (
+              <div>
+                <label
+                  htmlFor="profileNameInput"
+                  className="mb-1 block text-sm font-medium text-gray-700"
+                >
+                  お名前（プロフィール表示名）
+                </label>
+                <input
+                  id="profileNameInput"
+                  type="text"
+                  required
+                  value={profileName}
+                  onChange={(e) => setProfileName(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  placeholder="山田太郎"
+                />
+              </div>
+            )}
 
             <button
               type="submit"

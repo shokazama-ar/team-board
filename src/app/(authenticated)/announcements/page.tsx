@@ -21,52 +21,11 @@ type Announcement = {
   target_role: string | null;
 };
 
-type InquiryType = "trial" | "join" | "leave" | "other";
-type InquiryStatus = "new" | "read" | "replied";
-
-type Inquiry = {
-  id: string;
-  type: InquiryType;
-  name: string;
-  email: string;
-  phone: string | null;
-  message: string;
-  status: InquiryStatus;
-  created_at: string;
-};
-
 type TabType = "member" | "admin";
-
-const INQUIRY_TYPE_LABELS: Record<InquiryType, string> = {
-  trial: "体験・見学希望",
-  join: "入会依頼",
-  leave: "退会依頼",
-  other: "その他",
-};
-
-const INQUIRY_TYPE_STYLES: Record<InquiryType, string> = {
-  trial: "bg-blue-50 text-blue-700",
-  join: "bg-green-50 text-green-700",
-  leave: "bg-red-50 text-red-600",
-  other: "bg-gray-100 text-gray-600",
-};
-
-const INQUIRY_STATUS_LABELS: Record<InquiryStatus, string> = {
-  new: "未読",
-  read: "既読",
-  replied: "返信済み",
-};
-
-const INQUIRY_STATUS_STYLES: Record<InquiryStatus, string> = {
-  new: "bg-yellow-50 text-yellow-700 border border-yellow-300",
-  read: "bg-gray-100 text-gray-500",
-  replied: "bg-green-50 text-green-600",
-};
 
 export default function AnnouncementsPage() {
   const supabase = createClient();
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-  const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [teamId, setTeamId] = useState<string>("");
   const [currentUserRole, setCurrentUserRole] = useState<string>("");
   const [loading, setLoading] = useState(true);
@@ -140,36 +99,12 @@ export default function AnnouncementsPage() {
       setAnnouncements(formatted);
     }
 
-    const { data: inquiriesData } = await supabase
-      .from("inquiries")
-      .select("id, type, name, email, phone, message, status, created_at")
-      .eq("team_id", membership.team_id)
-      .order("created_at", { ascending: false });
-
-    if (inquiriesData) {
-      setInquiries(inquiriesData as Inquiry[]);
-    }
-
     setLoading(false);
   }, [supabase]);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
-
-  const handleStatusChange = async (
-    inquiryId: string,
-    newStatus: InquiryStatus
-  ) => {
-    await supabase
-      .from("inquiries")
-      .update({ status: newStatus })
-      .eq("id", inquiryId);
-
-    setInquiries((prev) =>
-      prev.map((i) => (i.id === inquiryId ? { ...i, status: newStatus } : i))
-    );
-  };
 
   if (loading) {
     return <div className="text-sm text-gray-500">読み込み中...</div>;
@@ -197,8 +132,6 @@ export default function AnnouncementsPage() {
             a.categories.some((cat) => myCategoryIds.includes(cat.id))
         )
       : tabFilteredAnnouncements;
-
-  const unreadCount = inquiries.filter((i) => i.status === "new").length;
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -319,92 +252,6 @@ export default function AnnouncementsPage() {
             </Link>
           ))}
         </div>
-      )}
-
-      {isAdmin && activeTab === "admin" && (
-        <>
-          <hr className="my-8 border-gray-200" />
-
-          <div className="mb-4 flex items-center gap-3">
-            <h2 className="text-lg font-semibold text-gray-900">問い合わせ</h2>
-            {unreadCount > 0 && (
-              <span className="rounded-full bg-yellow-400 px-2.5 py-0.5 text-xs font-bold text-white">
-                未読{unreadCount}件
-              </span>
-            )}
-          </div>
-
-          {inquiries.length === 0 ? (
-            <div className="rounded-lg border border-gray-200 bg-white p-6">
-              <p className="text-sm text-gray-500">まだ問い合わせがありません</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {inquiries.map((inquiry) => (
-                <div
-                  key={inquiry.id}
-                  className="rounded-lg border border-gray-200 bg-white p-4"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span
-                        className={`rounded px-2 py-0.5 text-xs font-medium ${INQUIRY_TYPE_STYLES[inquiry.type]}`}
-                      >
-                        {INQUIRY_TYPE_LABELS[inquiry.type]}
-                      </span>
-                      <span
-                        className={`rounded px-2 py-0.5 text-xs font-medium ${INQUIRY_STATUS_STYLES[inquiry.status]}`}
-                      >
-                        {INQUIRY_STATUS_LABELS[inquiry.status]}
-                      </span>
-                    </div>
-                    <span className="shrink-0 text-xs text-gray-400">
-                      {new Date(inquiry.created_at).toLocaleDateString("ja-JP", {
-                        year: "numeric",
-                        month: "numeric",
-                        day: "numeric",
-                        timeZone: "Asia/Tokyo",
-                      })}
-                    </span>
-                  </div>
-
-                  <p className="mt-2 text-sm font-medium text-gray-900">
-                    {inquiry.name}
-                  </p>
-                  <p className="mt-0.5 text-xs text-gray-500">
-                    {inquiry.email}
-                    {inquiry.phone && (
-                      <>
-                        {" / "}
-                        {inquiry.phone}
-                      </>
-                    )}
-                  </p>
-                  <p className="mt-2 text-sm text-gray-700 line-clamp-2">
-                    {inquiry.message}
-                  </p>
-
-                  <div className="mt-3 flex justify-end">
-                    <select
-                      value={inquiry.status}
-                      onChange={(e) =>
-                        handleStatusChange(
-                          inquiry.id,
-                          e.target.value as InquiryStatus
-                        )
-                      }
-                      className="rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="new">未読</option>
-                      <option value="read">既読</option>
-                      <option value="replied">返信済み</option>
-                    </select>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </>
       )}
     </div>
   );

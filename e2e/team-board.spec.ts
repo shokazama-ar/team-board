@@ -99,19 +99,23 @@ test.describe('[T013] 問い合わせフォーム（認証不要）', () => {
     await setupSupabaseProxy(page);
     await page.goto(`/contact/${TEST_TEAM_ID}`);
     await page.waitForLoadState('domcontentloaded');
-
-    // Wait a bit for client-side render
     await page.waitForTimeout(2000);
 
     const bodyText = await page.locator('body').innerText();
     console.log('[T013] Form test body:', bodyText.substring(0, 600));
+
+    // slug未設定でフォームが disabled の場合はスキップ
+    if (bodyText.includes('現在ご利用いただけません')) {
+      console.log('[T013] Contact form disabled (no slug), skipping');
+      test.skip();
+      return;
+    }
 
     const form = page.locator('form');
     const formCount = await form.count();
     console.log('[T013] Form count:', formCount);
     expect(formCount).toBeGreaterThan(0);
 
-    // 入力フィールドがある
     const inputs = page.locator('input, textarea, select');
     const inputCount = await inputs.count();
     console.log('[T013] Input/textarea/select count:', inputCount);
@@ -442,7 +446,7 @@ test.describe('[T021] 設定画面招待コードUI', () => {
     expect(copyCount).toBeGreaterThanOrEqual(1);
   });
 
-  test('コピーボタンクリックでドロップダウンが表示される', async ({ page }) => {
+  test('共有ボタンクリックでダイアログが表示される', async ({ page }) => {
     await page.goto('/settings');
     await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(1000);
@@ -453,37 +457,23 @@ test.describe('[T021] 設定画面招待コードUI', () => {
       return;
     }
 
-    const copyBtn = page.locator('button:has-text("コピー")').first();
-    const count = await copyBtn.count();
+    // 共有ボタン（aria-label="招待コードを共有"）
+    const shareBtn = page.locator('button[aria-label="招待コードを共有"]').first();
+    const count = await shareBtn.count();
+    console.log('[T021c] Share button count:', count);
     if (count === 0) {
-      console.log('[T021c] No copy button, skipping');
+      console.log('[T021c] No share button, skipping');
       return;
     }
 
-    await copyBtn.click();
+    await shareBtn.click();
     await page.waitForTimeout(500);
 
-    const dropdown = page.locator('button:has-text("コードをコピー"), button:has-text("招待リンクをコピー")');
-    const dropdownCount = await dropdown.count();
-    console.log('[T021c] Dropdown items:', dropdownCount);
-    expect(dropdownCount).toBeGreaterThan(0);
-  });
-
-  test('メールボタンが存在する', async ({ page }) => {
-    await page.goto('/settings');
-    await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(1000);
-
-    const bodyText = await page.locator('body').innerText();
-    if (bodyText.includes('Application error')) {
-      console.log('[T021d] Settings page error, skipping');
-      return;
-    }
-
-    const mailBtn = page.locator('button:has-text("メール"), button[aria-label*="メール"]');
-    const mailCount = await mailBtn.count();
-    console.log('[T021d] Mail button count:', mailCount);
-    expect(mailCount).toBeGreaterThanOrEqual(1);
+    // ダイアログ内に「コピー」ボタンが存在する
+    const copyInDialog = page.locator('button:has-text("コピー")');
+    const dialogCopyCount = await copyInDialog.count();
+    console.log('[T021c] Copy buttons in dialog:', dialogCopyCount);
+    expect(dialogCopyCount).toBeGreaterThan(0);
   });
 });
 
@@ -542,5 +532,138 @@ test.describe('[T022] サインアップ〜チーム参加UX', () => {
       // チーム所属済みユーザーにはナビが有効なはず
       expect(navCount).toBeGreaterThan(0);
     });
+  });
+});
+
+// ===== 問い合わせ管理 =====
+
+test.describe('[T026] 問い合わせ一覧ページ', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page);
+  });
+
+  test('問い合わせ一覧ページが表示される（タイトル「問い合わせ」）', async ({ page }) => {
+    await page.goto('/inquiries');
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(1000);
+
+    const url = page.url();
+    const bodyText = await page.locator('body').innerText();
+    console.log('[T026a] inquiries URL:', url);
+    console.log('[T026a] inquiries body (600):', bodyText.substring(0, 600));
+
+    expect(url).not.toContain('404');
+    expect(bodyText).not.toContain('Application error');
+    expect(bodyText).toContain('問い合わせ');
+  });
+
+  test('タブナビゲーション（すべて/未読/対応中/返信済み）が表示される', async ({ page }) => {
+    await page.goto('/inquiries');
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(1000);
+
+    const bodyText = await page.locator('body').innerText();
+    console.log('[T026b] inquiries body (600):', bodyText.substring(0, 600));
+
+    expect(bodyText).toContain('すべて');
+    expect(bodyText).toContain('未読');
+    expect(bodyText).toContain('対応中');
+    expect(bodyText).toContain('返信済み');
+  });
+
+  test('「未読」タブをクリックすると URL が /inquiries?status=new になる', async ({ page }) => {
+    await page.goto('/inquiries');
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(1000);
+
+    const unreadTab = page.locator('a:has-text("未読")').first();
+    const tabCount = await unreadTab.count();
+    console.log('[T026c] Unread tab count:', tabCount);
+    expect(tabCount).toBeGreaterThan(0);
+
+    await unreadTab.click();
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(500);
+
+    const url = page.url();
+    console.log('[T026c] After clicking unread tab URL:', url);
+    expect(url).toContain('/inquiries');
+    expect(url).toContain('status=new');
+  });
+
+  test('サイドメニューに「問い合わせ」リンクが存在する', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(1000);
+
+    // SideNav (hidden md:block) と BottomNav (md:hidden) 両方を確認
+    const inquiriesLink = page.locator('a[href="/inquiries"]');
+    const linkCount = await inquiriesLink.count();
+    console.log('[T026d] Inquiries nav link count:', linkCount);
+    expect(linkCount).toBeGreaterThan(0);
+  });
+});
+
+test.describe('[T027] 問い合わせ詳細ページ', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page);
+  });
+
+  test('存在しない UUID への /inquiries/[id] アクセスが 404 を返す', async ({ page }) => {
+    const nonExistentId = '00000000-0000-0000-0000-000000000000';
+    const response = await page.goto(`/inquiries/${nonExistentId}`);
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(1000);
+
+    const url = page.url();
+    const bodyText = await page.locator('body').innerText();
+    const statusCode = response?.status();
+    console.log('[T027a] URL:', url, 'Status:', statusCode);
+    console.log('[T027a] Body (400):', bodyText.substring(0, 400));
+
+    const is404 = statusCode === 404
+      || url.includes('404')
+      || bodyText.includes('404')
+      || bodyText.toLowerCase().includes('not found')
+      || bodyText.includes('見つかりません');
+    console.log('[T027a] Is 404:', is404, 'statusCode:', statusCode);
+    expect(is404).toBe(true);
+  });
+
+  test('一覧の最初の行をクリックすると詳細ページが開く（問い合わせが存在する場合）', async ({ page }) => {
+    await page.goto('/inquiries');
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(1000);
+
+    // 問い合わせ詳細リンクを探す
+    const inquiryLinks = page.locator('a[href*="/inquiries/"]:not([href="/inquiries"])');
+    const count = await inquiryLinks.count();
+    console.log('[T027b] Inquiry item links:', count);
+
+    if (count === 0) {
+      console.log('[T027b] No inquiries found, skipping');
+      test.skip();
+      return;
+    }
+
+    const href = await inquiryLinks.first().getAttribute('href');
+    console.log('[T027b] Navigating to:', href);
+    await inquiryLinks.first().click();
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(1000);
+
+    const url = page.url();
+    const bodyText = await page.locator('body').innerText();
+    console.log('[T027b] Detail URL:', url);
+    console.log('[T027b] Detail body (600):', bodyText.substring(0, 600));
+
+    // 詳細ページに「← 問い合わせ一覧」リンクが表示される
+    expect(bodyText).toContain('問い合わせ一覧');
+
+    // 戻るリンクが存在する
+    const backLink = page.locator('a[href="/inquiries"]');
+    const backCount = await backLink.count();
+    console.log('[T027b] Back link count:', backCount);
+    expect(backCount).toBeGreaterThan(0);
   });
 });

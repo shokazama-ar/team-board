@@ -23,6 +23,11 @@ const TOPICS = [
     description: "新しいメンバーをチームに招待する方法です。",
   },
   {
+    href: "/help/inquiries",
+    label: "問い合わせ管理",
+    description: "外部からの体験・見学希望などの問い合わせを受け取り、管理・返信します。",
+  },
+  {
     href: "/help/members",
     label: "メンバー管理",
     description: "アカウントとプレイヤープロファイルの関係を理解しましょう。",

@@ -300,11 +300,7 @@ npx supabase status
 
 | 順序 | ファイル名 | 内容 |
 |---|---|---|
-| 1 | `20260310000010_player_profile_sharing.sql` | `member_profile_access` テーブル作成・`member_profiles.share_code` カラム追加 |
-| 2 | `20260310000012_add_user_id_to_team_members.sql` | `team_members.user_id` カラム追加・RLS ポリシー/関数再定義 |
-| 3 | `20260310000013_cleanup_orphan_player_profiles.sql` | 孤立プレイヤープロファイルの削除（**適用前にデータ内容を必ず確認**） |
-
-> **注意**: 1 → 2 の順序を守ること。000012 は 000010 で作成した `member_profile_access` テーブルを参照するため、逆順に適用するとエラーになります。
+| 1 | `20260314120000_add_inquiry_replies.sql` | `inquiry_replies` テーブル作成・RLS ポリシー設定 |
 
 ### SQL Editor への貼り付け手順
 
