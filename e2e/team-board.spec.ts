@@ -667,3 +667,381 @@ test.describe('[T027] 問い合わせ詳細ページ', () => {
     expect(backCount).toBeGreaterThan(0);
   });
 });
+
+test.describe('[T028] ログインページ UI', () => {
+  test('ページが表示されメール・パスワード入力欄がある', async ({ page }) => {
+    await setupSupabaseProxy(page);
+    await page.goto('/login');
+    await page.waitForLoadState('domcontentloaded');
+    const url = page.url();
+    console.log('[T028a] URL:', url);
+    expect(url).toContain('/login');
+    const emailInput = page.locator('input[type="email"]');
+    const passwordInput = page.locator('input[type="password"]');
+    expect(await emailInput.count()).toBeGreaterThan(0);
+    expect(await passwordInput.count()).toBeGreaterThan(0);
+    const submitBtn = page.locator('button[type="submit"]');
+    expect(await submitBtn.count()).toBeGreaterThan(0);
+  });
+
+  test('無効なクレデンシャルでエラーが表示されルートにリダイレクトされない', async ({ page }) => {
+    await setupSupabaseProxy(page);
+    await page.goto('/login');
+    await page.waitForLoadState('domcontentloaded');
+    await page.locator('input[type="email"]').fill('invalid@example.com');
+    await page.locator('input[type="password"]').fill('wrongpassword');
+    await page.locator('button[type="submit"]').click();
+    await page.waitForTimeout(3000);
+    const url = page.url();
+    const bodyText = await page.locator('body').innerText();
+    console.log('[T028b] URL after submit:', url);
+    console.log('[T028b] Body (400):', bodyText.substring(0, 400));
+    expect(url).not.toContain('404');
+    expect(bodyText).not.toContain('Application error');
+    expect(url).not.toBe('http://localhost:3000/');
+  });
+
+  test('パスワードリセットとサインアップへのリンクが存在する', async ({ page }) => {
+    await setupSupabaseProxy(page);
+    await page.goto('/login');
+    await page.waitForLoadState('domcontentloaded');
+    const forgotLink = page.locator('a[href*="forgot"]');
+    const signupLink = page.locator('a[href*="signup"]');
+    console.log('[T028c] forgot links:', await forgotLink.count(), 'signup links:', await signupLink.count());
+    expect(await forgotLink.count() + await signupLink.count()).toBeGreaterThan(0);
+  });
+});
+
+test.describe('[T029] サインアップページ UI', () => {
+  test('ページが表示されフォームが存在する', async ({ page }) => {
+    await setupSupabaseProxy(page);
+    await page.goto('/signup');
+    await page.waitForLoadState('domcontentloaded');
+    const url = page.url();
+    console.log('[T029a] URL:', url);
+    expect(url).not.toContain('404');
+    expect(await page.locator('input[type="email"]').count()).toBeGreaterThan(0);
+    expect(await page.locator('input[type="password"]').count()).toBeGreaterThan(0);
+    expect(await page.locator('button[type="submit"]').count()).toBeGreaterThan(0);
+  });
+
+  test('ログインへのリンクが存在する', async ({ page }) => {
+    await setupSupabaseProxy(page);
+    await page.goto('/signup');
+    await page.waitForLoadState('domcontentloaded');
+    const loginLink = page.locator('a[href*="/login"]');
+    console.log('[T029b] login links:', await loginLink.count());
+    expect(await loginLink.count()).toBeGreaterThan(0);
+  });
+
+  test('既存メールで登録してもアプリケーションエラーにならない', async ({ page }) => {
+    await setupSupabaseProxy(page);
+    await page.goto('/signup');
+    await page.waitForLoadState('domcontentloaded');
+    await page.locator('input[type="email"]').fill(TEST_EMAIL);
+    await page.locator('input[type="password"]').fill(TEST_PASSWORD);
+    await page.locator('button[type="submit"]').click();
+    await page.waitForTimeout(3000);
+    const bodyText = await page.locator('body').innerText();
+    const url = page.url();
+    console.log('[T029c] URL after submit:', url);
+    console.log('[T029c] Body (400):', bodyText.substring(0, 400));
+    expect(bodyText).not.toContain('Application error');
+    expect(bodyText).not.toContain('is not defined');
+  });
+});
+
+test.describe('[T030] ホームダッシュボード', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page);
+  });
+
+  test('「ようこそ」メッセージが表示される', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(2000);
+    const bodyText = await page.locator('body').innerText();
+    console.log('[T030a] home body (400):', bodyText.substring(0, 400));
+    expect(bodyText).not.toContain('Application error');
+    expect(bodyText).toContain('ようこそ');
+  });
+
+  test('予定セクションまたは空状態メッセージが表示される', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(2000);
+    const bodyText = await page.locator('body').innerText();
+    console.log('[T030b] home body (600):', bodyText.substring(0, 600));
+    expect(bodyText).not.toContain('Application error');
+    const hasContent = bodyText.includes('予定') || bodyText.includes('スケジュール') || bodyText.includes('イベント') || bodyText.includes('なし') || bodyText.includes('ありません');
+    console.log('[T030b] hasContent:', hasContent);
+    expect(hasContent).toBe(true);
+  });
+
+  test('全主要ナビゲーションリンクが存在する', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(1000);
+    const eventsLink = page.locator('a[href="/events"]');
+    const announcementsLink = page.locator('a[href="/announcements"]');
+    const membersLink = page.locator('a[href="/members"]');
+    const inquiriesLink = page.locator('a[href="/inquiries"]');
+    console.log('[T030c] events:', await eventsLink.count(), 'announcements:', await announcementsLink.count(), 'members:', await membersLink.count(), 'inquiries:', await inquiriesLink.count());
+    expect(await eventsLink.count()).toBeGreaterThan(0);
+    expect(await announcementsLink.count()).toBeGreaterThan(0);
+    expect(await membersLink.count()).toBeGreaterThan(0);
+    expect(await inquiriesLink.count()).toBeGreaterThan(0);
+  });
+});
+
+test.describe('[T031] メンバー一覧ページ', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page);
+  });
+
+  test('ページが表示されメンバーの見出しがある', async ({ page }) => {
+    await page.goto('/members');
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(1000);
+    const url = page.url();
+    const bodyText = await page.locator('body').innerText();
+    console.log('[T031a] URL:', url, 'body (400):', bodyText.substring(0, 400));
+    expect(url).not.toContain('404');
+    expect(bodyText).not.toContain('Application error');
+    expect(bodyText).toContain('メンバー');
+  });
+
+  test('メンバーカードまたは空状態が表示される', async ({ page }) => {
+    await page.goto('/members');
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(2000);
+    const bodyText = await page.locator('body').innerText();
+    console.log('[T031b] members body (600):', bodyText.substring(0, 600));
+    expect(bodyText).not.toContain('Application error');
+    // メンバーが存在するかまたは空状態メッセージ
+    const hasMemberContent = await page.locator('[class*="avatar"], img[alt], .rounded-full').count() > 0
+      || bodyText.includes('メンバーがいません') || bodyText.includes('名');
+    console.log('[T031b] hasMemberContent:', hasMemberContent);
+    expect(hasMemberContent).toBe(true);
+  });
+});
+
+test.describe('[T032] イベント一覧ページ', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page);
+  });
+
+  test('ページが表示される', async ({ page }) => {
+    await page.goto('/events');
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(1000);
+    const url = page.url();
+    const bodyText = await page.locator('body').innerText();
+    console.log('[T032a] URL:', url, 'body (400):', bodyText.substring(0, 400));
+    expect(url).not.toContain('404');
+    expect(bodyText).not.toContain('Application error');
+  });
+
+  test('新規作成ボタンが存在する', async ({ page }) => {
+    await page.goto('/events');
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(1000);
+    const newEventLink = page.locator('a[href="/events/new"]');
+    console.log('[T032b] new event links:', await newEventLink.count());
+    expect(await newEventLink.count()).toBeGreaterThan(0);
+  });
+
+  test('イベントリストまたはカレンダーUIが表示される', async ({ page }) => {
+    await page.goto('/events');
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(2000);
+    const bodyText = await page.locator('body').innerText();
+    console.log('[T032c] events body (600):', bodyText.substring(0, 600));
+    expect(bodyText).not.toContain('Application error');
+    const hasContent = bodyText.includes('予定') || bodyText.includes('イベント') || bodyText.includes('追加') || bodyText.includes('カレンダー');
+    expect(hasContent).toBe(true);
+  });
+});
+
+test.describe('[T033] イベント作成フォーム', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page);
+  });
+
+  test('作成フォームが表示される', async ({ page }) => {
+    await page.goto('/events/new');
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(2000);
+    const url = page.url();
+    const bodyText = await page.locator('body').innerText();
+    console.log('[T033a] URL:', url, 'body (400):', bodyText.substring(0, 400));
+    expect(url).not.toContain('404');
+    expect(bodyText).not.toContain('Application error');
+    expect(bodyText).toContain('作成');
+    const titleInput = page.locator('input[type="text"]').first();
+    expect(await titleInput.count()).toBeGreaterThan(0);
+  });
+
+  test('タイトルなしで送信するとバリデーションエラー（required）', async ({ page }) => {
+    await page.goto('/events/new');
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(2000);
+    // タイトルを空のままsubmit
+    const submitBtn = page.locator('button[type="submit"]');
+    if (await submitBtn.count() === 0) {
+      console.log('[T033b] No submit button, skipping');
+      return;
+    }
+    await submitBtn.click();
+    await page.waitForTimeout(1000);
+    const url = page.url();
+    // required バリデーションが効いて /events に遷移しないこと
+    const bodyText = await page.locator('body').innerText();
+    console.log('[T033b] URL after empty submit:', url, 'body:', bodyText.substring(0, 200));
+    expect(url).not.toMatch(/\/events$/);
+  });
+});
+
+test.describe('[T034] お知らせ作成・詳細', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page);
+  });
+
+  test('作成フォームが表示される', async ({ page }) => {
+    await page.goto('/announcements/new');
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(1000);
+    const url = page.url();
+    const bodyText = await page.locator('body').innerText();
+    console.log('[T034a] URL:', url, 'body (400):', bodyText.substring(0, 400));
+    expect(url).not.toContain('404');
+    expect(bodyText).not.toContain('Application error');
+    const hasInput = await page.locator('input[type="text"], textarea').count() > 0;
+    console.log('[T034a] hasInput:', hasInput);
+    expect(hasInput).toBe(true);
+  });
+
+  test('お知らせ一覧から詳細ページへ遷移できる', async ({ page }) => {
+    await page.goto('/announcements');
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(1000);
+    const links = page.locator('a[href*="/announcements/"]:not([href*="/announcements/new"])');
+    const count = await links.count();
+    console.log('[T034b] announcement detail links:', count);
+    if (count === 0) {
+      console.log('[T034b] No announcements, skipping');
+      test.skip();
+      return;
+    }
+    await links.first().click();
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(1000);
+    const url = page.url();
+    const bodyText = await page.locator('body').innerText();
+    console.log('[T034b] detail URL:', url, 'body (400):', bodyText.substring(0, 400));
+    expect(url).toMatch(/\/announcements\/.+/);
+    expect(bodyText).not.toContain('Application error');
+  });
+});
+
+test.describe('[T035] 問い合わせ詳細・返信フォーム UI', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page);
+  });
+
+  test('詳細ページに返信フォームが存在する（問い合わせがある場合）', async ({ page }) => {
+    await page.goto('/inquiries');
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(1000);
+    const links = page.locator('a[href*="/inquiries/"]:not([href="/inquiries"])');
+    const count = await links.count();
+    console.log('[T035a] inquiry links:', count);
+    if (count === 0) {
+      console.log('[T035a] No inquiries, skipping');
+      test.skip();
+      return;
+    }
+    await links.first().click();
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(1000);
+    const bodyText = await page.locator('body').innerText();
+    console.log('[T035a] detail body (600):', bodyText.substring(0, 600));
+    expect(bodyText).not.toContain('Application error');
+    const hasReplyForm = bodyText.includes('返信') || await page.locator('textarea').count() > 0;
+    console.log('[T035a] hasReplyForm:', hasReplyForm);
+    expect(hasReplyForm).toBe(true);
+  });
+});
+
+test.describe('[T036] ヘルプページ群', () => {
+  const helpPaths = [
+    '/help',
+    '/help/announcements',
+    '/help/events',
+    '/help/inquiries',
+    '/help/members',
+    '/help/invite',
+    '/help/categories',
+  ];
+
+  for (const helpPath of helpPaths) {
+    test(`${helpPath} が表示される`, async ({ page }) => {
+      await setupSupabaseProxy(page);
+      await page.goto(helpPath);
+      await page.waitForLoadState('domcontentloaded');
+      await page.waitForTimeout(500);
+      const url = page.url();
+      const bodyText = await page.locator('body').innerText();
+      console.log(`[T036] ${helpPath} URL:`, url, 'body (200):', bodyText.substring(0, 200));
+      expect(url).not.toContain('404');
+      expect(bodyText).not.toContain('Application error');
+      expect(bodyText.length).toBeGreaterThan(10);
+    });
+  }
+});
+
+test.describe('[T037] チーム参加プロフィールページ', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page);
+  });
+
+  test('teams/join-profile ページへアクセスできる', async ({ page }) => {
+    await page.goto('/teams/join-profile');
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(1000);
+    const url = page.url();
+    const bodyText = await page.locator('body').innerText();
+    console.log('[T037] URL:', url, 'body (400):', bodyText.substring(0, 400));
+    expect(url).not.toContain('404');
+    expect(bodyText).not.toContain('Application error');
+  });
+});
+
+test.describe('[T038] 設定画面プロフィールタブ', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page);
+  });
+
+  test('設定ページにプロフィール関連フォームが存在する', async ({ page }) => {
+    await page.goto('/settings');
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(1000);
+    const bodyText = await page.locator('body').innerText();
+    console.log('[T038a] settings body (600):', bodyText.substring(0, 600));
+    expect(bodyText).not.toContain('Application error');
+    // プロフィールタブがあれば切り替える
+    const profileTab = page.locator('button:has-text("プロフィール"), [role="tab"]:has-text("プロフィール")');
+    const tabCount = await profileTab.count();
+    console.log('[T038a] profileTab count:', tabCount);
+    if (tabCount > 0) {
+      await profileTab.first().click();
+      await page.waitForTimeout(500);
+    }
+    const afterBody = await page.locator('body').innerText();
+    console.log('[T038a] after tab body (400):', afterBody.substring(0, 400));
+    expect(afterBody).not.toContain('Application error');
+    const hasProfileContent = afterBody.includes('名前') || afterBody.includes('ニックネーム') || afterBody.includes('プロフィール') || await page.locator('input[type="text"]').count() > 0;
+    console.log('[T038a] hasProfileContent:', hasProfileContent);
+    expect(hasProfileContent).toBe(true);
+  });
+});
