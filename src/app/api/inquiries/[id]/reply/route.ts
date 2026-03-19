@@ -47,16 +47,31 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   );
 
   // inquiry_replies に保存
-  await supabaseAdmin.from("inquiry_replies").insert({
-    inquiry_id: inquiry.id,
-    direction: "outbound",
-    from_name: "管理者",
-    from_email: `contact-${slug}@minibas.ballershub.net`,
-    body: message,
-  });
+  const { error: replyInsertError } = await supabaseAdmin
+    .from("inquiry_replies")
+    .insert({
+      inquiry_id: inquiry.id,
+      direction: "outbound",
+      from_name: "管理者",
+      from_email: `contact-${slug}@minibas.ballershub.net`,
+      body: message,
+    });
+
+  if (replyInsertError) {
+    console.error("inquiry_replies insert error:", replyInsertError);
+    return Response.json({ error: "返信の保存に失敗しました" }, { status: 500 });
+  }
 
   // status を replied に更新
-  await supabaseAdmin.from("inquiries").update({ status: "replied" }).eq("id", id);
+  const { error: updateError } = await supabaseAdmin
+    .from("inquiries")
+    .update({ status: "replied" })
+    .eq("id", id);
+
+  if (updateError) {
+    console.error("inquiry status update error:", updateError);
+    // ステータス更新失敗はログのみ（返信保存は成功しているため）
+  }
 
   return Response.json({ success: true });
 }

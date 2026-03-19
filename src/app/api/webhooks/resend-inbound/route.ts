@@ -60,14 +60,27 @@ export async function POST(req: Request) {
       return Response.json({ ok: true });
     }
 
+    // from フィールドから name と email を分離
+    // 形式: "山田太郎 <taro@example.com>" または "taro@example.com"
+    const rawFrom: string = data.from ?? "";
+    const fromMatch = rawFrom.match(/^(.*?)\s*<([^>]+)>$/);
+    const fromName = fromMatch ? fromMatch[1].trim() || null : null;
+    const fromEmail = fromMatch ? fromMatch[2] : rawFrom;
+
     // inquiry_replies に保存（inbound）
-    await supabaseAdmin.from("inquiry_replies").insert({
+    const { error: insertError } = await supabaseAdmin.from("inquiry_replies").insert({
       inquiry_id: inquiryId,
       direction: "inbound",
-      from_name: data.from_name ?? null,
-      from_email: data.from ?? null,
+      from_name: fromName,
+      from_email: fromEmail,
       body: data.text ?? data.html ?? "",
     });
+
+    if (insertError) {
+      console.error("inquiry_replies insert error (inbound):", insertError, { inquiryId });
+      // Resend へは 200 を返すが、内部エラーはログに残す
+      return Response.json({ ok: true });
+    }
 
     // status が replied でない場合のみ read に更新
     await supabaseAdmin
