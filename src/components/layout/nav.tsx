@@ -16,7 +16,7 @@ const navItems: { href: string; label: string; icon: LucideIcon }[] = [
 
 const ALWAYS_ACTIVE = ["/", "/settings"];
 
-export function BottomNav({ hasTeam }: { hasTeam: boolean }) {
+export function BottomNav({ hasTeam, inquiryCount = 0 }: { hasTeam: boolean; inquiryCount?: number }) {
   const pathname = usePathname();
   const [hidden, setHidden] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -67,7 +67,14 @@ export function BottomNav({ hasTeam }: { hasTeam: boolean }) {
                 isActive ? "text-blue-600" : "text-gray-500"
               }`}
             >
-              <item.icon size={24} strokeWidth={1.5} aria-hidden="true" />
+              <span className="relative">
+                <item.icon size={24} strokeWidth={1.5} aria-hidden="true" />
+                {item.href === "/inquiries" && inquiryCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[1.25rem] text-center leading-none">
+                    {inquiryCount}
+                  </span>
+                )}
+              </span>
             </Link>
           );
         })}
@@ -76,7 +83,7 @@ export function BottomNav({ hasTeam }: { hasTeam: boolean }) {
   );
 }
 
-export function SideNav({ hasTeam }: { hasTeam: boolean }) {
+export function SideNav({ hasTeam, inquiryCount = 0 }: { hasTeam: boolean; inquiryCount?: number }) {
   const pathname = usePathname();
 
   return (
@@ -113,6 +120,11 @@ export function SideNav({ hasTeam }: { hasTeam: boolean }) {
               >
                 <item.icon size={20} strokeWidth={1.5} aria-hidden="true" />
                 <span>{item.label}</span>
+                {item.href === "/inquiries" && inquiryCount > 0 && (
+                  <span className="ml-auto bg-red-500 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[1.25rem] text-center">
+                    {inquiryCount}
+                  </span>
+                )}
               </Link>
             </li>
           );

@@ -13,24 +13,36 @@ export default async function AuthenticatedLayout({
   } = await supabase.auth.getUser();
 
   let hasTeam = false;
+  let teamId: string | null = null;
   if (user) {
     const { data } = await supabase
       .from("team_members")
-      .select("id, member_profiles!inner(user_id)")
+      .select("team_id, member_profiles!inner(user_id)")
       .eq("member_profiles.user_id", user.id)
       .limit(1)
       .maybeSingle();
     hasTeam = !!data;
+    teamId = (data as { team_id: string } | null)?.team_id ?? null;
+  }
+
+  let inquiryCount = 0;
+  if (teamId) {
+    const { count } = await supabase
+      .from("inquiries")
+      .select("*", { count: "exact", head: true })
+      .eq("team_id", teamId)
+      .eq("status", "new");
+    inquiryCount = count ?? 0;
   }
 
   return (
     <div className="flex h-screen flex-col overflow-hidden">
       <Header />
       <div className="flex flex-1 overflow-hidden">
-        <SideNav hasTeam={hasTeam} />
+        <SideNav hasTeam={hasTeam} inquiryCount={inquiryCount} />
         <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 pb-20 md:pb-4">{children}</main>
       </div>
-      <BottomNav hasTeam={hasTeam} />
+      <BottomNav hasTeam={hasTeam} inquiryCount={inquiryCount} />
     </div>
   );
 }

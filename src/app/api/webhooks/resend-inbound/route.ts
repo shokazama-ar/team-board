@@ -103,12 +103,11 @@ export async function POST(req: Request) {
       return Response.json({ ok: true });
     }
 
-    // status が replied でない場合のみ read に更新
+    // status を new に更新
     await supabaseAdmin
       .from("inquiries")
-      .update({ status: "read" })
-      .eq("id", inquiryId)
-      .neq("status", "replied");
+      .update({ status: "new" })
+      .eq("id", inquiryId);
 
     return Response.json({ ok: true });
   } catch (err) {

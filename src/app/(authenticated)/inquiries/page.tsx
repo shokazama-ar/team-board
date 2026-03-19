@@ -51,7 +51,17 @@ export default async function InquiriesPage({
     query = query.eq("status", statusFilter);
   }
 
-  const { data: inquiries } = await query;
+  const [{ data: inquiries }, { data: statusCounts }] = await Promise.all([
+    query,
+    supabase.from("inquiries").select("status"),
+  ]);
+
+  const counts = {
+    all: statusCounts?.length ?? 0,
+    new: statusCounts?.filter((r) => r.status === "new").length ?? 0,
+    read: statusCounts?.filter((r) => r.status === "read").length ?? 0,
+    replied: statusCounts?.filter((r) => r.status === "replied").length ?? 0,
+  };
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -63,17 +73,30 @@ export default async function InquiriesPage({
           {TABS.map((tab) => {
             const isActive = (statusFilter ?? null) === tab.value;
             const href = tab.value ? `?status=${tab.value}` : "?";
+            const count =
+              tab.value === null
+                ? counts.all
+                : tab.value === "new"
+                ? counts.new
+                : tab.value === "read"
+                ? counts.read
+                : counts.replied;
             return (
               <Link
                 key={tab.label}
                 href={href}
-                className={`pb-3 text-sm font-medium border-b-2 transition-colors ${
+                className={`flex items-center pb-3 text-sm font-medium border-b-2 transition-colors ${
                   isActive
                     ? "border-blue-500 text-blue-600"
                     : "border-transparent text-gray-500 hover:text-gray-700"
                 }`}
               >
                 {tab.label}
+                {(tab.value === null || count > 0) && (
+                  <span className="ml-1.5 bg-red-500 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[1.25rem] text-center leading-none">
+                    {count}
+                  </span>
+                )}
               </Link>
             );
           })}
