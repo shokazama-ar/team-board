@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import ReplyForm from "./ReplyForm";
+import ReplyThread from "./ReplyThread";
 
 type InquiryStatus = "new" | "read" | "replied";
 
@@ -143,44 +144,7 @@ export default async function InquiryDetailPage({
       <div className="mb-6">
         <p className="text-sm font-medium text-gray-500 mb-3">返信履歴</p>
 
-        {!replies || replies.length === 0 ? (
-          <p className="text-sm text-gray-400 text-center py-4">返信はありません</p>
-        ) : (
-          <div>
-            {replies.map((reply: {
-              id: string;
-              direction: "outbound" | "inbound";
-              from_name: string | null;
-              body: string;
-              created_at: string;
-            }) => {
-              const isOutbound = reply.direction === "outbound";
-              return (
-                <div
-                  key={reply.id}
-                  className={`flex mb-3 ${isOutbound ? "justify-end" : "justify-start"}`}
-                >
-                  <div
-                    className={`max-w-[80%] rounded-lg p-3 ${
-                      isOutbound ? "bg-blue-50" : "bg-gray-50"
-                    }`}
-                  >
-                    <p
-                      className={`text-xs mb-1 ${
-                        isOutbound ? "text-blue-600" : "text-gray-500"
-                      }`}
-                    >
-                      {isOutbound
-                        ? `管理者 · ${formatDateTime(reply.created_at)}`
-                        : `${reply.from_name ?? "送信者"} · ${formatDateTime(reply.created_at)}`}
-                    </p>
-                    <p className="text-sm whitespace-pre-wrap">{reply.body}</p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+        <ReplyThread replies={replies ?? []} />
       </div>
 
       {/* 返信フォーム */}
