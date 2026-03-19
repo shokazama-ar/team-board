@@ -158,43 +158,37 @@ export default function HelpAnnouncementsPage() {
         </MockupFrame>
       </Section>
 
-      <Section title="問い合わせ管理（管理者向け）">
+      <Section title="管理者向けお知らせ">
         <ul className="list-disc space-y-1.5 pl-5 text-sm text-gray-700">
-          <li>お知らせ画面の<b>管理者タブ</b>から、チームへの問い合わせ一覧を確認できます。</li>
-          <li>問い合わせは「未読・既読・返信済み」の3つのステータスで管理できます。</li>
-          <li>チームの公開お問い合わせフォーム（<code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-xs">/contact/[チームID]</code>）から送信されます。</li>
-          <li>フォームではメールアドレスが必須で、送信前に確認ダイアログが表示されます。</li>
+          <li>お知らせ一覧には<b>「全員向け」</b>と<b>「管理者向け」</b>の2つのタブがあります。</li>
+          <li>「管理者向け」タブには、管理者（コーチ）のみに表示されるお知らせが表示されます。保護者アカウントには表示されません。</li>
+          <li>お知らせ作成時に対象を「管理者向け」に設定すると、このタブに分類されます。</li>
+          <li>チームへの問い合わせ（体験希望・入会依頼など）は、ナビの「問い合わせ」から独立したページで確認・返信できます。</li>
         </ul>
-        <MockupFrame title="お知らせ › 管理者タブ — TeamBoard">
+        <MockupFrame title="お知らせ › 管理者向け — TeamBoard">
           <div className="text-xs">
             <div className="mb-3 flex gap-2 border-b border-gray-200 pb-2">
-              {["全員向け", "管理者"].map((tab) => (
+              {["全員向け", "管理者向け"].map((tab) => (
                 <span
                   key={tab}
-                  className={`px-3 py-1 ${tab === "管理者" ? "border-b-2 border-blue-600 font-medium text-blue-600" : "text-gray-500"}`}
+                  className={`px-3 py-1 ${tab === "管理者向け" ? "border-b-2 border-blue-600 font-medium text-blue-600" : "text-gray-500"}`}
                 >
                   {tab}
                 </span>
               ))}
             </div>
-            <p className="mb-2 font-semibold text-gray-700">問い合わせ</p>
             <div className="space-y-2">
               {[
-                { name: "田中 太郎", type: "体験・見学希望", status: "未読", statusStyle: "bg-yellow-100 text-yellow-800" },
-                { name: "鈴木 次郎", type: "入会依頼", status: "返信済み", statusStyle: "bg-green-100 text-green-700" },
-              ].map(({ name, type, status, statusStyle }) => (
-                <div key={name} className="rounded-lg border border-gray-200 bg-white p-2.5">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <p className="font-medium text-gray-900">{name}</p>
-                      <p className="text-gray-500">{type}</p>
-                    </div>
-                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${statusStyle}`}>{status}</span>
-                  </div>
+                { title: "コーチミーティングのご案内", author: "山田 管理者", date: "3月1日（金）" },
+                { title: "来季スケジュール案（管理者確認用）", author: "山田 管理者", date: "2月20日（火）" },
+              ].map(({ title, author, date }) => (
+                <div key={title} className="rounded-lg border border-gray-200 bg-white p-3">
+                  <p className="font-semibold text-gray-900">{title}</p>
+                  <p className="mt-0.5 text-gray-400">{author} ・ {date}</p>
                 </div>
               ))}
             </div>
-            <p className="mt-2 text-[10px] text-blue-500">↑ ステータスをタップして既読・返信済みに変更できます</p>
+            <p className="mt-2 text-[10px] text-blue-500">↑ 保護者には表示されない管理者専用のお知らせを投稿できます</p>
           </div>
         </MockupFrame>
       </Section>

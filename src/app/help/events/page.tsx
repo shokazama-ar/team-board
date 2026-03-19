@@ -63,6 +63,42 @@ export default function HelpEventsPage() {
         </MockupFrame>
       </Section>
 
+      <Section title="一覧の表示切り替えとフィルタ">
+        <ul className="list-disc space-y-1.5 pl-5 text-sm text-gray-700">
+          <li>予定一覧は<b>リスト表示</b>と<b>カレンダー表示</b>を切り替えられます。右上のアイコンで切り替えます。</li>
+          <li>イベント種別ボタン（例: 練習・試合）をクリックすると、その種別の予定だけに絞り込めます。もう一度クリックで解除します。</li>
+          <li>管理者はCSVで予定を<b>エクスポート</b>・<b>インポート</b>できます（右上の ↓ / ↑ ボタン）。</li>
+        </ul>
+        <MockupFrame title="予定 — TeamBoard">
+          <div className="text-xs">
+            <div className="mb-3 flex items-center justify-between gap-2 flex-wrap">
+              <p className="text-base font-bold text-gray-900">予定</p>
+              <div className="flex items-center gap-1.5">
+                <div className="flex rounded-lg border border-gray-200 overflow-hidden">
+                  <span className="flex items-center gap-1 bg-blue-600 px-2 py-1 text-white font-medium">
+                    <span>☰</span><span>リスト</span>
+                  </span>
+                  <span className="flex items-center gap-1 px-2 py-1 text-gray-500">
+                    <span>📅</span><span>カレンダー</span>
+                  </span>
+                </div>
+                <span className="rounded border border-gray-200 px-2 py-1 text-gray-500">↓</span>
+                <span className="rounded border border-gray-200 px-2 py-1 text-gray-500">↑</span>
+                <span className="flex items-center gap-1 rounded-lg bg-blue-600 px-2 py-1 font-medium text-white">
+                  + 新規
+                </span>
+              </div>
+            </div>
+            <div className="mb-3 flex gap-1.5 flex-wrap">
+              <span className="rounded-full border border-gray-200 bg-white px-2 py-0.5 text-gray-500">すべて</span>
+              <span className="rounded-full border-2 border-red-400 bg-red-50 px-2 py-0.5 font-medium text-red-600">試合</span>
+              <span className="rounded-full border border-gray-200 bg-white px-2 py-0.5 text-gray-500">練習</span>
+            </div>
+            <p className="text-[10px] text-blue-500">↑ 種別ボタンをクリックして絞り込み。↓↑ でCSVエクスポート・インポート（管理者のみ）</p>
+          </div>
+        </MockupFrame>
+      </Section>
+
       <Section title="カテゴリフィルタ">
         <ul className="list-disc space-y-1.5 pl-5 text-sm text-gray-700">
           <li>予定一覧の右上にある「自分のカテゴリのみ ◯—◯ すべて」トグルで表示を絞り込めます。</li>
