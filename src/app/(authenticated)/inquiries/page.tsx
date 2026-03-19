@@ -92,8 +92,8 @@ export default async function InquiriesPage({
                 }`}
               >
                 {tab.label}
-                {(tab.value === null || count > 0) && (
-                  <span className="ml-1.5 bg-red-500 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[1.25rem] text-center leading-none">
+                {tab.value !== null && (
+                  <span className="ml-1.5 text-xs text-gray-500">
                     {count}
                   </span>
                 )}
