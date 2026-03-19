@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Pencil, Trash2, Clock, MapPin, Check, X, HelpCircle } from "lucide-react";
+import { ArrowLeft, Pencil, Trash2, Clock, MapPin, Check, X, HelpCircle, Loader2 } from "lucide-react";
 
 type EventType = {
   id: string;
@@ -379,11 +379,12 @@ export default function EventDetailPage() {
                 <div className="flex gap-2">
                   {(["present", "absent", "undecided"] as const).map((status) => {
                     const StatusIcon = status === "present" ? Check : status === "absent" ? X : HelpCircle;
+                    const isLoading = submitting === profile.profile_id;
                     return (
                       <button
                         key={status}
                         onClick={() => handleAttendance(profile.profile_id, status)}
-                        disabled={submitting === profile.profile_id}
+                        disabled={isLoading}
                         className={`flex items-center gap-1.5 rounded-lg border px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50 ${
                           profile.status === status
                             ? status === "present"
@@ -394,7 +395,11 @@ export default function EventDetailPage() {
                             : "border-gray-300 text-gray-700 hover:bg-gray-50"
                         }`}
                       >
-                        <StatusIcon size={16} strokeWidth={1.5} aria-hidden="true" />
+                        {isLoading ? (
+                          <Loader2 size={16} className="animate-spin" aria-hidden="true" />
+                        ) : (
+                          <StatusIcon size={16} strokeWidth={1.5} aria-hidden="true" />
+                        )}
                         {STATUS_LABELS[status]}
                       </button>
                     );

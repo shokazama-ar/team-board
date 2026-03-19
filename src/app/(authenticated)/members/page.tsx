@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Shield, Trash2 } from "lucide-react";
+import { Shield, Trash2, Loader2 } from "lucide-react";
 import Image from "next/image";
 
 type MemberProfile = {
@@ -217,7 +217,7 @@ export default function MembersPage() {
           <li className="px-6 py-4 text-sm text-gray-400">なし</li>
         )}
         {members.map((member) => (
-          <li key={member.id} className="flex items-center justify-between px-6 py-4">
+          <li key={member.id} className={`flex items-center justify-between px-6 py-4 ${actionLoading === member.id ? "opacity-50 pointer-events-none" : ""}`}>
             <div className="flex min-w-0 flex-1 items-center gap-3">
               <ProfileAvatar name={member.name} avatarUrl={member.avatar_url} size={40} />
               <div className="min-w-0">
@@ -258,7 +258,11 @@ export default function MembersPage() {
                     aria-label="削除"
                     className="flex items-center rounded border border-red-300 px-2 py-1 text-xs text-red-600 hover:bg-red-50 disabled:opacity-50"
                   >
-                    <Trash2 size={12} strokeWidth={1.5} aria-hidden="true" />
+                    {actionLoading === member.id ? (
+                      <Loader2 size={12} className="animate-spin" aria-hidden="true" />
+                    ) : (
+                      <Trash2 size={12} strokeWidth={1.5} aria-hidden="true" />
+                    )}
                   </button>
                 </>
               )}
@@ -358,7 +362,7 @@ export default function MembersPage() {
               return <li className="px-6 py-4 text-sm text-gray-400">なし</li>;
             }
             return filtered.map((member) => (
-              <li key={member.id} className="flex items-center justify-between px-6 py-4">
+              <li key={member.id} className={`flex items-center justify-between px-6 py-4 ${actionLoading === member.id ? "opacity-50 pointer-events-none" : ""}`}>
                 <div className="flex min-w-0 flex-1 items-center gap-3">
                   <ProfileAvatar name={member.name} avatarUrl={member.avatar_url} size={40} />
                   <div className="min-w-0">
@@ -397,7 +401,11 @@ export default function MembersPage() {
                         disabled={actionLoading === member.id}
                         className="flex items-center gap-1 rounded border border-red-300 px-2 py-1 text-xs text-red-600 hover:bg-red-50 disabled:opacity-50"
                       >
-                        <Trash2 size={12} strokeWidth={1.5} aria-hidden="true" />
+                        {actionLoading === member.id ? (
+                          <Loader2 size={12} className="animate-spin" aria-hidden="true" />
+                        ) : (
+                          <Trash2 size={12} strokeWidth={1.5} aria-hidden="true" />
+                        )}
                         削除
                       </button>
                     </>

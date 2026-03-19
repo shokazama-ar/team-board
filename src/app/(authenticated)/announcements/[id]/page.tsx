@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, Loader2, Pencil, Trash2 } from "lucide-react";
 
 type AnnouncementDetail = {
   id: string;
@@ -209,10 +209,19 @@ export default function AnnouncementDetailPage() {
                   <button
                     onClick={handleDelete}
                     disabled={deleting}
-                    className="flex items-center gap-1.5 rounded-lg border border-red-300 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
+                    className="flex items-center gap-1.5 rounded-lg border border-red-300 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:opacity-60"
                   >
-                    <Trash2 size={16} strokeWidth={1.5} aria-hidden="true" />
-                    {deleting ? "削除中..." : "削除"}
+                    {deleting ? (
+                      <span className="flex items-center gap-1">
+                        <Loader2 size={14} className="animate-spin" />
+                        削除中…
+                      </span>
+                    ) : (
+                      <>
+                        <Trash2 size={16} strokeWidth={1.5} aria-hidden="true" />
+                        削除
+                      </>
+                    )}
                   </button>
                 </div>
               )}
@@ -306,9 +315,14 @@ export default function AnnouncementDetailPage() {
               <button
                 onClick={handleSave}
                 disabled={saving || !editTitle.trim() || !editBody.trim()}
-                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 disabled:opacity-60"
               >
-                {saving ? "保存中..." : "保存"}
+                {saving ? (
+                  <span className="flex items-center gap-1">
+                    <Loader2 size={14} className="animate-spin" />
+                    保存中…
+                  </span>
+                ) : "保存"}
               </button>
               <button
                 onClick={handleCancelEdit}

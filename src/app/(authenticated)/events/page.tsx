@@ -3,9 +3,10 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { CalendarView } from "@/components/events/CalendarView";
 import { ImportModal } from "@/components/events/ImportModal";
-import { List, CalendarDays, Plus, MapPin, Download, Upload, LayoutList } from "lucide-react";
+import { List, CalendarDays, Plus, MapPin, Download, Upload, LayoutList, Loader2 } from "lucide-react";
 
 type EventType = {
   id: string;
@@ -34,6 +35,8 @@ type AttendanceSummary = {
 
 export default function EventsPage() {
   const supabase = createClient();
+  const router = useRouter();
+  const [loadingId, setLoadingId] = useState<string | null>(null);
   const [events, setEvents] = useState<Event[]>([]);
   const [teamId, setTeamId] = useState<string>("");
   const [currentUserRole, setCurrentUserRole] = useState<string>("");
@@ -447,11 +450,15 @@ export default function EventsPage() {
               .map((e) => e.event_types)
               .filter(Boolean) as EventType[];
             const sortedTypes = [...types].sort((a, b) => a.sort_order - b.sort_order);
+            const isLoading = loadingId === event.id;
             return (
-              <Link
+              <div
                 key={event.id}
-                href={`/events/${event.id}`}
-                className="block rounded-lg border border-gray-200 bg-white p-4 hover:border-gray-300 hover:shadow-sm"
+                onClick={() => {
+                  setLoadingId(event.id);
+                  router.push(`/events/${event.id}`);
+                }}
+                className={`block rounded-lg border border-gray-200 bg-white p-4 hover:border-gray-300 hover:shadow-sm cursor-pointer ${isLoading ? "opacity-60" : ""}`}
               >
                 <div className="flex items-start justify-between">
                   <div>
@@ -487,17 +494,20 @@ export default function EventsPage() {
                       </p>
                     )}
                   </div>
-                  {summary && (
-                    <div className="flex gap-2 text-xs">
-                      <span className="text-green-700">{summary.present}</span>
-                      <span className="text-gray-400">/</span>
-                      <span className="text-red-700">{summary.absent}</span>
-                      <span className="text-gray-400">/</span>
-                      <span className="text-yellow-700">{summary.undecided}</span>
-                    </div>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {summary && (
+                      <div className="flex gap-2 text-xs">
+                        <span className="text-green-700">{summary.present}</span>
+                        <span className="text-gray-400">/</span>
+                        <span className="text-red-700">{summary.absent}</span>
+                        <span className="text-gray-400">/</span>
+                        <span className="text-yellow-700">{summary.undecided}</span>
+                      </div>
+                    )}
+                    {isLoading && <Loader2 size={14} className="animate-spin text-gray-400" />}
+                  </div>
                 </div>
-              </Link>
+              </div>
             );
           })}
         </div>

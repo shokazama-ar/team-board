@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { RefreshCw, Trash2, AlertTriangle, Plus, X, ChevronUp, ChevronDown, Pencil, Check, UserPlus, ExternalLink, Copy, Share2 } from "lucide-react";
+import { RefreshCw, Trash2, AlertTriangle, Plus, X, ChevronUp, ChevronDown, Pencil, Check, UserPlus, ExternalLink, Copy, Share2, Loader2 } from "lucide-react";
 import { AvatarUpload } from "@/components/ui/AvatarUpload";
 
 function copyToClipboard(text: string): Promise<void> {
@@ -76,6 +76,9 @@ function EventTypeSection({
   const [message, setMessage] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
+  const [movingId, setMovingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [savingId, setSavingId] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -103,23 +106,23 @@ function EventTypeSection({
             <div className="flex flex-col">
               <button
                 type="button"
-                onClick={() => onMoveUp(index)}
-                disabled={index === 0}
+                onClick={async () => { setMovingId(item.id); await onMoveUp(index); setMovingId(null); }}
+                disabled={index === 0 || movingId === item.id}
                 className="text-gray-300 hover:text-gray-600 disabled:opacity-20"
                 aria-label="上へ"
                 title="上へ"
               >
-                <ChevronUp size={14} strokeWidth={2} />
+                {movingId === item.id ? <Loader2 size={14} className="animate-spin" /> : <ChevronUp size={14} strokeWidth={2} />}
               </button>
               <button
                 type="button"
-                onClick={() => onMoveDown(index)}
-                disabled={index === items.length - 1}
+                onClick={async () => { setMovingId(item.id); await onMoveDown(index); setMovingId(null); }}
+                disabled={index === items.length - 1 || movingId === item.id}
                 className="text-gray-300 hover:text-gray-600 disabled:opacity-20"
                 aria-label="下へ"
                 title="下へ"
               >
-                <ChevronDown size={14} strokeWidth={2} />
+                {movingId === item.id ? <Loader2 size={14} className="animate-spin" /> : <ChevronDown size={14} strokeWidth={2} />}
               </button>
             </div>
             <span
@@ -145,15 +148,18 @@ function EventTypeSection({
                       setEditingId(null);
                       return;
                     }
+                    setSavingId(item.id);
                     const msg = await onUpdate(item.id, editingName);
+                    setSavingId(null);
                     if (!msg.includes("失敗") && !msg.includes("存在")) setEditingId(null);
                     else setMessage(msg);
                   }}
-                  className="text-blue-500 hover:text-blue-700"
+                  disabled={savingId === item.id}
+                  className="text-blue-500 hover:text-blue-700 disabled:opacity-50"
                   aria-label="保存"
                   title="保存"
                 >
-                  <Check size={16} strokeWidth={2} />
+                  {savingId === item.id ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} strokeWidth={2} />}
                 </button>
                 <button
                   type="button"
@@ -178,12 +184,13 @@ function EventTypeSection({
                 </button>
                 <button
                   type="button"
-                  onClick={() => onDelete(item.id)}
-                  className="text-gray-400 hover:text-red-500"
+                  onClick={async () => { setDeletingId(item.id); await onDelete(item.id); setDeletingId(null); }}
+                  disabled={deletingId === item.id}
+                  className="text-gray-400 hover:text-red-500 disabled:opacity-50"
                   aria-label="削除"
                   title="削除"
                 >
-                  <X size={16} strokeWidth={1.5} />
+                  {deletingId === item.id ? <Loader2 size={16} className="animate-spin" /> : <X size={16} strokeWidth={1.5} />}
                 </button>
               </>
             )}
@@ -229,7 +236,7 @@ function EventTypeSection({
               disabled={adding || !newName.trim()}
               className="shrink-0 flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
             >
-              <Plus size={16} strokeWidth={1.5} aria-hidden="true" />
+              {adding ? <Loader2 size={16} className="animate-spin" aria-hidden="true" /> : <Plus size={16} strokeWidth={1.5} aria-hidden="true" />}
               {adding ? "追加中..." : "追加"}
             </button>
           </div>

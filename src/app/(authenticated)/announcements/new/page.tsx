@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import { Loader2 } from "lucide-react";
 
 type EventCategory = { id: string; name: string; color: string };
 
@@ -222,9 +223,14 @@ export default function NewAnnouncementPage() {
           <button
             type="submit"
             disabled={submitting}
-            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 disabled:opacity-60"
           >
-            {submitting ? "作成中..." : "作成する"}
+            {submitting ? (
+              <span className="flex items-center gap-1">
+                <Loader2 size={14} className="animate-spin" />
+                投稿中…
+              </span>
+            ) : "投稿"}
           </button>
           <button
             type="button"

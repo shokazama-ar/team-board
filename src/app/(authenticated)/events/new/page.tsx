@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import DateTimePicker from "@/components/ui/DateTimePicker";
+import { Loader2 } from "lucide-react";
 
 type EventType = {
   id: string;
@@ -309,9 +310,14 @@ export default function NewEventPage() {
           <button
             type="submit"
             disabled={submitting}
-            className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+            className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 disabled:opacity-60"
           >
-            {submitting ? "作成中..." : "作成する"}
+            {submitting ? (
+              <span className="flex items-center gap-1">
+                <Loader2 size={14} className="animate-spin" />
+                保存中…
+              </span>
+            ) : "保存"}
           </button>
           <button
             type="button"

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { Loader2 } from "lucide-react";
 
 export default function TeamSetupPage() {
   const router = useRouter();
@@ -135,9 +136,14 @@ export default function TeamSetupPage() {
             <button
               type="submit"
               disabled={creating || !teamName.trim() || !createProfileName.trim()}
-              className="w-full rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+              className="w-full rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 disabled:opacity-60"
             >
-              {creating ? "作成中..." : "チームを作成"}
+              {creating ? (
+                <span className="flex items-center justify-center gap-1">
+                  <Loader2 size={14} className="animate-spin" />
+                  作成中…
+                </span>
+              ) : "チームを作成"}
             </button>
           </form>
         </div>
@@ -195,9 +201,14 @@ export default function TeamSetupPage() {
             <button
               type="submit"
               disabled={joining || !inviteCode.trim() || (detectedJoinKind !== "guardian" && !joinProfileName.trim())}
-              className="w-full rounded-lg border border-blue-600 bg-white px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 disabled:opacity-50"
+              className="w-full rounded-lg border border-blue-600 bg-white px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 disabled:opacity-50 disabled:opacity-60"
             >
-              {joining ? "参加中..." : "チームに参加"}
+              {joining ? (
+                <span className="flex items-center justify-center gap-1">
+                  <Loader2 size={14} className="animate-spin" />
+                  参加中…
+                </span>
+              ) : "参加"}
             </button>
           </form>
         </div>
