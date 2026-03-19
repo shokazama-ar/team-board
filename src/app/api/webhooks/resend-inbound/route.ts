@@ -67,13 +67,34 @@ export async function POST(req: Request) {
     const fromName = fromMatch ? fromMatch[1].trim() || null : null;
     const fromEmail = fromMatch ? fromMatch[2] : rawFrom;
 
+    // email_id で Resend API から本文を取得
+    const emailId: string | undefined = data.email_id;
+    let body = "";
+
+    if (emailId) {
+      const resendRes = await fetch(`https://api.resend.com/emails/${emailId}`, {
+        headers: {
+          Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+        },
+      });
+      if (resendRes.ok) {
+        const emailDetail = await resendRes.json();
+        body = emailDetail.text ?? emailDetail.html ?? "";
+      } else {
+        console.error("Resend API fetch failed:", resendRes.status, await resendRes.text());
+      }
+    } else {
+      // email_id がない場合はフォールバック
+      body = data.text ?? data.html ?? "";
+    }
+
     // inquiry_replies に保存（inbound）
     const { error: insertError } = await supabaseAdmin.from("inquiry_replies").insert({
       inquiry_id: inquiryId,
       direction: "inbound",
       from_name: fromName,
       from_email: fromEmail,
-      body: data.text ?? data.html ?? "",
+      body,
     });
 
     if (insertError) {
