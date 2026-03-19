@@ -29,6 +29,7 @@ export async function POST(req: Request) {
     // }
 
     const data = payload?.data ?? payload; // ペイロード形式の違いを吸収
+    console.log("Resend inbound payload:", JSON.stringify(payload, null, 2));
 
     // to アドレスから inquiry-id を抽出
     const toAddresses: string[] = Array.isArray(data.to) ? data.to : [data.to];
@@ -67,26 +68,8 @@ export async function POST(req: Request) {
     const fromName = fromMatch ? fromMatch[1].trim() || null : null;
     const fromEmail = fromMatch ? fromMatch[2] : rawFrom;
 
-    // email_id で Resend API から本文を取得
-    const emailId: string | undefined = data.email_id;
-    let body = "";
-
-    if (emailId) {
-      const resendRes = await fetch(`https://api.resend.com/emails/${emailId}`, {
-        headers: {
-          Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-        },
-      });
-      if (resendRes.ok) {
-        const emailDetail = await resendRes.json();
-        body = emailDetail.text ?? emailDetail.html ?? "";
-      } else {
-        console.error("Resend API fetch failed:", resendRes.status, await resendRes.text());
-      }
-    } else {
-      // email_id がない場合はフォールバック
-      body = data.text ?? data.html ?? "";
-    }
+    // ペイロードから本文を取得（text 優先、なければ html）
+    const body: string = data.text ?? data.html ?? "";
 
     // inquiry_replies に保存（inbound）
     const { error: insertError } = await supabaseAdmin.from("inquiry_replies").insert({
