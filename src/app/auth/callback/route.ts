@@ -36,10 +36,12 @@ export async function GET(request: Request) {
 
   // PKCE コードなし = implicit flow の可能性（#access_token= がフラグメントにある）
   // フラグメントはサーバーに届かないため、クライアントサイドで読み取り直す HTML を返す
-  if (next.startsWith("/accept-invite")) {
+  if (next.startsWith("/accept-invite") || next.startsWith("/auth/accept-invite")) {
+    // implicit flow: fragment は JS で読み取り /accept-invite に渡す
+    const dest = nextWithExtra.replace(/^\/auth\/accept-invite/, "/accept-invite");
     return new Response(
       `<!doctype html><html><head><meta charset="utf-8"></head><body><script>
-        location.replace("${nextWithExtra}" + location.hash);
+        location.replace("${dest}" + location.hash);
       </script></body></html>`,
       { headers: { "content-type": "text/html; charset=utf-8" } }
     );
