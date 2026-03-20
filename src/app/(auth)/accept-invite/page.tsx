@@ -1,12 +1,24 @@
 "use client";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 export default function AcceptInvitePage() {
   const router = useRouter();
+  const [authError, setAuthError] = useState<{ code: string; description: string } | null>(null);
 
   useEffect(() => {
+    // ハッシュからエラーパラメータを取得
+    const hash = window.location.hash.slice(1);
+    const params = new URLSearchParams(hash);
+    const errorCode = params.get("error_code");
+    const errorDesc = params.get("error_description");
+
+    if (errorCode) {
+      setAuthError({ code: errorCode, description: errorDesc ?? "" });
+      return;
+    }
+
     const supabase = createClient();
 
     // PKCE・implicit flow 両方に対応するため onAuthStateChange でセッション確立を待つ
@@ -26,6 +38,23 @@ export default function AcceptInvitePage() {
 
     return () => subscription.unsubscribe();
   }, [router]);
+
+  if (authError) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center space-y-4">
+          <p className="text-sm text-red-600">
+            {authError.code === "otp_expired"
+              ? "招待リンクの有効期限が切れています。チーム管理者に再招待を依頼してください。"
+              : `招待リンクが無効です（${authError.description}）。`}
+          </p>
+          <a href="/login" className="text-sm text-blue-600 underline">
+            ログインページへ
+          </a>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center">
