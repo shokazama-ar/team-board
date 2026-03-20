@@ -33,7 +33,9 @@ export async function POST(req: NextRequest) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
-  const redirectTo = `${process.env.NEXT_PUBLIC_SITE_URL}/auth/accept-invite`;
+  // PKCE フローでは /auth/callback でコード交換してから /auth/accept-invite へ
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? `https://${process.env.VERCEL_URL}`;
+  const redirectTo = `${siteUrl}/auth/callback?next=/auth/accept-invite`;
 
   const { error } = await adminClient.auth.admin.inviteUserByEmail(email, {
     data: { team_id: teamId },

@@ -370,9 +370,15 @@ export default function MembersPage() {
       {isAdmin && (
         <div className="rounded-lg border border-gray-200 bg-white p-4 mb-4">
           <h3 className="mb-3 text-sm font-semibold text-gray-800">新メンバーを招待</h3>
-          {inviteSuccess ? (
-            <p className="text-sm text-green-600">招待メールを送信しました。</p>
-          ) : (
+          {inviteSuccess && (
+            <p className="mb-2 text-sm text-green-600">
+              招待メールを送信しました。
+              <button onClick={() => setInviteSuccess(false)} className="ml-2 text-blue-600 underline">
+                別のアドレスを招待
+              </button>
+            </p>
+          )}
+          {!inviteSuccess && (
             <div className="flex gap-2">
               <input
                 type="email"
