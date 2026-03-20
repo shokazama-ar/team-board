@@ -64,7 +64,7 @@ export default function JoinProfilePage() {
     <div className="mx-auto max-w-lg">
       <h1 className="mb-2 text-2xl font-bold">プロファイルにリンク</h1>
       <p className="mb-8 text-sm text-gray-500">
-        保護者・コーチ間でプレイヤーのプロファイルを共有できます。プロファイルの設定画面に表示された共有コードを入力してください。
+        保護者・コーチ間で選手のプロファイルを共有できます。プロファイルの設定画面に表示された共有コードを入力してください。
       </p>
 
       <div className="rounded-lg border border-gray-200 bg-white p-6">

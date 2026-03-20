@@ -372,7 +372,7 @@ export default function EventDetailPage() {
                         : "bg-green-50 text-green-700"
                     }`}
                   >
-                    {profile.kind === "coach" ? "コーチ" : "プレイヤー"}
+                    {profile.kind === "coach" ? "コーチ" : "選手"}
                   </span>
                   {profile.name || "名前未設定"}
                 </p>
@@ -410,10 +410,10 @@ export default function EventDetailPage() {
           </div>
         )}
 
-        {/* 集計サマリー（プレイヤー・コーチ別） */}
+        {/* 集計サマリー（選手・コーチ別） */}
         <div className="mb-4 space-y-1.5">
           <div className="flex items-center gap-3 text-sm">
-            <span className="w-20 shrink-0 text-xs font-medium text-green-700">プレイヤー</span>
+            <span className="w-20 shrink-0 text-xs font-medium text-green-700">選手</span>
             <span className="text-green-700">出席 {playerSummary.present}</span>
             <span className="text-red-700">欠席 {playerSummary.absent}</span>
             <span className="text-yellow-700">未定 {playerSummary.undecided}</span>
@@ -441,7 +441,7 @@ export default function EventDetailPage() {
                   : "text-gray-500 hover:text-gray-700"
               }`}
             >
-              プレイヤー
+              選手
             </button>
             <button
               onClick={() => setActiveTab("coach")}
@@ -460,7 +460,7 @@ export default function EventDetailPage() {
         {(activeTab === "player" || !isCoach) && (
           <div className="divide-y divide-gray-100">
             {players.length === 0 ? (
-              <p className="py-2 text-sm text-gray-400">プレイヤーはいません</p>
+              <p className="py-2 text-sm text-gray-400">選手はいません</p>
             ) : (
               players.map((member) => (
                 <div key={member.profile_id} className="flex items-center justify-between py-2">

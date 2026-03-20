@@ -308,7 +308,7 @@ function MemberProfileRow({ profile, onUpdated, onAvatarUploaded, canDelete, onD
                   profile.kind === "coach" ? "bg-blue-50 text-blue-700" : "bg-green-50 text-green-700"
                 }`}
               >
-                {profile.kind === "coach" ? "コーチ" : "プレイヤー"}
+                {profile.kind === "coach" ? "コーチ" : "選手"}
               </span>
               {profile.role === "admin" && (
                 <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">管理者</span>
@@ -459,7 +459,7 @@ function AddProfileForm({
                     : "border-gray-300 text-gray-600 hover:bg-gray-50"
                 }`}
               >
-                {k === "coach" ? "コーチ" : "プレイヤー"}
+                {k === "coach" ? "コーチ" : "選手"}
               </button>
             ))}
           </div>
@@ -1030,6 +1030,7 @@ export default function SettingsPage() {
     avatar_url: string | null;
     number: string | null;
     owner_user_id: string;
+    owner_name: string | null;
   };
   const [myProfiles, setMyProfiles] = useState<MemberProfileItem[]>([]);
   const [linkedProfiles, setLinkedProfiles] = useState<LinkedProfileItem[]>([]);
@@ -1096,6 +1097,14 @@ export default function SettingsPage() {
       .select("member_profile_id, member_profiles(id, kind, name, avatar_url, number, user_id)")
       .eq("user_id", uid);
     if (accessEntries) {
+      const ownerIds = [...new Set(
+        accessEntries.map((a) => (a.member_profiles as unknown as { user_id: string } | null)?.user_id).filter(Boolean) as string[]
+      )];
+      const ownerNameMap: Record<string, string | null> = {};
+      if (ownerIds.length > 0) {
+        const { data: ownerProfiles } = await supabase.from("profiles").select("id, name").in("id", ownerIds);
+        (ownerProfiles ?? []).forEach((p) => { ownerNameMap[p.id] = p.name; });
+      }
       setLinkedProfiles(
         accessEntries.map((a) => {
           const mp = a.member_profiles as unknown as {
@@ -1113,6 +1122,7 @@ export default function SettingsPage() {
             avatar_url: mp?.avatar_url ?? null,
             number: mp?.number ?? null,
             owner_user_id: mp?.user_id ?? "",
+            owner_name: ownerNameMap[mp?.user_id ?? ""] ?? null,
           };
         })
       );
@@ -1460,7 +1470,7 @@ export default function SettingsPage() {
     });
   };
 
-  const handleSavePlayerCategories = async () => {
+  const handleSavePlayerCategories = useCallback(async () => {
     if (!teamId) return;
     setSavingPlayerCategories(true);
 
@@ -1476,7 +1486,7 @@ export default function SettingsPage() {
 
     setPlayerCategoryModalOpen(false);
     setSavingPlayerCategories(false);
-  };
+  }, [supabase, teamId, playerCategoryAssignments]);
 
   if (loading) {
     return <div className="text-sm text-gray-500">読み込み中...</div>;
@@ -1557,10 +1567,10 @@ export default function SettingsPage() {
   const memberProfilesJsx = teamId ? (
     <>
       <hr className="my-8 border-gray-200" />
-      <h2 className="mb-1 text-lg font-semibold">プレイヤープロファイル</h2>
-      <p className="mb-4 text-sm text-gray-500">プレイヤープロファイルを管理します。</p>
+      <h2 className="mb-1 text-lg font-semibold">選手プロファイル</h2>
+      <p className="mb-4 text-sm text-gray-500">選手プロファイルを管理します。</p>
       <div className="space-y-3 mb-4">
-        {myProfiles.filter((p) => p.kind === "player" || p.kind === "guardian" || p.kind === "coach").map((p) => (
+        {myProfiles.filter((p) => p.kind === "player").map((p) => (
           <div key={p.id}>
             <MemberProfileRow
               profile={p}
@@ -1593,7 +1603,7 @@ export default function SettingsPage() {
                 setMyProfiles((prev) => prev.filter((mp) => mp.id !== p.id));
               }}
             />
-            {/* プロファイル共有セクション（プレイヤーかつ自分がオーナーのみ） */}
+            {/* プロファイル共有セクション（選手かつ自分がオーナーのみ） */}
             {p.kind === "player" && (
               <div className="rounded-b-lg border-x border-b border-gray-200 bg-gray-50 px-4 py-3 -mt-1">
                 <p className="mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">プロファイル共有</p>
@@ -1656,10 +1666,15 @@ export default function SettingsPage() {
               <div key={lp.profile_id} className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white px-4 py-3">
                 <div className="flex items-center gap-2 min-w-0">
                   <span className="text-base">👦</span>
-                  <span className="text-sm font-medium text-gray-900 truncate">
-                    {lp.profile_name ?? "名前未設定"}
-                    {lp.number && <span className="ml-1.5 text-xs text-gray-400">#{lp.number}</span>}
-                  </span>
+                  <div className="min-w-0">
+                    <span className="text-sm font-medium text-gray-900 truncate">
+                      {lp.profile_name ?? "名前未設定"}
+                      {lp.number && <span className="ml-1.5 text-xs text-gray-400">#{lp.number}</span>}
+                    </span>
+                    {lp.owner_name && (
+                      <p className="text-xs text-gray-400">{lp.owner_name} が作成</p>
+                    )}
+                  </div>
                 </div>
                 <button
                   type="button"
@@ -1888,7 +1903,7 @@ export default function SettingsPage() {
                   href={href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-2 text-sm text-blue-600 hover:underline"
+                  className="inline-flex items-center gap-2 text-sm text-blue-600 hover:underline"
                 >
                   <ExternalLink size={14} strokeWidth={1.5} aria-hidden="true" />
                   {label}
@@ -1920,7 +1935,7 @@ export default function SettingsPage() {
                   href={href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-2 text-sm text-blue-600 hover:underline"
+                  className="inline-flex items-center gap-2 text-sm text-blue-600 hover:underline"
                 >
                   <ExternalLink size={14} strokeWidth={1.5} aria-hidden="true" />
                   {label}
@@ -2137,7 +2152,7 @@ export default function SettingsPage() {
                   href={href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-2 text-sm text-blue-600 hover:underline"
+                  className="inline-flex items-center gap-2 text-sm text-blue-600 hover:underline"
                 >
                   <ExternalLink size={14} strokeWidth={1.5} aria-hidden="true" />
                   {label}

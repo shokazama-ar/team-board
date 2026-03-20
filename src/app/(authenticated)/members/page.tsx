@@ -137,9 +137,10 @@ export default function MembersPage() {
         };
       });
 
-      // 保護者: account_type="guardian"（プレイヤーセクションと重複させない）
+      // コーチ: account_type="coach" かつ kind="coach"（コーチが登録した選手を除外）
+      // 保護者: account_type="guardian"（選手セクションと重複させない）
+      setCoaches(enriched.filter((m) => m.account_type === "coach" && m.kind === "coach"));
       setGuardians(enriched.filter((m) => m.account_type === "guardian"));
-      setCoaches(enriched.filter((m) => m.account_type === "coach"));
       const playerList = enriched.filter((m) => m.kind === "player");
       setPlayers(playerList);
 
@@ -342,7 +343,7 @@ export default function MembersPage() {
       <div className="rounded-lg border border-gray-200 bg-white mb-4">
         <div className="border-b border-gray-200 px-6 py-3 flex items-center gap-2">
           <span className="rounded-full px-2 py-0.5 text-xs font-medium bg-green-50 text-green-700">
-            プレイヤー
+            選手
           </span>
           <span className="text-sm text-gray-500">
             {selectedCategoryId === null

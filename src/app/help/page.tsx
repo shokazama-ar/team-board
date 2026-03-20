@@ -30,7 +30,7 @@ const TOPICS = [
   {
     href: "/help/members",
     label: "メンバー管理",
-    description: "アカウントとプレイヤープロファイルの関係を理解しましょう。",
+    description: "アカウントと選手プロファイルの関係を理解しましょう。",
   },
 ];
 

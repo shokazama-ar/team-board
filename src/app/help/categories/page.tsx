@@ -14,7 +14,7 @@ export default function HelpCategoriesPage() {
           </div>
           <div className="rounded-lg border border-gray-100 bg-gray-50 p-4">
             <p className="mb-1 font-semibold text-gray-800">対象カテゴリ（例: A組・男子・全体）</p>
-            <p>予定・お知らせの<b>対象者</b>を絞ります。プレイヤーをカテゴリに所属させることで、関係する予定だけが表示されます。</p>
+            <p>予定・お知らせの<b>対象者</b>を絞ります。選手をカテゴリに所属させることで、関係する予定だけが表示されます。</p>
           </div>
         </div>
         <MockupFrame title="予定を作成 — TeamBoard">
@@ -48,7 +48,7 @@ export default function HelpCategoriesPage() {
         </MockupFrame>
       </Section>
 
-      <Section title="プレイヤーへのカテゴリ割り当て">
+      <Section title="選手へのカテゴリ割り当て">
         <ul className="list-disc space-y-1.5 pl-5 text-sm text-gray-700">
           <li>コーチは設定画面の「コーチ」タブの「カテゴリ割り当て」から、各選手にカテゴリを割り当てます。</li>
           <li>1人の選手に複数カテゴリを設定できます。</li>
@@ -66,7 +66,7 @@ export default function HelpCategoriesPage() {
               ))}
             </div>
             <div className="rounded-lg p-2 ring-2 ring-green-400 ring-offset-1">
-              <p className="mb-2 font-semibold text-gray-700">プレイヤーカテゴリ割り当て</p>
+              <p className="mb-2 font-semibold text-gray-700">選手カテゴリ割り当て</p>
               <div className="space-y-2">
                 {[
                   { name: "田中 次郎", cats: ["A組", "全体"] },
@@ -91,7 +91,7 @@ export default function HelpCategoriesPage() {
 
       <Section title="フィルタ機能（ダッシュボード・予定表・お知らせ）">
         <ul className="list-disc space-y-1.5 pl-5 text-sm text-gray-700">
-          <li>ダッシュボードには、自分のプレイヤープロファイルが所属するカテゴリに関係する予定・お知らせだけが表示されます。</li>
+          <li>ダッシュボードには、自分の選手プロファイルが所属するカテゴリに関係する予定・お知らせだけが表示されます。</li>
           <li>トグルスイッチを「すべて」にするとフィルタを解除して全件表示できます。</li>
           <li>カテゴリ未設定の予定・お知らせは、フィルタに関係なく常に全員に表示されます。</li>
           <li>「予定表」と「お知らせ」ページにも同じトグルがあります。自分のカテゴリに関係する内容だけに絞り込めます。</li>

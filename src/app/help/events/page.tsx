@@ -102,7 +102,7 @@ export default function HelpEventsPage() {
       <Section title="カテゴリフィルタ">
         <ul className="list-disc space-y-1.5 pl-5 text-sm text-gray-700">
           <li>予定一覧の右上にある「自分のカテゴリのみ ◯—◯ すべて」トグルで表示を絞り込めます。</li>
-          <li>自分のプレイヤープロファイルが所属するカテゴリの予定のみ表示します。</li>
+          <li>自分の選手プロファイルが所属するカテゴリの予定のみ表示します。</li>
           <li>カテゴリが未設定の場合はトグルが表示されず、すべての予定が表示されます。</li>
         </ul>
         <MockupFrame title="予定 — TeamBoard">
@@ -142,7 +142,7 @@ export default function HelpEventsPage() {
 
       <Section title="出欠回答">
         <ul className="list-disc space-y-1.5 pl-5 text-sm text-gray-700">
-          <li>予定の詳細ページでプレイヤーごとに「参加 / 欠席 / 未定」を選択します。</li>
+          <li>予定の詳細ページで選手ごとに「参加 / 欠席 / 未定」を選択します。</li>
           <li>保護者アカウントは、自分が管理する複数の選手分まとめて回答できます。</li>
           <li>回答状況は一覧で確認できます。</li>
         </ul>

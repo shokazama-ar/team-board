@@ -4,7 +4,7 @@ export default function HelpMembersPage() {
   return (
     <article className="rounded-2xl border border-gray-200 bg-white p-8">
       <h1 className="mb-1 text-2xl font-bold text-gray-900">メンバー管理</h1>
-      <p className="mb-8 text-sm text-gray-500">アカウントとプレイヤープロファイルの関係を理解しましょう。</p>
+      <p className="mb-8 text-sm text-gray-500">アカウントと選手プロファイルの関係を理解しましょう。</p>
 
       <Section title="アカウントとプロファイルの違い">
         <div className="space-y-3 text-sm text-gray-700">
@@ -52,7 +52,7 @@ export default function HelpMembersPage() {
 
       <Section title="プロファイルの追加">
         <ul className="list-disc space-y-1.5 pl-5 text-sm text-gray-700">
-          <li><b>コーチアカウント</b>は設定画面の「保護者」タブからプレイヤープロファイルを追加・管理できます。</li>
+          <li><b>コーチアカウント</b>は設定画面の「保護者」タブから選手プロファイルを追加・管理できます。</li>
           <li><b>保護者アカウント</b>も設定画面の「保護者」タブから選手プロファイルを追加・管理します。</li>
         </ul>
         <MockupFrame title="設定 — TeamBoard">
@@ -93,15 +93,15 @@ export default function HelpMembersPage() {
 
       <Section title="メンバー一覧">
         <ul className="list-disc space-y-1.5 pl-5 text-sm text-gray-700">
-          <li>メンバーページではチーム全員のプロファイルを確認できます。<b>プレイヤー・コーチ・保護者</b>の3つのセクションに分かれています。</li>
-          <li>プレイヤーセクションはカテゴリで絞り込めます。カテゴリが設定されている場合、一覧上部にフィルタボタンが表示されます。</li>
+          <li>メンバーページではチーム全員のプロファイルを確認できます。<b>選手・コーチ・保護者</b>の3つのセクションに分かれています。</li>
+          <li>選手セクションはカテゴリで絞り込めます。カテゴリが設定されている場合、一覧上部にフィルタボタンが表示されます。</li>
           <li>管理者は各メンバーの権限変更（管理者 ↔ メンバー）や削除ができます。</li>
         </ul>
         <MockupFrame title="メンバー — TeamBoard">
           <div className="text-xs">
             <div className="mb-3">
               <div className="mb-1 flex items-center justify-between">
-                <p className="font-semibold text-gray-700">プレイヤー <span className="font-normal text-gray-400">3名</span></p>
+                <p className="font-semibold text-gray-700">選手 <span className="font-normal text-gray-400">3名</span></p>
               </div>
               <div className="mb-2 flex gap-1.5">
                 <span className="rounded-full border border-gray-200 bg-white px-2 py-0.5 text-gray-500">すべて</span>

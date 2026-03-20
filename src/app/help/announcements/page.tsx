@@ -73,7 +73,7 @@ export default function HelpAnnouncementsPage() {
       <Section title="カテゴリフィルタ">
         <ul className="list-disc space-y-1.5 pl-5 text-sm text-gray-700">
           <li>お知らせ一覧の右上にある「自分のカテゴリのみ ◯—◯ すべて」トグルで表示を絞り込めます。</li>
-          <li>自分のプレイヤープロファイルが所属するカテゴリのお知らせのみ表示します。</li>
+          <li>自分の選手プロファイルが所属するカテゴリのお知らせのみ表示します。</li>
           <li>カテゴリが未設定のお知らせ（全員向け）は、フィルタ設定に関わらず常に表示されます。</li>
         </ul>
         <MockupFrame title="お知らせ — TeamBoard">
