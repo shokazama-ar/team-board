@@ -105,13 +105,8 @@ export default async function InquiryDetailPage({
         {/* 名前 */}
         <p className="text-xl font-semibold mb-1">{inquiry.name}</p>
 
-        {/* メール・電話 */}
-        <p className="text-sm text-gray-600">
-          {inquiry.email}
-          {inquiry.phone && (
-            <span className="ml-3">{inquiry.phone}</span>
-          )}
-        </p>
+        {/* メール */}
+        <p className="text-sm text-gray-600">{inquiry.email}</p>
 
         {/* 種別 */}
         {inquiryTypes?.name && (

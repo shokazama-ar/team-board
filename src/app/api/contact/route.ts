@@ -7,7 +7,7 @@ const FROM_DOMAIN = "minibas.ballershub.net";
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { team_id, type, inquiry_type_id, name, email, phone, message, custom_fields } = body;
+  const { team_id, type, inquiry_type_id, name, email, message, custom_fields } = body;
 
   if (!team_id || !name || !email) {
     return NextResponse.json({ error: "必須項目が不足しています" }, { status: 400 });
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
       inquiry_type_id: inquiry_type_id ?? null,
       name: name.trim(),
       email: email.trim(),
-      phone: phone?.trim() || null,
+
       message: message?.trim() || null,
       custom_fields: custom_fields ?? null,
     })
@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
     `お名前: ${name}`,
     `メールアドレス: ${email}`,
   ];
-  if (phone) lines.push(`電話番号: ${phone}`);
+
   if (message) lines.push("", "メッセージ:", message);
   if (custom_fields && Object.keys(custom_fields).length > 0) {
     const fieldIds = Object.keys(custom_fields);

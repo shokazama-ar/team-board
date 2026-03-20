@@ -57,7 +57,6 @@ export default function ContactPage({
   const [selectedTypeId, setSelectedTypeId] = useState('');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
   const [message, setMessage] = useState('');
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, string | string[]>>({});
 
@@ -177,7 +176,7 @@ export default function ContactPage({
       inquiry_type_id: isUuid(selectedTypeId) ? selectedTypeId : null,
       name: name.trim(),
       email: email.trim(),
-      phone: phone.trim() || null,
+
       message: message.trim() || null,
       custom_fields: Object.keys(customFieldValues).length > 0 ? customFieldValues : null,
     };
@@ -357,23 +356,6 @@ export default function ContactPage({
                   />
                 </div>
 
-                {/* 電話番号 */}
-                <div>
-                  <label
-                    htmlFor="phone"
-                    className="mb-1 block text-sm font-medium text-gray-700"
-                  >
-                    電話番号
-                  </label>
-                  <input
-                    id="phone"
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    placeholder="090-0000-0000"
-                  />
-                </div>
 
                 {/* カスタムフォーム項目（種別選択時に動的表示） */}
                 {currentFields.map((field) => (

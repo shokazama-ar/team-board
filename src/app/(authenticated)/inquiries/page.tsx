@@ -11,7 +11,7 @@ type Inquiry = {
   id: string;
   name: string;
   email: string;
-  phone: string | null;
+
   message: string;
   status: InquiryStatus;
   created_at: string;
@@ -52,7 +52,7 @@ export default function InquiriesPage() {
 
       let query = supabase
         .from("inquiries")
-        .select("id, name, email, phone, message, status, created_at, inquiry_types(name)")
+        .select("id, name, email, message, status, created_at, inquiry_types(name)")
         .order("created_at", { ascending: false });
 
       if (statusFilter) {
@@ -168,9 +168,6 @@ export default function InquiriesPage() {
                 </div>
                 <p className="mt-1 text-xs text-gray-500">
                   {typedInquiry.email}
-                  {typedInquiry.phone && (
-                    <span className="ml-2">{typedInquiry.phone}</span>
-                  )}
                 </p>
                 <p className="mt-2 text-sm text-gray-700">{messagePreview}</p>
               </div>
