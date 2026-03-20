@@ -9,31 +9,22 @@ export default function AcceptInvitePage() {
   useEffect(() => {
     const supabase = createClient();
 
-    const join = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        router.push("/login");
-        return;
+    // PKCE・implicit flow 両方に対応するため onAuthStateChange でセッション確立を待つ
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if ((event === "SIGNED_IN" || event === "TOKEN_REFRESHED") && session?.user) {
+        subscription.unsubscribe();
+
+        const teamId = session.user.user_metadata?.team_id as string | undefined;
+        if (!teamId) { router.push("/"); return; }
+
+        const { error } = await supabase.rpc("accept_team_invite", { p_team_id: teamId });
+        if (error) console.error(error);
+
+        router.push("/teams/join-profile");
       }
+    });
 
-      const teamId = user.user_metadata?.team_id as string | undefined;
-      if (!teamId) {
-        router.push("/");
-        return;
-      }
-
-      const { error } = await supabase.rpc("accept_team_invite", {
-        p_team_id: teamId,
-      });
-      if (error) console.error(error);
-
-      // プロファイル作成画面へ
-      router.push("/teams/join-profile");
-    };
-
-    join();
+    return () => subscription.unsubscribe();
   }, [router]);
 
   return (
