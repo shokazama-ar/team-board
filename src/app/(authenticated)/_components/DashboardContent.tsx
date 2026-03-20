@@ -11,7 +11,7 @@ export default async function DashboardContent({ userId }: { userId: string }) {
 
   const { data: membership } = await supabase
     .from("team_members")
-    .select("team_id, role, member_profiles!inner(user_id)")
+    .select("team_id, role, account_type, member_profiles!inner(user_id)")
     .eq("member_profiles.user_id", userId)
     .limit(1)
     .single();
@@ -68,7 +68,7 @@ export default async function DashboardContent({ userId }: { userId: string }) {
         .limit(5),
       supabase
         .from("team_members")
-        .select("member_profile_id, member_profiles!inner(user_id)")
+        .select("member_profile_id, member_profiles!inner(user_id, kind)")
         .eq("team_id", membership.team_id)
         .eq("member_profiles.user_id", userId),
     ]);
@@ -91,9 +91,18 @@ export default async function DashboardContent({ userId }: { userId: string }) {
   // リンク済みプロファイルIDを取得（保護者が子プロファイルにアクセスできるケース）
   const { data: linkedAccess } = await supabase
     .from("member_profile_access")
-    .select("member_profile_id");
+    .select("member_profile_id, member_profiles(kind)");
   const linkedProfileIds = (linkedAccess ?? []).map((r) => r.member_profile_id);
   const allMyProfileIds = [...new Set([...myProfileIds, ...linkedProfileIds])];
+
+  const isGuardian = (membership.account_type as string) === "guardian";
+  const ownedPlayerProfiles = (myProfilesResult.data ?? []).filter(
+    (m) => (m.member_profiles as unknown as { kind: string } | null)?.kind === "player"
+  );
+  const linkedPlayerProfiles = (linkedAccess ?? []).filter(
+    (a) => (a.member_profiles as unknown as { kind: string } | null)?.kind === "player"
+  );
+  const hasPlayerProfile = ownedPlayerProfiles.length > 0 || linkedPlayerProfiles.length > 0;
 
   // ユーザーのカテゴリ取得 + 出欠回答済みイベント取得 を並列実行
   const eventIds = (allUpcomingEventsResult.data ?? []).map((e) => e.id);
@@ -144,6 +153,24 @@ export default async function DashboardContent({ userId }: { userId: string }) {
 
   return (
     <>
+      {/* 保護者向け：選手プロファイル未登録バナー */}
+      {isGuardian && !hasPlayerProfile && (
+        <div className="mt-6 rounded-lg border border-blue-200 bg-blue-50 p-4">
+          <p className="text-sm font-semibold text-blue-800">
+            まずは選手のプロファイルを登録してください 😊
+          </p>
+          <p className="mt-1 text-sm text-blue-700">
+            選手プロファイルを登録すると、スケジュールの出欠回答などの機能が利用できます。
+          </p>
+          <Link
+            href="/settings"
+            className="mt-3 inline-block rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          >
+            設定画面で登録する
+          </Link>
+        </div>
+      )}
+
       {/* Team Info */}
       <div className="mt-6">
         <div className="rounded-lg border border-gray-200 bg-white p-6">

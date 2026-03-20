@@ -37,6 +37,7 @@ export default function ReplyForm({ inquiryId, defaultMessage = "", recipientEma
       }
 
       setSuccess(true);
+      setMessage("");
       // 同ページのデータ再取得（遷移ではないため router.refresh() は問題なし）
       router.refresh();
     } catch {
