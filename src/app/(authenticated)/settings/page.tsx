@@ -991,6 +991,12 @@ export default function SettingsPage() {
   // Invite share dialog state
   const [guardianShareDialogOpen, setGuardianShareDialogOpen] = useState(false);
 
+  // 招待メール送信
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviting, setInviting] = useState(false);
+  const [inviteError, setInviteError] = useState<string | null>(null);
+  const [inviteSuccess, setInviteSuccess] = useState(false);
+
   // Event types / categories state
   const [eventTypes, setEventTypes] = useState<EventType[]>([]);
   const [eventCategories, setEventCategories] = useState<EventType[]>([]);
@@ -1365,6 +1371,29 @@ export default function SettingsPage() {
       setTeamMessage("保護者用招待コードを再生成しました");
     }
     setRegeneratingGuardian(false);
+  };
+
+  const handleInvite = async () => {
+    if (!inviteEmail || !teamId) return;
+    setInviting(true);
+    setInviteError(null);
+    try {
+      const res = await fetch("/api/invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: inviteEmail, teamId }),
+      });
+      if (res.status === 409) {
+        setInviteError("このメールアドレスはすでに TeamBoard に登録されています。招待コードをお知らせください。");
+      } else if (!res.ok) {
+        setInviteError("招待メールの送信に失敗しました。");
+      } else {
+        setInviteSuccess(true);
+        setInviteEmail("");
+      }
+    } finally {
+      setInviting(false);
+    }
   };
 
   const handleDeleteTeam = async () => {
@@ -2073,6 +2102,41 @@ export default function SettingsPage() {
                   <span className="hidden sm:inline">{regeneratingGuardian ? "再生成中..." : "再生成"}</span>
                 </button>
               </div>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                メンバーを招待
+              </label>
+              <p className="mb-1.5 text-xs text-gray-400">TeamBoard アカウントを持っていないメンバーに招待メールを送ります</p>
+              {inviteSuccess && (
+                <p className="mb-2 text-sm text-green-600">
+                  招待メールを送信しました。
+                  <button onClick={() => setInviteSuccess(false)} className="ml-2 text-blue-600 underline">
+                    別のアドレスを招待
+                  </button>
+                </p>
+              )}
+              {!inviteSuccess && (
+                <div className="flex gap-2">
+                  <input
+                    type="email"
+                    placeholder="メールアドレス"
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    className="flex-1 min-w-0 rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleInvite}
+                    disabled={inviting || !inviteEmail}
+                    className="shrink-0 flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
+                  >
+                    {inviting ? <Loader2 size={14} className="animate-spin" /> : "送信"}
+                  </button>
+                </div>
+              )}
+              {inviteError && <p className="mt-2 text-xs text-red-500">{inviteError}</p>}
             </div>
 
             <div>
