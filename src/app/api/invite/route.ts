@@ -15,14 +15,15 @@ export async function POST(req: NextRequest) {
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
-  const { data: member } = await supabase
+  // member_profiles!inner 経由で確認（team_members.user_id が NULL の場合も対応）
+  const { data: memberships } = await supabase
     .from("team_members")
-    .select("role")
-    .eq("user_id", user.id)
+    .select("role, member_profiles!inner(user_id)")
     .eq("team_id", teamId)
-    .maybeSingle();
+    .eq("member_profiles.user_id", user.id)
+    .limit(1);
 
-  if (member?.role !== "admin") {
+  if (!memberships || memberships.length === 0 || memberships[0].role !== "admin") {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 
