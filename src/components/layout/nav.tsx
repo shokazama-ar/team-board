@@ -16,7 +16,7 @@ const navItems: { href: string; label: string; icon: LucideIcon }[] = [
 
 const ALWAYS_ACTIVE = ["/", "/settings"];
 
-export function BottomNav({ hasTeam, inquiryCount = 0 }: { hasTeam: boolean; inquiryCount?: number }) {
+export function BottomNav({ hasTeam, isAdmin = false, inquiryCount = 0 }: { hasTeam: boolean; isAdmin?: boolean; inquiryCount?: number }) {
   const pathname = usePathname();
   const [hidden, setHidden] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -44,7 +44,8 @@ export function BottomNav({ hasTeam, inquiryCount = 0 }: { hasTeam: boolean; inq
         {navItems.map((item) => {
           const isActive =
             item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
-          const isEnabled = hasTeam || ALWAYS_ACTIVE.includes(item.href);
+          const isEnabled = (hasTeam || ALWAYS_ACTIVE.includes(item.href))
+            && (item.href !== "/inquiries" || isAdmin);
 
           if (!isEnabled) {
             return (
@@ -83,7 +84,7 @@ export function BottomNav({ hasTeam, inquiryCount = 0 }: { hasTeam: boolean; inq
   );
 }
 
-export function SideNav({ hasTeam, inquiryCount = 0 }: { hasTeam: boolean; inquiryCount?: number }) {
+export function SideNav({ hasTeam, isAdmin = false, inquiryCount = 0 }: { hasTeam: boolean; isAdmin?: boolean; inquiryCount?: number }) {
   const pathname = usePathname();
 
   return (
@@ -92,7 +93,8 @@ export function SideNav({ hasTeam, inquiryCount = 0 }: { hasTeam: boolean; inqui
         {navItems.map((item) => {
           const isActive =
             item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
-          const isEnabled = hasTeam || ALWAYS_ACTIVE.includes(item.href);
+          const isEnabled = (hasTeam || ALWAYS_ACTIVE.includes(item.href))
+            && (item.href !== "/inquiries" || isAdmin);
 
           if (!isEnabled) {
             return (

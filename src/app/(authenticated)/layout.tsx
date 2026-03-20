@@ -14,19 +14,21 @@ export default async function AuthenticatedLayout({
 
   let hasTeam = false;
   let teamId: string | null = null;
+  let isAdmin = false;
   if (user) {
     const { data } = await supabase
       .from("team_members")
-      .select("team_id, member_profiles!inner(user_id)")
+      .select("team_id, role, member_profiles!inner(user_id)")
       .eq("member_profiles.user_id", user.id)
       .limit(1)
       .maybeSingle();
     hasTeam = !!data;
     teamId = (data as { team_id: string } | null)?.team_id ?? null;
+    isAdmin = (data as { role: string } | null)?.role === "admin";
   }
 
   let inquiryCount = 0;
-  if (teamId) {
+  if (teamId && isAdmin) {
     const { count } = await supabase
       .from("inquiries")
       .select("*", { count: "exact", head: true })
@@ -39,10 +41,10 @@ export default async function AuthenticatedLayout({
     <div className="flex h-screen flex-col overflow-hidden">
       <Header />
       <div className="flex flex-1 overflow-hidden">
-        <SideNav hasTeam={hasTeam} inquiryCount={inquiryCount} />
+        <SideNav hasTeam={hasTeam} isAdmin={isAdmin} inquiryCount={inquiryCount} />
         <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 pb-20 md:pb-4">{children}</main>
       </div>
-      <BottomNav hasTeam={hasTeam} inquiryCount={inquiryCount} />
+      <BottomNav hasTeam={hasTeam} isAdmin={isAdmin} inquiryCount={inquiryCount} />
     </div>
   );
 }
