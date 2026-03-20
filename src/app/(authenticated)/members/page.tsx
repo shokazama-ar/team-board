@@ -139,7 +139,7 @@ export default function MembersPage() {
 
       // 保護者: account_type="guardian"（プレイヤーセクションと重複させない）
       setGuardians(enriched.filter((m) => m.account_type === "guardian"));
-      setCoaches(enriched.filter((m) => m.kind === "coach" && m.account_type === "coach"));
+      setCoaches(enriched.filter((m) => m.account_type === "coach"));
       const playerList = enriched.filter((m) => m.kind === "player");
       setPlayers(playerList);
 
@@ -199,6 +199,25 @@ export default function MembersPage() {
     setActionLoading(null);
   };
 
+  const grantCoach = async (ownerUserId: string) => {
+    setActionLoading(ownerUserId);
+    const { error } = await supabase.rpc("grant_coach_role", {
+      target_user_id: ownerUserId,
+    });
+    if (!error) await loadData();
+    setActionLoading(null);
+  };
+
+  const revokeCoach = async (ownerUserId: string) => {
+    if (!window.confirm("コーチ権限を剥奪しますか？")) return;
+    setActionLoading(ownerUserId);
+    const { error } = await supabase.rpc("revoke_coach_role", {
+      target_user_id: ownerUserId,
+    });
+    if (!error) await loadData();
+    setActionLoading(null);
+  };
+
   if (loading) return <div className="text-sm text-gray-500">読み込み中...</div>;
   if (!team) return <div className="text-sm text-gray-500">チームが見つかりません</div>;
 
@@ -251,6 +270,23 @@ export default function MembersPage() {
                   >
                     {member.role === "admin" ? "メンバーに変更" : "管理者に変更"}
                   </button>
+                  {member.account_type === "guardian" ? (
+                    <button
+                      onClick={() => grantCoach(member.owner_user_id)}
+                      disabled={actionLoading === member.owner_user_id}
+                      className="rounded border border-blue-300 px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 disabled:opacity-50"
+                    >
+                      コーチ権限付与
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => revokeCoach(member.owner_user_id)}
+                      disabled={actionLoading === member.owner_user_id}
+                      className="rounded border border-orange-300 px-2 py-1 text-xs text-orange-600 hover:bg-orange-50 disabled:opacity-50"
+                    >
+                      コーチ権限剥奪
+                    </button>
+                  )}
                   <button
                     onClick={() => removeMember(member.id, member.name ?? "")}
                     disabled={actionLoading === member.id}

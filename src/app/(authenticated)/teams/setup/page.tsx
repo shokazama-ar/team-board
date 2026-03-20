@@ -16,25 +16,9 @@ export default function TeamSetupPage() {
 
   // Join team form
   const [inviteCode, setInviteCode] = useState("");
-  const [joinProfileName, setJoinProfileName] = useState("");
-  const [detectedJoinKind, setDetectedJoinKind] = useState<"coach" | "guardian" | null>(null);
   const [joining, setJoining] = useState(false);
 
   const [error, setError] = useState("");
-
-  const handleInviteCodeChange = async (value: string) => {
-    setInviteCode(value);
-    if (value.trim().length >= 6) {
-      const { data } = await supabase.rpc("check_invite_code_type", { code: value.trim() });
-      if (data) {
-        setDetectedJoinKind(data as "coach" | "guardian");
-      } else {
-        setDetectedJoinKind(null);
-      }
-    } else {
-      setDetectedJoinKind(null);
-    }
-  };
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,21 +48,16 @@ export default function TeamSetupPage() {
   const handleJoin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inviteCode.trim()) return;
-    if (detectedJoinKind !== "guardian" && !joinProfileName.trim()) return;
     setJoining(true);
     setError("");
 
     const { error: joinError } = await supabase.rpc("join_team_with_profile", {
       code: inviteCode.trim(),
-      profile_name: detectedJoinKind === "guardian" ? "" : joinProfileName.trim(),
-      profile_kind: detectedJoinKind ?? "coach",
     });
 
     if (joinError) {
       if (joinError.message?.includes("Invalid invite code")) {
         setError("招待コードが無効です");
-      } else if (joinError.message?.includes("unique")) {
-        setError("このプロファイルはすでにこのチームに参加しています");
       } else {
         setError("チームへの参加に失敗しました");
       }
@@ -169,38 +148,14 @@ export default function TeamSetupPage() {
                 id="inviteCode"
                 type="text"
                 value={inviteCode}
-                onChange={(e) => handleInviteCodeChange(e.target.value)}
+                onChange={(e) => setInviteCode(e.target.value)}
                 placeholder="例: a1b2c3d4"
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
-              {detectedJoinKind && (
-                <div className="mt-2 flex items-center gap-2 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-700">
-                  <span className="text-gray-500">参加種別（自動判定）:</span>
-                  <span className="font-medium">{detectedJoinKind === "coach" ? "コーチ" : "保護者"}</span>
-                </div>
-              )}
-              {!detectedJoinKind && inviteCode.trim().length >= 6 && (
-                <p className="mt-1 text-xs text-red-500">招待コードが見つかりません</p>
-              )}
             </div>
-            {detectedJoinKind !== "guardian" && (
-              <div>
-                <label htmlFor="joinProfileName" className="mb-1 block text-sm font-medium text-gray-700">
-                  参加者の名前（チーム内表示名）
-                </label>
-                <input
-                  id="joinProfileName"
-                  type="text"
-                  value={joinProfileName}
-                  onChange={(e) => setJoinProfileName(e.target.value)}
-                  placeholder="例: 田中"
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-            )}
             <button
               type="submit"
-              disabled={joining || !inviteCode.trim() || (detectedJoinKind !== "guardian" && !joinProfileName.trim())}
+              disabled={joining || !inviteCode.trim()}
               className="w-full rounded-lg border border-blue-600 bg-white px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 disabled:opacity-50 disabled:opacity-60"
             >
               {joining ? (

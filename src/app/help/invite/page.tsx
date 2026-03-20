@@ -6,15 +6,11 @@ export default function HelpInvitePage() {
       <h1 className="mb-1 text-2xl font-bold text-gray-900">招待コード</h1>
       <p className="mb-8 text-sm text-gray-500">新しいメンバーをチームに招待する方法です。</p>
 
-      <Section title="2種類の招待コード">
+      <Section title="招待コードについて">
         <div className="space-y-3 text-sm text-gray-700">
           <div className="rounded-lg border border-gray-100 bg-gray-50 p-4">
-            <p className="mb-1 font-semibold text-gray-800">コーチ用招待コード</p>
-            <p>コーチアカウントとしてチームに参加する際に使用します。設定画面で<b>担当カテゴリ</b>を選択すると、関連する予定・お知らせのみダッシュボードに表示されます。</p>
-          </div>
-          <div className="rounded-lg border border-gray-100 bg-gray-50 p-4">
-            <p className="mb-1 font-semibold text-gray-800">保護者用招待コード</p>
-            <p>保護者アカウントとして参加する際に使用します。保護者は複数の選手プロファイルを管理できます。</p>
+            <p className="mb-1 font-semibold text-gray-800">保護者用招待コード（1種類のみ）</p>
+            <p>チームへの参加はすべて保護者用招待コード1つで行います。参加後、管理者がコーチ権限を付与することができます。</p>
           </div>
         </div>
         <MockupFrame title="設定 › 管理者 — TeamBoard">
@@ -30,25 +26,14 @@ export default function HelpInvitePage() {
               ))}
             </div>
             <p className="mb-2 font-semibold text-gray-700">招待コード</p>
-            <div className="space-y-3">
-              <div className="rounded-lg border-2 border-blue-200 bg-blue-50 p-3">
-                <p className="mb-1 font-medium text-blue-800">コーチ用</p>
-                <code className="mb-2 block rounded border border-blue-300 bg-white px-2 py-1 font-mono text-blue-900 tracking-wider">COACH-ABCD-1234</code>
-                <div className="flex gap-2">
-                  <span className="rounded-lg border border-blue-300 px-3 py-1 text-xs text-blue-700">共有</span>
-                  <span className="rounded-lg border border-gray-300 px-3 py-1 text-xs text-gray-600">再生成</span>
-                </div>
-                <p className="mt-1.5 text-[10px] text-blue-600">↑ コーチとして参加する人に共有します</p>
+            <div className="rounded-lg border-2 border-purple-200 bg-purple-50 p-3">
+              <p className="mb-1 font-medium text-purple-800">保護者用</p>
+              <code className="mb-2 block rounded border border-purple-300 bg-white px-2 py-1 font-mono text-purple-900 tracking-wider">PRNT-EFGH-5678</code>
+              <div className="flex gap-2">
+                <span className="rounded-lg border border-purple-300 px-3 py-1 text-xs text-purple-700">共有</span>
+                <span className="rounded-lg border border-gray-300 px-3 py-1 text-xs text-gray-600">再生成</span>
               </div>
-              <div className="rounded-lg border-2 border-purple-200 bg-purple-50 p-3">
-                <p className="mb-1 font-medium text-purple-800">保護者用</p>
-                <code className="mb-2 block rounded border border-purple-300 bg-white px-2 py-1 font-mono text-purple-900 tracking-wider">PRNT-EFGH-5678</code>
-                <div className="flex gap-2">
-                  <span className="rounded-lg border border-purple-300 px-3 py-1 text-xs text-purple-700">共有</span>
-                  <span className="rounded-lg border border-gray-300 px-3 py-1 text-xs text-gray-600">再生成</span>
-                </div>
-                <p className="mt-1.5 text-[10px] text-purple-600">↑ 保護者として参加する人に共有します</p>
-              </div>
+              <p className="mt-1.5 text-[10px] text-purple-600">↑ チームに参加する人に共有します</p>
             </div>
           </div>
         </MockupFrame>
@@ -59,6 +44,7 @@ export default function HelpInvitePage() {
           <li>設定画面（管理者タブ）で招待コードを確認します。</li>
           <li>コードを参加者に共有します（メッセージ・口頭など）。</li>
           <li>参加者はサインアップ後、「チームに参加」画面でコードを入力します。</li>
+          <li>コーチとして活動する場合は、管理者がメンバー画面からコーチ権限を付与します。</li>
         </ol>
         <MockupFrame title="チームに参加 — TeamBoard">
           <div className="text-xs">
@@ -88,7 +74,7 @@ export default function HelpInvitePage() {
               <p className="mb-3 text-sm font-bold text-gray-900">チームに参加する</p>
               <div className="mb-3">
                 <p className="mb-1 font-medium text-gray-700">招待コード</p>
-                <div className="rounded border-2 border-blue-400 bg-white px-2 py-1.5 font-mono text-gray-600 tracking-wider">COACH-ABCD-1234</div>
+                <div className="rounded border-2 border-blue-400 bg-white px-2 py-1.5 font-mono text-gray-600 tracking-wider">PRNT-EFGH-5678</div>
               </div>
               <span className="rounded-lg bg-blue-600 px-3 py-1.5 font-medium text-white">チームに参加する</span>
             </div>
@@ -104,8 +90,8 @@ export default function HelpInvitePage() {
         <MockupFrame title="設定 › 管理者 — TeamBoard">
           <div className="text-xs">
             <div className="rounded-lg border-2 border-orange-200 bg-orange-50 p-3">
-              <p className="mb-2 font-medium text-orange-800">コーチ用招待コード</p>
-              <code className="mb-2 block rounded border border-orange-200 bg-white px-2 py-1 font-mono text-gray-700">COACH-ABCD-1234</code>
+              <p className="mb-2 font-medium text-orange-800">保護者用招待コード</p>
+              <code className="mb-2 block rounded border border-orange-200 bg-white px-2 py-1 font-mono text-gray-700">PRNT-EFGH-5678</code>
               <div className="flex gap-2">
                 <span className="rounded-lg border border-orange-300 px-3 py-1 text-xs text-orange-700">共有</span>
                 <span className="rounded-lg border border-gray-300 px-3 py-1 text-xs text-gray-600">再生成</span>
@@ -121,6 +107,13 @@ export default function HelpInvitePage() {
             </div>
           </div>
         </MockupFrame>
+      </Section>
+
+      <Section title="コーチ権限の付与">
+        <ul className="list-disc space-y-1.5 pl-5 text-sm text-gray-700">
+          <li>参加者が保護者として参加した後、管理者がメンバー画面からコーチ権限を付与できます。</li>
+          <li>コーチ権限の付与・剥奪は管理者のみが行えます。</li>
+        </ul>
       </Section>
     </article>
   );

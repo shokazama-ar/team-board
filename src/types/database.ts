@@ -82,7 +82,6 @@ export type Database = {
           id: string;
           name: string;
           icon_url: string | null;
-          invite_code: string;
           invite_code_guardian: string;
           created_by: string;
           created_at: string;
@@ -92,7 +91,6 @@ export type Database = {
           id?: string;
           name: string;
           icon_url?: string | null;
-          invite_code?: string;
           invite_code_guardian?: string;
           created_by: string;
           created_at?: string;
@@ -102,7 +100,6 @@ export type Database = {
           id?: string;
           name?: string;
           icon_url?: string | null;
-          invite_code?: string;
           invite_code_guardian?: string;
           created_by?: string;
           created_at?: string;
@@ -370,15 +367,11 @@ export type Database = {
         Returns: string;
       };
       join_team_with_profile: {
-        Args: { code: string; profile_name: string; profile_kind?: string };
+        Args: { code: string; profile_name?: string; profile_kind?: string };
         Returns: string;
       };
       add_profile_to_team: {
         Args: { target_team_id: string; profile_name: string; profile_kind?: string };
-        Returns: string;
-      };
-      regenerate_invite_code: {
-        Args: { target_team_id: string };
         Returns: string;
       };
       regenerate_guardian_invite_code: {
@@ -388,6 +381,14 @@ export type Database = {
       is_coach_in_team: {
         Args: { tid: string };
         Returns: boolean;
+      };
+      grant_coach_role: {
+        Args: { target_user_id: string };
+        Returns: void;
+      };
+      revoke_coach_role: {
+        Args: { target_user_id: string };
+        Returns: void;
       };
     };
     Enums: Record<string, never>;

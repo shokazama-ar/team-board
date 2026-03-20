@@ -24,8 +24,7 @@ Supabase (PostgreSQL) のテーブル構成。RLSはすべて有効。
 | id | uuid | |
 | name | text | |
 | icon_url | text | |
-| invite_code | text | コーチ用招待コード |
-| invite_code_guardian | text | 保護者用招待コード |
+| invite_code_guardian | text | 保護者用招待コード（唯一の参加経路） |
 | created_by | uuid | profiles.id |
 
 ---
@@ -37,7 +36,7 @@ Supabase (PostgreSQL) のテーブル構成。RLSはすべて有効。
 |---|---|---|
 | id | uuid | |
 | user_id | uuid | auth.users.id |
-| kind | enum | `coach` / `player` |
+| kind | enum | `coach` / `player` / `guardian` |
 | name | text | プロファイル表示名 |
 | avatar_url | text | |
 | number | text | 背番号（任意） |
@@ -182,11 +181,12 @@ RLSポリシー:
 | `is_member_of_team(tid)` | チームメンバーか判定（SECURITY DEFINER） |
 | `is_admin_of_team(tid)` | 管理者か判定 |
 | `add_profile_to_team(target_team_id, profile_name, profile_kind)` | プロファイル追加 |
-| `join_team_with_profile(code, profile_name, profile_kind)` | 招待コードでチーム参加（種別はRPC内部で自動判定） |
+| `join_team_with_profile(code)` | 保護者招待コードでチーム参加。`kind='guardian'` の member_profile を自動作成（`profiles.name` をデフォルト名） |
 | `create_team_with_member(team_name, profile_name, profile_kind, team_account_type)` | チーム作成と同時にメンバー登録。`team_account_type` で `coach`/`guardian` を指定 |
-| `check_invite_code_type(code)` | 招待コードの種別を返す（`'coach'`/`'guardian'`/`null`）。認証不要（SECURITY DEFINER） |
-| `regenerate_invite_code(target_team_id)` | コーチ用招待コード再生成 |
+| `check_invite_code_type(code)` | 招待コードの種別を返す（`'guardian'`/`null`）。認証不要（SECURITY DEFINER） |
 | `regenerate_guardian_invite_code(target_team_id)` | 保護者用招待コード再生成 |
+| `grant_coach_role(target_user_id)` | 対象ユーザーにコーチ権限を付与（admin専用）。`account_type='coach'` + `member_profiles.kind='coach'` に更新 |
+| `revoke_coach_role(target_user_id)` | 対象ユーザーのコーチ権限を剥奪（admin専用・自分自身は不可）。guardian に戻す |
 | `get_team_name(tid)` | チームIDからチーム名を返す。認証不要（SECURITY DEFINER）。公開問い合わせフォームから使用 |
 | `owns_member_profile_by_id(profile_id)` | プロファイルのオーナーか判定（SECURITY DEFINER）。`member_profile_access` のRLSから呼ばれる |
 

@@ -263,7 +263,7 @@ type MemberProfileRowProps = {
   profile: {
     id: string;
     member_profile_id: string;
-    kind: "coach" | "player";
+    kind: "coach" | "player" | "guardian";
     profile_name: string | null;
     avatar_url: string | null;
     number: string | null;
@@ -974,16 +974,13 @@ export default function SettingsPage() {
   const [teamName, setTeamName] = useState("");
   const [slug, setSlug] = useState("");
   const [teamIconUrl, setTeamIconUrl] = useState<string | null>(null);
-  const [inviteCode, setInviteCode] = useState("");
   const [inviteCodeGuardian, setInviteCodeGuardian] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
   const [accountType, setAccountType] = useState<"coach" | "guardian">("coach");
   const [savingTeam, setSavingTeam] = useState(false);
   const [teamMessage, setTeamMessage] = useState("");
-  const [regenerating, setRegenerating] = useState(false);
   const [regeneratingGuardian, setRegeneratingGuardian] = useState(false);
   const [contactUrlCopied, setContactUrlCopied] = useState(false);
-  const [coachCopied, setCoachCopied] = useState<"code" | "link" | null>(null);
   const [guardianCopied, setGuardianCopied] = useState<"code" | "link" | null>(null);
   const [copiedShareCodeId, setCopiedShareCodeId] = useState<string | null>(null);
   const [shareDialogProfileId, setShareDialogProfileId] = useState<string | null>(null);
@@ -992,7 +989,6 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<"coach" | "guardian" | "admin">("coach");
 
   // Invite share dialog state
-  const [coachShareDialogOpen, setCoachShareDialogOpen] = useState(false);
   const [guardianShareDialogOpen, setGuardianShareDialogOpen] = useState(false);
 
   // Event types / categories state
@@ -1019,7 +1015,7 @@ export default function SettingsPage() {
   type MemberProfileItem = {
     id: string;
     member_profile_id: string;
-    kind: "coach" | "player";
+    kind: "coach" | "player" | "guardian";
     profile_name: string | null;
     avatar_url: string | null;
     number: string | null;
@@ -1169,14 +1165,13 @@ export default function SettingsPage() {
 
         const { data: team } = await supabase
           .from("teams")
-          .select("name, slug, invite_code, invite_code_guardian, icon_url")
+          .select("name, slug, invite_code_guardian, icon_url")
           .eq("id", membership.team_id)
           .single();
 
         if (team) {
           setTeamName(team.name);
           setSlug(team.slug ?? "");
-          setInviteCode(team.invite_code);
           setInviteCodeGuardian(team.invite_code_guardian);
           setTeamIconUrl(team.icon_url ?? null);
         }
@@ -1336,30 +1331,6 @@ export default function SettingsPage() {
 
     setTeamMessage(error ? "保存に失敗しました" : "保存しました");
     setSavingTeam(false);
-  };
-
-  const handleRegenerateCode = async () => {
-    if (!teamId) return;
-    const confirmed = window.confirm(
-      "コーチ用招待コードを再生成すると、以前のコードは無効になります。よろしいですか？"
-    );
-    if (!confirmed) return;
-
-    setRegenerating(true);
-    setTeamMessage("");
-
-    const { data: newCode, error } = await supabase.rpc(
-      "regenerate_invite_code",
-      { target_team_id: teamId }
-    );
-
-    if (error) {
-      setTeamMessage("再生成に失敗しました");
-    } else {
-      setInviteCode(newCode);
-      setTeamMessage("コーチ用招待コードを再生成しました");
-    }
-    setRegenerating(false);
   };
 
   const handleRegenerateGuardianCode = async () => {
@@ -1589,7 +1560,7 @@ export default function SettingsPage() {
       <h2 className="mb-1 text-lg font-semibold">プレイヤープロファイル</h2>
       <p className="mb-4 text-sm text-gray-500">プレイヤープロファイルを管理します。</p>
       <div className="space-y-3 mb-4">
-        {myProfiles.filter((p) => accountType !== "coach" || p.kind === "player").map((p) => (
+        {myProfiles.filter((p) => p.kind === "player" || p.kind === "guardian" || p.kind === "coach").map((p) => (
           <div key={p.id}>
             <MemberProfileRow
               profile={p}
@@ -2061,35 +2032,6 @@ export default function SettingsPage() {
 
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700">
-                コーチ用招待コード
-              </label>
-              <div className="flex flex-wrap items-center gap-2">
-                <code className="flex-1 min-w-0 truncate rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm font-mono">
-                  {inviteCode}
-                </code>
-                <button
-                  type="button"
-                  onClick={() => setCoachShareDialogOpen(true)}
-                  title="招待コードを共有"
-                  aria-label="招待コードを共有"
-                  className="flex items-center rounded-lg border border-gray-300 bg-white p-2 text-gray-600 hover:bg-gray-50"
-                >
-                  <Share2 size={16} strokeWidth={1.5} aria-hidden="true" />
-                </button>
-                <button
-                  type="button"
-                  onClick={handleRegenerateCode}
-                  disabled={regenerating}
-                  className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-2.5 py-2 text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50 sm:px-3"
-                >
-                  <RefreshCw size={16} strokeWidth={1.5} aria-hidden="true" />
-                  <span className="hidden sm:inline">{regenerating ? "再生成中..." : "再生成"}</span>
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
                 保護者用招待コード
               </label>
               <p className="mb-1.5 text-xs text-gray-400">保護者アカウントでチームに参加する際に使用します</p>
@@ -2220,73 +2162,6 @@ export default function SettingsPage() {
               チームを削除
             </button>
           </div>
-
-          {/* コーチ用招待コード共有ダイアログ */}
-          {coachShareDialogOpen && (
-            <div
-              className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-              onClick={() => setCoachShareDialogOpen(false)}
-            >
-              <div
-                className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="mb-4 flex items-center justify-between">
-                  <h3 className="text-base font-semibold text-gray-800">コーチ用招待コードを共有</h3>
-                  <button
-                    type="button"
-                    onClick={() => setCoachShareDialogOpen(false)}
-                    className="rounded-lg p-1 text-gray-400 hover:bg-gray-100"
-                    aria-label="閉じる"
-                  >
-                    <X size={18} strokeWidth={1.5} />
-                  </button>
-                </div>
-                <div className="mb-3">
-                  <p className="mb-1.5 text-xs font-medium text-gray-500">招待コード</p>
-                  <div className="flex items-center gap-2">
-                    <code className="flex-1 min-w-0 truncate rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-mono">
-                      {inviteCode}
-                    </code>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        copyToClipboard(inviteCode).then(() => {
-                          setCoachCopied("code");
-                          setTimeout(() => setCoachCopied(null), 1500);
-                        });
-                      }}
-                      className="shrink-0 flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
-                    >
-                      {coachCopied === "code" ? <Check size={16} strokeWidth={1.5} aria-hidden="true" /> : <Copy size={16} strokeWidth={1.5} aria-hidden="true" />}
-                      {coachCopied === "code" ? "コピー済み" : "コピー"}
-                    </button>
-                  </div>
-                </div>
-                <div>
-                  <p className="mb-1.5 text-xs font-medium text-gray-500">招待リンク</p>
-                  <div className="flex items-center gap-2">
-                    <code className="flex-1 min-w-0 truncate rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-mono">
-                      {origin}/signup?invite={inviteCode}
-                    </code>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        copyToClipboard(`${origin}/signup?invite=${inviteCode}`).then(() => {
-                          setCoachCopied("link");
-                          setTimeout(() => setCoachCopied(null), 1500);
-                        });
-                      }}
-                      className="shrink-0 flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
-                    >
-                      {coachCopied === "link" ? <Check size={16} strokeWidth={1.5} aria-hidden="true" /> : <Copy size={16} strokeWidth={1.5} aria-hidden="true" />}
-                      {coachCopied === "link" ? "コピー済み" : "コピー"}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* 保護者用招待コード共有ダイアログ */}
           {guardianShareDialogOpen && (
