@@ -36,7 +36,7 @@ export async function GET(request: Request) {
 
   // PKCE コードなし = implicit flow の可能性（#access_token= がフラグメントにある）
   // フラグメントはサーバーに届かないため、クライアントサイドで読み取り直す HTML を返す
-  if (next.startsWith("/auth/accept-invite")) {
+  if (next.startsWith("/accept-invite")) {
     return new Response(
       `<!doctype html><html><head><meta charset="utf-8"></head><body><script>
         location.replace("${nextWithExtra}" + location.hash);
