@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient as createAdminClient, createClient as createAnonClient } from "@supabase/supabase-js";
+import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
+import { Resend } from "resend";
 
 export async function POST(req: NextRequest) {
   const { email, teamId } = await req.json();
@@ -15,7 +16,6 @@ export async function POST(req: NextRequest) {
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
-  // member_profiles!inner 経由で確認（team_members.user_id が NULL の場合も対応）
   const { data: memberships } = await supabase
     .from("team_members")
     .select("role, member_profiles!inner(user_id)")
@@ -27,12 +27,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 
-  // Admin API で招待メール送信
   const adminClient = createAdminClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
+  // team_invitations レコードを作成
   const { data: invitation, error: invErr } = await adminClient
     .from("team_invitations")
     .insert({ team_id: teamId, email, invited_by: user.id })
@@ -46,26 +46,56 @@ export async function POST(req: NextRequest) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? `https://${process.env.VERCEL_URL}`;
   const redirectTo = `${siteUrl}/auth/callback?next=/accept-invite&invitation_token=${invitation.id}`;
 
-  const { error } = await adminClient.auth.admin.inviteUserByEmail(email, { redirectTo });
+  // チーム名を取得（メール本文用）
+  const { data: team } = await adminClient
+    .from("teams")
+    .select("name")
+    .eq("id", teamId)
+    .single();
+  const teamName = team?.name ?? "チーム";
 
-  if (error) {
-    if (error.message.includes("already registered")) {
-      // 既存ユーザー: signInWithOtp でマジックリンクメールを送る（Supabase のメール配信を利用）
-      const anonClient = createAnonClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      );
-      const { error: otpError } = await anonClient.auth.signInWithOtp({
-        email,
-        options: { emailRedirectTo: redirectTo, shouldCreateUser: false },
-      });
-      if (otpError) {
-        console.error("[invite] signInWithOtp failed:", otpError.message, otpError);
-        return NextResponse.json({ error: `otp_failed: ${otpError.message}` }, { status: 500 });
-      }
-      return NextResponse.json({ ok: true });
-    }
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  // まず新規ユーザー向け inviteUserByEmail を試みる
+  const { error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(email, { redirectTo });
+
+  if (!inviteError) {
+    return NextResponse.json({ ok: true });
+  }
+
+  if (!inviteError.message.includes("already registered")) {
+    return NextResponse.json({ error: inviteError.message }, { status: 500 });
+  }
+
+  // 既存ユーザー: generateLink でマジックリンクを生成し Resend で送信
+  const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
+    type: "magiclink",
+    email,
+    options: { redirectTo },
+  });
+
+  if (linkError || !linkData) {
+    console.error("[invite] generateLink failed:", linkError);
+    return NextResponse.json({ error: "link_generate_failed" }, { status: 500 });
+  }
+
+  const actionLink = linkData.properties.action_link;
+  const fromEmail = process.env.RESEND_FROM_EMAIL ?? "noreply@team-board-psi.vercel.app";
+
+  const resend = new Resend(process.env.RESEND_API_KEY);
+  const { error: resendError } = await resend.emails.send({
+    from: fromEmail,
+    to: email,
+    subject: `【${teamName}】チームへの招待`,
+    html: `
+      <p>チーム「${teamName}」へのご招待です。</p>
+      <p>以下のリンクをクリックしてチームに参加してください。</p>
+      <p><a href="${actionLink}" style="display:inline-block;padding:12px 24px;background:#2563eb;color:#fff;border-radius:8px;text-decoration:none;font-weight:bold;">チームに参加する</a></p>
+      <p style="color:#6b7280;font-size:12px;">このリンクの有効期限は1時間です。心当たりがない場合は無視してください。</p>
+    `,
+  });
+
+  if (resendError) {
+    console.error("[invite] resend failed:", resendError);
+    return NextResponse.json({ error: "mail_send_failed" }, { status: 500 });
   }
 
   return NextResponse.json({ ok: true });

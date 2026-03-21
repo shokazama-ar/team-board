@@ -1384,8 +1384,7 @@ export default function SettingsPage() {
         body: JSON.stringify({ email: inviteEmail, teamId }),
       });
       if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        setInviteError(`招待メールの送信に失敗しました。(${json.error ?? res.status})`);
+        setInviteError("招待メールの送信に失敗しました。");
       } else {
         setInviteSuccess(true);
         setInviteEmail("");
