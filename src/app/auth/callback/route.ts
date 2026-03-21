@@ -6,11 +6,8 @@ export async function GET(request: Request) {
   const code = searchParams.get("code");
   const next = searchParams.get("next") ?? "/";
   const type = searchParams.get("type");
+  const invitationToken = searchParams.get("invitation_token");
 
-  // `next` may be a path like "/onboarding" but additional query params
-  // (e.g. `invite=CODE`) may have been parsed out separately when the
-  // emailRedirectTo URL was constructed without encoding the inner query string.
-  // Reconstruct the full redirect path by re-appending any extra params.
   const excludedParams = new Set(["code", "next", "type"]);
   const extraParams = new URLSearchParams();
   for (const [key, value] of searchParams.entries()) {
@@ -25,21 +22,18 @@ export async function GET(request: Request) {
 
   if (code) {
     const supabase = await createClient();
-    const { data: exchangeData, error } = await supabase.auth.exchangeCodeForSession(code);
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
-      // 招待フロー: サーバーサイドで team に追加して / へ直行
       const isInviteFlow =
         next.startsWith("/accept-invite") || next.startsWith("/auth/accept-invite");
-      if (isInviteFlow) {
-        const teamId = exchangeData.user?.user_metadata?.team_id as string | undefined;
-        if (teamId) {
-          const { error: rpcError } = await supabase.rpc("accept_team_invite", {
-            p_team_id: teamId,
-          });
-          if (rpcError) {
-            console.error("accept_team_invite failed:", rpcError);
-            return NextResponse.redirect(`${origin}/accept-invite?error=join_failed`);
-          }
+
+      if (isInviteFlow && invitationToken) {
+        const { error: rpcError } = await supabase.rpc("accept_team_invite_by_token", {
+          p_token: invitationToken,
+        });
+        if (rpcError) {
+          console.error("accept_team_invite_by_token failed:", rpcError);
+          return NextResponse.redirect(`${origin}/accept-invite?error=join_failed`);
         }
         return NextResponse.redirect(`${origin}/`);
       }
@@ -51,10 +45,9 @@ export async function GET(request: Request) {
     }
   }
 
-  // PKCE コードなし = implicit flow の可能性（#access_token= がフラグメントにある）
+  // PKCE コードなし = implicit flow（#access_token= がフラグメントにある）
   // フラグメントはサーバーに届かないため、クライアントサイドで読み取り直す HTML を返す
   if (next.startsWith("/accept-invite") || next.startsWith("/auth/accept-invite")) {
-    // implicit flow: fragment は JS で読み取り /accept-invite に渡す
     const dest = nextWithExtra.replace(/^\/auth\/accept-invite/, "/accept-invite");
     return new Response(
       `<!doctype html><html><head><meta charset="utf-8"></head><body><script>

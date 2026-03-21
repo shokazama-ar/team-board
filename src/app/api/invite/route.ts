@@ -33,14 +33,20 @@ export async function POST(req: NextRequest) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
-  // PKCE フローでは /auth/callback でコード交換してから /auth/accept-invite へ
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? `https://${process.env.VERCEL_URL}`;
-  const redirectTo = `${siteUrl}/auth/callback?next=/accept-invite`;
+  const { data: invitation, error: invErr } = await adminClient
+    .from("team_invitations")
+    .insert({ team_id: teamId, email, invited_by: user.id })
+    .select("id")
+    .single();
 
-  const { error } = await adminClient.auth.admin.inviteUserByEmail(email, {
-    data: { team_id: teamId },
-    redirectTo,
-  });
+  if (invErr || !invitation) {
+    return NextResponse.json({ error: "invitation_create_failed" }, { status: 500 });
+  }
+
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? `https://${process.env.VERCEL_URL}`;
+  const redirectTo = `${siteUrl}/auth/callback?next=/accept-invite&invitation_token=${invitation.id}`;
+
+  const { error } = await adminClient.auth.admin.inviteUserByEmail(email, { redirectTo });
 
   if (error) {
     // 既存ユーザーへの招待は別途案内
