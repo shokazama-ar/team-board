@@ -60,7 +60,8 @@ export async function POST(req: NextRequest) {
         options: { emailRedirectTo: redirectTo, shouldCreateUser: false },
       });
       if (otpError) {
-        return NextResponse.json({ error: otpError.message }, { status: 500 });
+        console.error("[invite] signInWithOtp failed:", otpError.message, otpError);
+        return NextResponse.json({ error: `otp_failed: ${otpError.message}` }, { status: 500 });
       }
       return NextResponse.json({ ok: true });
     }
