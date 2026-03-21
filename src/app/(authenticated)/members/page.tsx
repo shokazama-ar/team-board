@@ -139,7 +139,7 @@ export default function MembersPage() {
       // コーチ: account_type="coach" かつ kind="coach"（コーチが登録した選手を除外）
       // 保護者: account_type="guardian"（選手セクションと重複させない）
       setCoaches(enriched.filter((m) => m.account_type === "coach" && m.kind === "coach"));
-      setGuardians(enriched.filter((m) => m.account_type === "guardian"));
+      setGuardians(enriched.filter((m) => m.account_type === "guardian" && m.kind !== "player"));
       const playerList = enriched.filter((m) => m.kind === "player");
       setPlayers(playerList);
 
@@ -223,7 +223,7 @@ export default function MembersPage() {
 
   const isAdmin = currentUserRole === "admin";
 
-  const renderSection = (title: string, members: MemberProfile[], badgeColor: string) => (
+  const renderSection = (title: string, members: MemberProfile[], badgeColor: string, showRoleActions = false) => (
     <div className="rounded-lg border border-gray-200 bg-white mb-4">
       <div className="border-b border-gray-200 px-6 py-3 flex items-center gap-2">
         <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${badgeColor}`}>
@@ -263,29 +263,33 @@ export default function MembersPage() {
               )}
               {isAdmin && member.owner_user_id !== currentUserId && (
                 <>
-                  <button
-                    onClick={() => toggleRole(member.id, member.role)}
-                    disabled={actionLoading === member.id}
-                    className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50 disabled:opacity-50"
-                  >
-                    {member.role === "admin" ? "-管理者権限" : "+管理者権限"}
-                  </button>
-                  {member.account_type === "guardian" ? (
-                    <button
-                      onClick={() => grantCoach(member.owner_user_id)}
-                      disabled={actionLoading === member.owner_user_id}
-                      className="rounded border border-blue-300 px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 disabled:opacity-50"
-                    >
-                      +コーチ権限
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => revokeCoach(member.owner_user_id)}
-                      disabled={actionLoading === member.owner_user_id}
-                      className="rounded border border-orange-300 px-2 py-1 text-xs text-orange-600 hover:bg-orange-50 disabled:opacity-50"
-                    >
-                      -コーチ権限
-                    </button>
+                  {showRoleActions && (
+                    <>
+                      <button
+                        onClick={() => toggleRole(member.id, member.role)}
+                        disabled={actionLoading === member.id}
+                        className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                      >
+                        {member.role === "admin" ? "-管理者権限" : "+管理者権限"}
+                      </button>
+                      {member.account_type === "guardian" ? (
+                        <button
+                          onClick={() => grantCoach(member.owner_user_id)}
+                          disabled={actionLoading === member.owner_user_id}
+                          className="rounded border border-blue-300 px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 disabled:opacity-50"
+                        >
+                          +コーチ権限
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => revokeCoach(member.owner_user_id)}
+                          disabled={actionLoading === member.owner_user_id}
+                          className="rounded border border-orange-300 px-2 py-1 text-xs text-orange-600 hover:bg-orange-50 disabled:opacity-50"
+                        >
+                          -コーチ権限
+                        </button>
+                      )}
+                    </>
                   )}
                   <button
                     onClick={() => removeMember(member.id, member.name ?? "")}
@@ -426,13 +430,6 @@ export default function MembersPage() {
                   {isAdmin && member.owner_user_id !== currentUserId && (
                     <>
                       <button
-                        onClick={() => toggleRole(member.id, member.role)}
-                        disabled={actionLoading === member.id}
-                        className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50 disabled:opacity-50"
-                      >
-                        {member.role === "admin" ? "-管理者権限" : "+管理者権限"}
-                      </button>
-                      <button
                         onClick={() => removeMember(member.id, member.name ?? "")}
                         disabled={actionLoading === member.id}
                         className="flex items-center gap-1 rounded border border-red-300 px-2 py-1 text-xs text-red-600 hover:bg-red-50 disabled:opacity-50"
@@ -454,10 +451,10 @@ export default function MembersPage() {
       </div>
 
       {/* Coach Section */}
-      {renderSection("コーチ", coaches, "bg-blue-50 text-blue-700")}
+      {renderSection("コーチ", coaches, "bg-blue-50 text-blue-700", false)}
 
       {/* Guardian Section */}
-      {renderSection("保護者", guardians, "bg-orange-50 text-orange-700")}
+      {renderSection("保護者", guardians, "bg-orange-50 text-orange-700", true)}
     </div>
   );
 }
