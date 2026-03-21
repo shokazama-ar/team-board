@@ -24,9 +24,9 @@ function AcceptInviteContent() {
     const accessToken = params.get("access_token");
     const refreshToken = params.get("refresh_token");
 
-    // hash にトークンがない = PKCE フロー（サーバー側で処理済み）→ / へ
+    // hash にトークンがない = PKCE フロー（サーバー側で処理済み）→ パスワード設定へ
     if (!accessToken) {
-      router.push("/");
+      router.push("/set-password");
       return;
     }
 
@@ -52,7 +52,7 @@ function AcceptInviteContent() {
         setAuthError({ code: "rpc_failed", description: error.message });
         return;
       }
-      router.push("/");
+      router.push("/set-password");
     };
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {

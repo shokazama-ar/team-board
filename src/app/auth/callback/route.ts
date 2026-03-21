@@ -35,7 +35,7 @@ export async function GET(request: Request) {
           console.error("accept_team_invite_by_token failed:", rpcError);
           return NextResponse.redirect(`${origin}/accept-invite?error=join_failed`);
         }
-        return NextResponse.redirect(`${origin}/`);
+        return NextResponse.redirect(`${origin}/set-password`);
       }
 
       if (type === "recovery") {

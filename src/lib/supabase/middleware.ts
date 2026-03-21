@@ -69,7 +69,7 @@ export async function updateSession(request: NextRequest) {
   }
 
   // Check if authenticated user has a team (skip for setup and settings pages)
-  const skipTeamCheck = ["/teams/setup", "/settings", "/onboarding"];
+  const skipTeamCheck = ["/teams/setup", "/settings", "/onboarding", "/set-password"];
   const shouldCheckTeam =
     user &&
     !isPublicPath &&
