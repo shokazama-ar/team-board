@@ -24,7 +24,7 @@ export default function AcceptInvitePage() {
 
     // onAuthStateChange を先に登録してからセッションを設定する（イベント取りこぼし防止）
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if ((event === "SIGNED_IN" || event === "TOKEN_REFRESHED") && session?.user) {
+      if ((event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "INITIAL_SESSION") && session?.user) {
         subscription.unsubscribe();
 
         const teamId = session.user.user_metadata?.team_id as string | undefined;
