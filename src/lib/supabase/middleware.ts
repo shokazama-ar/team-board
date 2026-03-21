@@ -38,7 +38,6 @@ export async function updateSession(request: NextRequest) {
     "/signup",
     "/auth/callback",
     "/forgot-password",
-    "/reset-password",
   ];
 
   // 常時公開（ログイン状態に関わらずアクセス可能）

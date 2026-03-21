@@ -1,10 +1,12 @@
 "use client";
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-export default function SetPasswordPage() {
+function SetPasswordContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isReset = searchParams.get("from") === "reset";
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -41,7 +43,6 @@ export default function SetPasswordPage() {
     setLoading(true);
     const supabase = createClient();
 
-    // パスワード設定
     const { error: pwError } = await supabase.auth.updateUser({ password });
     if (pwError) {
       setError("パスワードの設定に失敗しました: " + pwError.message);
@@ -49,7 +50,6 @@ export default function SetPasswordPage() {
       return;
     }
 
-    // 名前を保存
     if (name.trim()) {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
@@ -65,7 +65,9 @@ export default function SetPasswordPage() {
       <div className="w-full max-w-sm">
         <h1 className="mb-2 text-2xl font-bold text-gray-900">パスワードを設定</h1>
         <p className="mb-6 text-sm text-gray-500">
-          チームへの参加が完了しました。次回以降のログインに使うパスワードを設定してください。
+          {isReset
+            ? "新しいパスワードを設定してください。"
+            : "チームへの参加が完了しました。次回以降のログインに使うパスワードを設定してください。"}
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -117,7 +119,7 @@ export default function SetPasswordPage() {
             disabled={loading || !password || !confirm}
             className="w-full rounded-lg bg-blue-600 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
           >
-            {loading ? "設定中..." : "設定してチームへ進む"}
+            {loading ? "設定中..." : "設定して進む"}
           </button>
 
           <button
@@ -130,5 +132,17 @@ export default function SetPasswordPage() {
         </form>
       </div>
     </div>
+  );
+}
+
+export default function SetPasswordPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center">
+        <p className="text-sm text-gray-400">読み込み中...</p>
+      </div>
+    }>
+      <SetPasswordContent />
+    </Suspense>
   );
 }
