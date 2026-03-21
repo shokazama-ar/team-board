@@ -8,7 +8,6 @@ export default function AcceptInvitePage() {
   const [authError, setAuthError] = useState<{ code: string; description: string } | null>(null);
 
   useEffect(() => {
-    // ハッシュからエラーパラメータを取得
     const hash = window.location.hash.slice(1);
     const params = new URLSearchParams(hash);
     const errorCode = params.get("error_code");
@@ -20,8 +19,10 @@ export default function AcceptInvitePage() {
     }
 
     const supabase = createClient();
+    const accessToken = params.get("access_token");
+    const refreshToken = params.get("refresh_token");
 
-    // PKCE・implicit flow 両方に対応するため onAuthStateChange でセッション確立を待つ
+    // onAuthStateChange を先に登録してからセッションを設定する（イベント取りこぼし防止）
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if ((event === "SIGNED_IN" || event === "TOKEN_REFRESHED") && session?.user) {
         subscription.unsubscribe();
@@ -35,6 +36,12 @@ export default function AcceptInvitePage() {
         router.push("/teams/join-profile");
       }
     });
+
+    // implicit flow: ハッシュにトークンがある場合は手動でセッションを設定
+    // createBrowserClient は detectSessionInUrl がデフォルト無効のため
+    if (accessToken && refreshToken) {
+      supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+    }
 
     return () => subscription.unsubscribe();
   }, [router]);
