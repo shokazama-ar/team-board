@@ -3,10 +3,11 @@ import MockupFrame from "../_components/MockupFrame";
 export default function HelpInvitePage() {
   return (
     <article className="rounded-2xl border border-gray-200 bg-white p-8">
-      <h1 className="mb-1 text-2xl font-bold text-gray-900">招待コード</h1>
-      <p className="mb-8 text-sm text-gray-500">新しいメンバーをチームに招待する方法です。</p>
+      <h1 className="mb-1 text-2xl font-bold text-gray-900">メンバーの招待</h1>
+      <p className="mb-8 text-sm text-gray-500">新しいメンバーをチームに招待する方法は2種類あります。</p>
 
-      <Section title="招待コードについて">
+      {/* ========== 招待コード ========== */}
+      <Section title="方法①　招待コードを共有する">
         <div className="space-y-3 text-sm text-gray-700">
           <div className="rounded-lg border border-gray-100 bg-gray-50 p-4">
             <p className="mb-1 font-semibold text-gray-800">保護者用招待コード（1種類のみ）</p>
@@ -37,51 +38,54 @@ export default function HelpInvitePage() {
             </div>
           </div>
         </MockupFrame>
-      </Section>
 
-      <Section title="招待の手順">
+        <h3 className="mb-2 mt-4 text-sm font-semibold text-gray-700">手順</h3>
         <ol className="list-decimal space-y-1.5 pl-5 text-sm text-gray-700">
           <li>設定画面（管理者タブ）で招待コードを確認します。</li>
           <li>コードを参加者に共有します（メッセージ・口頭など）。</li>
           <li>参加者はサインアップ後、「チームに参加」画面でコードを入力します。</li>
           <li>コーチとして活動する場合は、管理者がメンバー画面からコーチ権限を付与します。</li>
         </ol>
-        <MockupFrame title="チームに参加 — TeamBoard">
-          <div className="text-xs">
-            {/* Steps */}
-            <div className="mb-4 flex items-center gap-1">
-              {[
-                { n: "1", label: "設定で確認", active: false, done: true },
-                { n: "2", label: "コードを共有", active: false, done: true },
-                { n: "3", label: "参加者が入力", active: true, done: false },
-              ].map(({ n, label, active, done }) => (
-                <div key={n} className="flex items-center">
-                  <div className="flex flex-col items-center">
-                    <span
-                      className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${
-                        done ? "bg-green-500 text-white" : active ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-600"
-                      }`}
-                    >
-                      {done ? "✓" : n}
-                    </span>
-                    <span className={`mt-0.5 text-[9px] ${active ? "font-medium text-blue-600" : "text-gray-400"}`}>{label}</span>
-                  </div>
-                  {n !== "3" && <span className="mx-1 text-gray-300">→</span>}
-                </div>
-              ))}
-            </div>
-            <div className="rounded-lg border border-gray-200 bg-white p-4">
-              <p className="mb-3 text-sm font-bold text-gray-900">チームに参加する</p>
-              <div className="mb-3">
-                <p className="mb-1 font-medium text-gray-700">招待コード</p>
-                <div className="rounded border-2 border-blue-400 bg-white px-2 py-1.5 font-mono text-gray-600 tracking-wider">PRNT-EFGH-5678</div>
+      </Section>
+
+      {/* ========== メール招待 ========== */}
+      <Section title="方法②　メールで招待する（管理者）">
+        <div className="rounded-lg border border-blue-100 bg-blue-50 p-4 text-sm text-blue-800">
+          <p className="mb-1 font-semibold">メールアドレスを指定して招待リンクを送れます</p>
+          <p>管理者が設定画面からメールアドレスを入力すると、招待メールが自動送信されます。参加者はメール内のリンクをクリックするだけでチームに参加でき、サインアップ作業は不要です。</p>
+        </div>
+        <MockupFrame title="設定 › 管理者 — TeamBoard">
+          <div className="text-xs space-y-3">
+            <div>
+              <p className="mb-2 font-semibold text-gray-700">メンバーを招待</p>
+              <p className="mb-2 text-gray-400">メンバーに招待メールを送ります</p>
+              <div className="flex gap-2">
+                <input
+                  readOnly
+                  value="member@example.com"
+                  className="flex-1 rounded border border-gray-300 px-2 py-1 text-gray-600"
+                />
+                <span className="rounded-lg bg-blue-600 px-3 py-1 text-white">招待メールを送る</span>
               </div>
-              <span className="rounded-lg bg-blue-600 px-3 py-1.5 font-medium text-white">チームに参加する</span>
             </div>
           </div>
         </MockupFrame>
+
+        <h3 className="mb-2 mt-4 text-sm font-semibold text-gray-700">手順</h3>
+        <ol className="list-decimal space-y-1.5 pl-5 text-sm text-gray-700">
+          <li>設定画面（管理者タブ）の「メンバーを招待」欄にメールアドレスを入力します。</li>
+          <li>「招待メールを送る」をクリックすると、招待メールが送信されます。</li>
+          <li>参加者がメール内のリンクをクリックすると、チームに参加します（サインアップ不要）。</li>
+          <li>参加直後にパスワード設定画面が表示されます。設定するか「あとで設定する」でスキップできます。</li>
+        </ol>
+
+        <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
+          <p className="mb-1 font-semibold text-gray-700">すでにアカウントを持っている方への招待</p>
+          <p>招待するメールアドレスがすでに登録済みの場合も、同じ操作で招待メールが届きます。リンクをクリックするとチームへの参加が完了します。</p>
+        </div>
       </Section>
 
+      {/* ========== 招待コード再生成 ========== */}
       <Section title="招待コードの再生成">
         <ul className="list-disc space-y-1.5 pl-5 text-sm text-gray-700">
           <li>コードが漏洩した場合などは、設定画面から再生成できます。</li>
@@ -109,9 +113,11 @@ export default function HelpInvitePage() {
         </MockupFrame>
       </Section>
 
+      {/* ========== コーチ権限付与 ========== */}
       <Section title="コーチ権限の付与">
         <ul className="list-disc space-y-1.5 pl-5 text-sm text-gray-700">
-          <li>参加者が保護者として参加した後、管理者がメンバー画面からコーチ権限を付与できます。</li>
+          <li>どちらの方法で参加した場合も、最初は「保護者」として参加します。</li>
+          <li>コーチとして活動する場合は、管理者がメンバー画面からコーチ権限を付与します。</li>
           <li>コーチ権限の付与・剥奪は管理者のみが行えます。</li>
         </ul>
       </Section>

@@ -173,6 +173,34 @@ RLSポリシー:
 - 回避策: `team_members.user_id` を直接参照するか、`SECURITY DEFINER` 関数 (`is_member_of_team` 等) を経由する
 - `member_profile_access` ポリシーで `member_profiles` を直接参照すると再帰的 RLS 評価が発生する。`SECURITY DEFINER` 関数 `owns_member_profile_by_id(profile_id)` 経由で回避する
 
+---
+
+### `team_invitations`
+管理者が発行するメール招待レコード。`/api/invite` が INSERT し、`accept_team_invite_by_token` RPC が消費する。
+
+| カラム | 型 | 備考 |
+|---|---|---|
+| id | uuid PK | 招待トークンとして使用（URL に埋め込む） |
+| team_id | uuid | teams.id |
+| email | text | 招待先メールアドレス |
+| invited_by | uuid | 招待した管理者の auth.users.id |
+| accepted_at | timestamptz | 受諾日時（NULL = 未受諾） |
+| expires_at | timestamptz | 有効期限（デフォルト: 作成から7日） |
+| created_at | timestamptz | |
+
+RLSポリシー:
+- INSERT: サービスロール（`/api/invite` 経由）のみ
+- SELECT: 同チームの管理者のみ
+
+招待フロー:
+1. 管理者が設定画面でメールアドレスを入力 → `/api/invite` POST
+2. API が `team_invitations` に INSERT → `invitation.id` を `invitation_token` として `redirectTo` URL に付与
+3. 新規ユーザー: `inviteUserByEmail` で Supabase 標準招待メール送信
+4. 既存ユーザー: `generateLink(magiclink)` + Resend でカスタムメール送信
+5. 受信者がリンクをクリック → `/auth/callback?invitation_token=<id>` → `accept_team_invite_by_token` RPC 実行 → `/set-password` へ
+
+---
+
 ## 主要RPC関数
 
 | 関数 | 説明 |
@@ -189,6 +217,7 @@ RLSポリシー:
 | `revoke_coach_role(target_user_id)` | 対象ユーザーのコーチ権限を剥奪（admin専用・自分自身は不可）。guardian に戻す |
 | `get_team_name(tid)` | チームIDからチーム名を返す。認証不要（SECURITY DEFINER）。公開問い合わせフォームから使用 |
 | `owns_member_profile_by_id(profile_id)` | プロファイルのオーナーか判定（SECURITY DEFINER）。`member_profile_access` のRLSから呼ばれる |
+| `accept_team_invite_by_token(p_token)` | 招待トークンを検証してチームに参加。`kind='guardian'` の `member_profile` を自動作成し `team_members` に INSERT。`team_invitations.accepted_at` を更新（SECURITY DEFINER） |
 
 ---
 
