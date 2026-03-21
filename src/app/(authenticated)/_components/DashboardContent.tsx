@@ -197,12 +197,15 @@ export default async function DashboardContent({ userId }: { userId: string }) {
         </div>
       </div>
 
-      <DashboardFilteredContent
-        allUpcomingEvents={allUpcomingEvents}
-        answeredEventIds={answeredEventIds}
-        announcements={announcements}
-        userCategoryIds={userCategoryIds}
-      />
+      {/* 選手プロファイルがある場合のみ予定・お知らせを表示 */}
+      {hasPlayerProfile && (
+        <DashboardFilteredContent
+          allUpcomingEvents={allUpcomingEvents}
+          answeredEventIds={answeredEventIds}
+          announcements={announcements}
+          userCategoryIds={userCategoryIds}
+        />
+      )}
     </>
   );
 }

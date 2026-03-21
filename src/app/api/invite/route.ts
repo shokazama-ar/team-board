@@ -49,9 +49,17 @@ export async function POST(req: NextRequest) {
   const { error } = await adminClient.auth.admin.inviteUserByEmail(email, { redirectTo });
 
   if (error) {
-    // 既存ユーザーへの招待は別途案内
     if (error.message.includes("already registered")) {
-      return NextResponse.json({ error: "already_registered" }, { status: 409 });
+      // 既存ユーザー: magic link を生成して管理者が手動共有できるようにする
+      const { data: linkData, error: linkErr } = await adminClient.auth.admin.generateLink({
+        type: "magiclink",
+        email,
+        options: { redirectTo },
+      });
+      if (linkErr || !linkData) {
+        return NextResponse.json({ error: "already_registered" }, { status: 409 });
+      }
+      return NextResponse.json({ ok: true, inviteLink: linkData.properties.action_link });
     }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
