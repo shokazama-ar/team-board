@@ -1,9 +1,9 @@
 "use client";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-export default function AcceptInvitePage() {
+function AcceptInviteContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const joinError = searchParams.get("error");
@@ -54,7 +54,7 @@ export default function AcceptInvitePage() {
       }
     });
 
-    supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+    supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken ?? "" });
 
     return () => subscription.unsubscribe();
   }, [router, invitationToken]);
@@ -95,5 +95,17 @@ export default function AcceptInvitePage() {
     <div className="flex min-h-screen items-center justify-center">
       <p className="text-sm text-gray-500">チームに参加しています…</p>
     </div>
+  );
+}
+
+export default function AcceptInvitePage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center">
+        <p className="text-sm text-gray-500">チームに参加しています…</p>
+      </div>
+    }>
+      <AcceptInviteContent />
+    </Suspense>
   );
 }
