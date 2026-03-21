@@ -209,7 +209,7 @@ export default function MembersPage() {
   };
 
   const revokeCoach = async (ownerUserId: string) => {
-    if (!window.confirm("コーチ権限を剥奪しますか？")) return;
+    if (!window.confirm("コーチ権限を削除しますか？")) return;
     setActionLoading(ownerUserId);
     const { error } = await supabase.rpc("revoke_coach_role", {
       target_user_id: ownerUserId,
@@ -268,7 +268,7 @@ export default function MembersPage() {
                     disabled={actionLoading === member.id}
                     className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50 disabled:opacity-50"
                   >
-                    {member.role === "admin" ? "メンバーに変更" : "管理者に変更"}
+                    {member.role === "admin" ? "-管理者権限" : "+管理者権限"}
                   </button>
                   {member.account_type === "guardian" ? (
                     <button
@@ -276,7 +276,7 @@ export default function MembersPage() {
                       disabled={actionLoading === member.owner_user_id}
                       className="rounded border border-blue-300 px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 disabled:opacity-50"
                     >
-                      コーチ権限付与
+                      +コーチ権限
                     </button>
                   ) : (
                     <button
@@ -284,7 +284,7 @@ export default function MembersPage() {
                       disabled={actionLoading === member.owner_user_id}
                       className="rounded border border-orange-300 px-2 py-1 text-xs text-orange-600 hover:bg-orange-50 disabled:opacity-50"
                     >
-                      コーチ権限剥奪
+                      -コーチ権限
                     </button>
                   )}
                   <button
@@ -430,7 +430,7 @@ export default function MembersPage() {
                         disabled={actionLoading === member.id}
                         className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50 disabled:opacity-50"
                       >
-                        {member.role === "admin" ? "メンバーに変更" : "管理者に変更"}
+                        {member.role === "admin" ? "-管理者権限" : "+管理者権限"}
                       </button>
                       <button
                         onClick={() => removeMember(member.id, member.name ?? "")}
