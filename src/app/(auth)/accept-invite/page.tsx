@@ -1,12 +1,13 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 export default function AcceptInvitePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const joinError = searchParams.get("error");
   const [authError, setAuthError] = useState<{ code: string; description: string } | null>(null);
-  const [rpcError, setRpcError] = useState(false);
 
   useEffect(() => {
     const hash = window.location.hash.slice(1);
@@ -19,11 +20,17 @@ export default function AcceptInvitePage() {
       return;
     }
 
-    const supabase = createClient();
     const accessToken = params.get("access_token");
     const refreshToken = params.get("refresh_token");
 
-    // onAuthStateChange を先に登録してからセッションを設定する（イベント取りこぼし防止）
+    // hash にトークンがない = PKCE フロー（サーバー側で処理済み）→ / へ
+    if (!accessToken) {
+      router.push("/");
+      return;
+    }
+
+    // implicit flow: onAuthStateChange を先に登録してからセッションを設定する
+    const supabase = createClient();
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if ((event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "INITIAL_SESSION") && session?.user) {
         subscription.unsubscribe();
@@ -34,23 +41,20 @@ export default function AcceptInvitePage() {
         const { error } = await supabase.rpc("accept_team_invite", { p_team_id: teamId });
         if (error) {
           console.error(error);
-          setRpcError(true);
+          setAuthError({ code: "rpc_failed", description: error.message });
           return;
         }
+
         router.push("/");
       }
     });
 
-    // implicit flow: ハッシュにトークンがある場合は手動でセッションを設定
-    // createBrowserClient は detectSessionInUrl がデフォルト無効のため
-    if (accessToken && refreshToken) {
-      supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
-    }
+    supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
 
     return () => subscription.unsubscribe();
   }, [router]);
 
-  if (rpcError) {
+  if (joinError === "join_failed") {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center space-y-4">
@@ -72,6 +76,8 @@ export default function AcceptInvitePage() {
           <p className="text-sm text-red-600">
             {authError.code === "otp_expired"
               ? "招待リンクの有効期限が切れています。チーム管理者に再招待を依頼してください。"
+              : authError.code === "rpc_failed"
+              ? "チームへの参加に失敗しました。チーム管理者に再招待を依頼してください。"
               : `招待リンクが無効です（${authError.description}）。`}
           </p>
           <a href="/login" className="text-sm text-blue-600 underline">

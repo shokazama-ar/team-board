@@ -25,8 +25,25 @@ export async function GET(request: Request) {
 
   if (code) {
     const supabase = await createClient();
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    const { data: exchangeData, error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
+      // 招待フロー: サーバーサイドで team に追加して / へ直行
+      const isInviteFlow =
+        next.startsWith("/accept-invite") || next.startsWith("/auth/accept-invite");
+      if (isInviteFlow) {
+        const teamId = exchangeData.user?.user_metadata?.team_id as string | undefined;
+        if (teamId) {
+          const { error: rpcError } = await supabase.rpc("accept_team_invite", {
+            p_team_id: teamId,
+          });
+          if (rpcError) {
+            console.error("accept_team_invite failed:", rpcError);
+            return NextResponse.redirect(`${origin}/accept-invite?error=join_failed`);
+          }
+        }
+        return NextResponse.redirect(`${origin}/`);
+      }
+
       if (type === "recovery") {
         return NextResponse.redirect(`${origin}/reset-password`);
       }
