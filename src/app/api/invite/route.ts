@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient as createAdminClient } from "@supabase/supabase-js";
+import { createClient as createAdminClient, createClient as createAnonClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 
 export async function POST(req: NextRequest) {
@@ -50,16 +50,19 @@ export async function POST(req: NextRequest) {
 
   if (error) {
     if (error.message.includes("already registered")) {
-      // 既存ユーザー: magic link を生成して管理者が手動共有できるようにする
-      const { data: linkData, error: linkErr } = await adminClient.auth.admin.generateLink({
-        type: "magiclink",
+      // 既存ユーザー: signInWithOtp でマジックリンクメールを送る（Supabase のメール配信を利用）
+      const anonClient = createAnonClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      );
+      const { error: otpError } = await anonClient.auth.signInWithOtp({
         email,
-        options: { redirectTo },
+        options: { emailRedirectTo: redirectTo, shouldCreateUser: false },
       });
-      if (linkErr || !linkData) {
-        return NextResponse.json({ error: "already_registered" }, { status: 409 });
+      if (otpError) {
+        return NextResponse.json({ error: otpError.message }, { status: 500 });
       }
-      return NextResponse.json({ ok: true, inviteLink: linkData.properties.action_link });
+      return NextResponse.json({ ok: true });
     }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

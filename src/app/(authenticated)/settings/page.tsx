@@ -996,8 +996,6 @@ export default function SettingsPage() {
   const [inviting, setInviting] = useState(false);
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [inviteSuccess, setInviteSuccess] = useState(false);
-  const [inviteLink, setInviteLink] = useState<string | null>(null);
-  const [inviteLinkCopied, setInviteLinkCopied] = useState(false);
 
   // Event types / categories state
   const [eventTypes, setEventTypes] = useState<EventType[]>([]);
@@ -1379,20 +1377,14 @@ export default function SettingsPage() {
     if (!inviteEmail || !teamId) return;
     setInviting(true);
     setInviteError(null);
-    setInviteLink(null);
     try {
       const res = await fetch("/api/invite", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: inviteEmail, teamId }),
       });
-      const json = await res.json();
       if (!res.ok) {
         setInviteError("招待メールの送信に失敗しました。");
-      } else if (json.inviteLink) {
-        // 既存ユーザー: 管理者が手動共有できるようにリンクを表示
-        setInviteLink(json.inviteLink);
-        setInviteEmail("");
       } else {
         setInviteSuccess(true);
         setInviteEmail("");
@@ -2123,32 +2115,7 @@ export default function SettingsPage() {
                   </button>
                 </p>
               )}
-              {inviteLink && (
-                <div className="mb-2 rounded-lg border border-yellow-200 bg-yellow-50 p-3">
-                  <p className="mb-2 text-xs text-yellow-800">
-                    このメールアドレスはすでに登録済みです。以下のリンクをコピーして本人にお知らせください。
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <code className="flex-1 min-w-0 truncate rounded border border-yellow-200 bg-white px-2 py-1 text-xs font-mono">
-                      {inviteLink}
-                    </code>
-                    <button
-                      type="button"
-                      onClick={() => copyToClipboard(inviteLink).then(() => {
-                        setInviteLinkCopied(true);
-                        setTimeout(() => setInviteLinkCopied(false), 1500);
-                      })}
-                      className="shrink-0 rounded-lg border border-yellow-300 bg-white px-3 py-1.5 text-xs font-medium text-yellow-800 hover:bg-yellow-50"
-                    >
-                      {inviteLinkCopied ? "コピー済み" : "コピー"}
-                    </button>
-                  </div>
-                  <button onClick={() => setInviteLink(null)} className="mt-2 text-xs text-blue-600 underline">
-                    別のアドレスを招待
-                  </button>
-                </div>
-              )}
-              {!inviteSuccess && !inviteLink && (
+              {!inviteSuccess && (
                 <div className="flex gap-2">
                   <input
                     type="email"
