@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 export default function AcceptInvitePage() {
   const router = useRouter();
   const [authError, setAuthError] = useState<{ code: string; description: string } | null>(null);
+  const [rpcError, setRpcError] = useState(false);
 
   useEffect(() => {
     const hash = window.location.hash.slice(1);
@@ -31,9 +32,12 @@ export default function AcceptInvitePage() {
         if (!teamId) { router.push("/"); return; }
 
         const { error } = await supabase.rpc("accept_team_invite", { p_team_id: teamId });
-        if (error) console.error(error);
-
-        router.push("/teams/join-profile");
+        if (error) {
+          console.error(error);
+          setRpcError(true);
+          return;
+        }
+        router.push("/");
       }
     });
 
@@ -45,6 +49,21 @@ export default function AcceptInvitePage() {
 
     return () => subscription.unsubscribe();
   }, [router]);
+
+  if (rpcError) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center space-y-4">
+          <p className="text-sm text-red-600">
+            チームへの参加に失敗しました。チーム管理者に再招待を依頼してください。
+          </p>
+          <a href="/login" className="text-sm text-blue-600 underline">
+            ログインページへ
+          </a>
+        </div>
+      </div>
+    );
+  }
 
   if (authError) {
     return (
