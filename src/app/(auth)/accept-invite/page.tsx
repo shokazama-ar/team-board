@@ -37,26 +37,50 @@ function AcceptInviteContent() {
 
     // implicit flow: onAuthStateChange を先に登録してからセッションを設定する
     const supabase = createClient();
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    let done = false;
+
+    const acceptInvite = async () => {
+      if (done) return;
+      done = true;
+      subscription.unsubscribe();
+
+      const { error } = await supabase.rpc("accept_team_invite_by_token", {
+        p_token: invitationToken,
+      });
+      if (error) {
+        console.error(error);
+        setAuthError({ code: "rpc_failed", description: error.message });
+        return;
+      }
+      router.push("/");
+    };
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if ((event === "SIGNED_IN" || event === "TOKEN_REFRESHED") && session?.user) {
-        subscription.unsubscribe();
-
-        const { error } = await supabase.rpc("accept_team_invite_by_token", {
-          p_token: invitationToken,
-        });
-        if (error) {
-          console.error(error);
-          setAuthError({ code: "rpc_failed", description: error.message });
-          return;
-        }
-
-        router.push("/");
+        acceptInvite();
       }
     });
 
-    supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken ?? "" });
+    // setSession を await して、onAuthStateChange が発火しないケースにも対応する
+    (async () => {
+      const { data, error: sessionError } = await supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken ?? "",
+      });
+      if (sessionError) {
+        if (!done) setAuthError({ code: "session_failed", description: sessionError.message });
+        return;
+      }
+      // onAuthStateChange が発火しなかった場合のフォールバック
+      if (data.session?.user && !done) {
+        acceptInvite();
+      }
+    })();
 
-    return () => subscription.unsubscribe();
+    return () => {
+      done = true;
+      subscription.unsubscribe();
+    };
   }, [router, invitationToken]);
 
   if (joinError === "join_failed") {
