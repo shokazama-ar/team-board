@@ -7,17 +7,19 @@ function SetPasswordContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isReset = searchParams.get("from") === "reset";
+  const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // 現在のプロフィール名を取得
+  // 現在のプロフィール名とメールアドレスを取得
   useEffect(() => {
     const supabase = createClient();
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) { router.push("/login"); return; }
+      if (user.email) setEmail(user.email);
       supabase
         .from("profiles")
         .select("name")
@@ -71,6 +73,21 @@ function SetPasswordContent() {
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {email && (
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                メールアドレス
+              </label>
+              <input
+                type="email"
+                value={email}
+                readOnly
+                autoComplete="username"
+                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-500"
+              />
+            </div>
+          )}
+
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">
               表示名
@@ -93,6 +110,7 @@ function SetPasswordContent() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="8文字以上"
+              autoComplete="new-password"
               required
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
             />
@@ -107,6 +125,7 @@ function SetPasswordContent() {
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
               placeholder="もう一度入力"
+              autoComplete="new-password"
               required
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
             />

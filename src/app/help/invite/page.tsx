@@ -118,7 +118,7 @@ export default function HelpInvitePage() {
         <ul className="list-disc space-y-1.5 pl-5 text-sm text-gray-700">
           <li>どちらの方法で参加した場合も、最初は「保護者」として参加します。</li>
           <li>コーチとして活動する場合は、管理者がメンバー画面からコーチ権限を付与します。</li>
-          <li>コーチ権限の付与・剥奪は管理者のみが行えます。</li>
+          <li>コーチ権限の変更は管理者のみが行えます。</li>
         </ul>
       </Section>
     </article>

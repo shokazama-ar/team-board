@@ -432,14 +432,15 @@ export default function MembersPage() {
                       <button
                         onClick={() => removeMember(member.id, member.name ?? "")}
                         disabled={actionLoading === member.id}
-                        className="flex items-center gap-1 rounded border border-red-300 px-2 py-1 text-xs text-red-600 hover:bg-red-50 disabled:opacity-50"
+                        title="削除"
+                        aria-label="削除"
+                        className="flex items-center rounded border border-red-300 px-2 py-1 text-xs text-red-600 hover:bg-red-50 disabled:opacity-50"
                       >
                         {actionLoading === member.id ? (
                           <Loader2 size={12} className="animate-spin" aria-hidden="true" />
                         ) : (
                           <Trash2 size={12} strokeWidth={1.5} aria-hidden="true" />
                         )}
-                        削除
                       </button>
                     </>
                   )}

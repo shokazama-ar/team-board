@@ -954,6 +954,223 @@ function InquiryTypeSection({ teamId }: InquiryTypeSectionProps) {
   );
 }
 
+// ── 返信テンプレート管理セクション ────────────────────────────────────────────
+type ReplyTemplate = {
+  id: string;
+  title: string;
+  body: string;
+  created_at: string;
+};
+
+type ReplyTemplateSectionProps = {
+  teamId: string;
+};
+
+function ReplyTemplateSection({ teamId }: ReplyTemplateSectionProps) {
+  const supabase = createClient();
+  const [templates, setTemplates] = useState<ReplyTemplate[]>([]);
+  const [sectionMessage, setSectionMessage] = useState('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editBody, setEditBody] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const loadTemplates = async () => {
+    const { data } = await supabase
+      .from('inquiry_reply_templates')
+      .select('id, title, body, created_at')
+      .eq('team_id', teamId)
+      .order('created_at', { ascending: true });
+    if (data) setTemplates(data as ReplyTemplate[]);
+  };
+
+  useEffect(() => {
+    loadTemplates();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [teamId]);
+
+  const openNewModal = () => {
+    setEditingId(null);
+    setEditTitle('');
+    setEditBody('');
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (t: ReplyTemplate) => {
+    setEditingId(t.id);
+    setEditTitle(t.title);
+    setEditBody(t.body);
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setEditingId(null);
+    setEditTitle('');
+    setEditBody('');
+  };
+
+  const handleSave = async () => {
+    if (!editTitle.trim() || !editBody.trim()) return;
+    setSaving(true);
+    setSectionMessage('');
+
+    if (editingId === null) {
+      const { error } = await supabase.from('inquiry_reply_templates').insert({
+        team_id: teamId,
+        title: editTitle.trim(),
+        body: editBody.trim(),
+      });
+      if (error) {
+        setSectionMessage('追加に失敗しました');
+      } else {
+        await loadTemplates();
+        closeModal();
+      }
+    } else {
+      const { error } = await supabase
+        .from('inquiry_reply_templates')
+        .update({ title: editTitle.trim(), body: editBody.trim(), updated_at: new Date().toISOString() })
+        .eq('id', editingId);
+      if (error) {
+        setSectionMessage('更新に失敗しました');
+      } else {
+        await loadTemplates();
+        closeModal();
+      }
+    }
+    setSaving(false);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('このテンプレートを削除しますか？')) return;
+    setDeletingId(id);
+    const { error } = await supabase.from('inquiry_reply_templates').delete().eq('id', id);
+    if (error) {
+      setSectionMessage('削除に失敗しました');
+    } else {
+      setTemplates((prev) => prev.filter((t) => t.id !== id));
+    }
+    setDeletingId(null);
+  };
+
+  return (
+    <>
+      <hr className="my-8 border-gray-200" />
+      <div className="mb-4">
+        <h2 className="text-lg font-semibold">返信テンプレート</h2>
+        <p className="mt-1 text-sm text-gray-500">問い合わせへの返信時に使用するテンプレートを管理します</p>
+      </div>
+
+      {sectionMessage && (
+        <div className={`mb-4 rounded-md p-3 text-sm ${sectionMessage.includes('失敗') ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>
+          {sectionMessage}
+        </div>
+      )}
+
+      <div className="space-y-2">
+        {templates.length === 0 && (
+          <p className="text-sm text-gray-400">テンプレートが登録されていません</p>
+        )}
+        {templates.map((t) => (
+          <div key={t.id} className="rounded-lg border border-gray-200 bg-white px-4 py-3">
+            <div className="flex items-start gap-2">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900">{t.title}</p>
+                <p className="mt-0.5 text-xs text-gray-400 line-clamp-2">{t.body}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => openEditModal(t)}
+                className="shrink-0 text-gray-400 hover:text-gray-600"
+                aria-label="編集"
+                title="編集"
+              >
+                <Pencil size={14} strokeWidth={1.5} />
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDelete(t.id)}
+                disabled={deletingId === t.id}
+                className="shrink-0 text-gray-400 hover:text-red-500 disabled:opacity-50"
+                aria-label="削除"
+                title="削除"
+              >
+                {deletingId === t.id ? <Loader2 size={16} className="animate-spin" /> : <X size={16} strokeWidth={1.5} />}
+              </button>
+            </div>
+          </div>
+        ))}
+        <button
+          type="button"
+          onClick={openNewModal}
+          className="flex items-center gap-1.5 rounded-lg border border-dashed border-gray-300 px-4 py-2 text-sm text-gray-500 hover:border-gray-400 hover:text-gray-700"
+        >
+          <Plus size={16} strokeWidth={1.5} aria-hidden="true" />
+          テンプレートを追加
+        </button>
+      </div>
+
+      {/* 追加・編集モーダル */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl">
+            <h3 className="mb-4 text-base font-semibold text-gray-800">
+              {editingId === null ? 'テンプレートを追加' : 'テンプレートを編集'}
+            </h3>
+            <div className="space-y-4">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">
+                  タイトル <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  placeholder="例: 受付完了のご連絡"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">
+                  本文 <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  rows={6}
+                  value={editBody}
+                  onChange={(e) => setEditBody(e.target.value)}
+                  placeholder="返信本文を入力してください"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={closeModal}
+                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50"
+              >
+                キャンセル
+              </button>
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={saving || !editTitle.trim() || !editBody.trim()}
+                className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                {saving && <Loader2 size={14} className="animate-spin" />}
+                {saving ? '保存中...' : '保存'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 // ── メインページ ────────────────────────────────────────────────────────────
 export default function SettingsPage() {
   const supabase = createClient();
@@ -2196,6 +2413,9 @@ export default function SettingsPage() {
           {/* 問い合わせ種別 */}
           <InquiryTypeSection teamId={teamId} />
 
+          {/* 返信テンプレート */}
+          <ReplyTemplateSection teamId={teamId} />
+
           {/* 機能説明 */}
           <hr className="my-8 border-gray-200" />
           <h2 className="mb-1 text-lg font-semibold">機能説明</h2>
@@ -2424,9 +2644,9 @@ export default function SettingsPage() {
               </nav>
             </div>
 
-            <div className="overflow-x-auto px-6 py-4">
+            <div className="overflow-x-auto py-4">
               {eventCategories.length === 0 ? (
-                <p className="text-sm text-gray-400">対象カテゴリが登録されていません。先に「対象カテゴリ」を追加してください。</p>
+                <p className="px-6 text-sm text-gray-400">対象カテゴリが登録されていません。先に「対象カテゴリ」を追加してください。</p>
               ) : (() => {
                 const visibleProfiles = playerCategoryPlayers.filter(
                   (p) => p.kind === playerCategoryModalTab
@@ -2442,7 +2662,7 @@ export default function SettingsPage() {
                   <table className="w-full text-sm">
                     <thead>
                       <tr>
-                        <th className="sticky left-0 z-10 bg-white min-w-[8rem] pb-3 pr-6 text-left text-sm font-medium text-gray-500">
+                        <th className="sticky left-0 z-10 bg-white min-w-[8rem] pb-3 pl-6 pr-6 text-left text-sm font-medium text-gray-500">
                           {playerCategoryModalTab === "coach" ? "コーチ" : "選手"}
                         </th>
                         {eventCategories.map((cat) => (
@@ -2460,7 +2680,7 @@ export default function SettingsPage() {
                     <tbody className="divide-y divide-gray-100">
                       {visibleProfiles.map((player) => (
                         <tr key={player.member_profile_id}>
-                          <td className="sticky left-0 z-10 bg-white py-3 pr-6 font-medium text-gray-900">
+                          <td className="sticky left-0 z-10 bg-white py-3 pl-6 pr-6 font-medium text-gray-900">
                             {player.name || "名前未設定"}
                           </td>
                           {eventCategories.map((cat) => (

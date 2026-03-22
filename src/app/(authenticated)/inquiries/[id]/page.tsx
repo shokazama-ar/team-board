@@ -40,7 +40,7 @@ export default async function InquiryDetailPage({
 
   const { data: inquiry } = await supabase
     .from("inquiries")
-    .select("*, inquiry_types(name, message_template), teams(slug)")
+    .select("*, team_id, inquiry_types(name, message_template), teams(slug)")
     .eq("id", id)
     .single();
 
@@ -147,6 +147,7 @@ export default async function InquiryDetailPage({
         inquiryId={inquiry.id}
         defaultMessage={inquiryTypes?.message_template ?? ""}
         recipientEmail={inquiry.email ?? ""}
+        teamId={inquiry.team_id}
       />
     </div>
   );

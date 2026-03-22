@@ -78,7 +78,11 @@ export async function POST(req: NextRequest) {
   }
 
   const actionLink = linkData.properties.action_link;
-  const fromEmail = process.env.RESEND_FROM_EMAIL ?? "noreply@team-board-psi.vercel.app";
+  const fromEmail = process.env.RESEND_FROM_EMAIL;
+  if (!fromEmail) {
+    console.error("[invite] RESEND_FROM_EMAIL is not set");
+    return NextResponse.json({ error: "server_misconfigured" }, { status: 500 });
+  }
 
   const resend = new Resend(process.env.RESEND_API_KEY);
   const { error: resendError } = await resend.emails.send({

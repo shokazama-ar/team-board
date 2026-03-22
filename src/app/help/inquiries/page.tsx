@@ -65,6 +65,7 @@ export default function HelpInquiriesPage() {
           <li>問い合わせ詳細から直接メールで返信できます。</li>
           <li>返信メールは問い合わせ者のメールアドレス宛に送信されます。</li>
           <li>返信後にステータスが自動で「返信済み」に変わります。</li>
+          <li>あらかじめ登録した返信テンプレートをカーソル位置に挿入できます（「テンプレートを挿入」ボタン）。</li>
         </ul>
         <MockupFrame title="問い合わせ詳細 — TeamBoard">
           <div className="space-y-3 text-xs">
@@ -78,11 +79,40 @@ export default function HelpInquiriesPage() {
               <p className="mt-1.5 text-gray-700">体験入会を希望します。いつ頃伺えますか？</p>
             </div>
             <div className="rounded-lg border-2 border-blue-200 bg-blue-50 p-3">
-              <p className="mb-2 font-medium text-gray-700">返信メッセージ</p>
+              <div className="mb-2 flex items-center justify-between">
+                <p className="font-medium text-gray-700">返信メッセージ</p>
+                <span className="rounded border border-gray-300 px-2 py-0.5 text-[10px] text-gray-600">テンプレートを挿入 ▾</span>
+              </div>
               <div className="h-12 rounded border border-blue-300 bg-white px-2 py-1.5 text-gray-400">返信内容を入力...</div>
               <span className="mt-2 inline-block rounded-lg bg-blue-600 px-3 py-1.5 font-medium text-white">送信する</span>
               <p className="mt-1.5 text-[10px] text-blue-600">↑ 送信後にステータスが「返信済み」に変わります</p>
             </div>
+          </div>
+        </MockupFrame>
+      </Section>
+
+      <Section title="返信テンプレート">
+        <ul className="list-disc space-y-1.5 pl-5 text-sm text-gray-700">
+          <li>よく使う返信文をテンプレートとして登録しておくと、返信フォームから素早く挿入できます。</li>
+          <li>テンプレートは設定画面（管理者タブ）の「返信テンプレート」セクションから追加・編集・削除できます。</li>
+          <li>テンプレートはチームごとに管理されます。管理者のみ編集可能です。</li>
+        </ul>
+        <MockupFrame title="設定 › 管理者 — TeamBoard">
+          <div className="text-xs space-y-2">
+            <p className="font-semibold text-gray-700">返信テンプレート</p>
+            <div className="rounded-lg border border-gray-200 bg-white p-2.5">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="font-medium text-gray-900">体験受付の返信</p>
+                  <p className="mt-0.5 text-gray-500 line-clamp-2">ご連絡ありがとうございます。体験入会のお申し込みを受け付けました...</p>
+                </div>
+                <div className="flex shrink-0 gap-1">
+                  <span className="rounded border border-gray-300 px-2 py-0.5 text-gray-600">編集</span>
+                  <span className="rounded border border-red-300 px-2 py-0.5 text-red-600">削除</span>
+                </div>
+              </div>
+            </div>
+            <span className="inline-block rounded border border-dashed border-gray-300 px-3 py-1 text-gray-500">＋ テンプレートを追加</span>
           </div>
         </MockupFrame>
       </Section>

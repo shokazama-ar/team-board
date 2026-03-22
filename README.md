@@ -35,7 +35,7 @@ team-board/
 
 | | ローカル確認 (EC2) | ステージング |
 |---|---|---|
-| **URL** | `http://<EC2の公開IP>:3000` | `https://team-board-psi.vercel.app` |
+| **URL** | `http://<EC2の公開IP>:3000` | Vercel のプロジェクト設定を参照 |
 | **フロントエンド** | Next.js dev server (EC2上) | Vercel |
 | **データベース** | ローカル Supabase (Docker) | Supabase クラウド |
 | **Supabase プロジェクト** | `127.0.0.1:54321` | `lgghvqytslnocbpgouhb.supabase.co` |
@@ -54,6 +54,10 @@ team-board/
 |---|---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | ✅ | ブラウザから接続する Supabase API URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | ✅ | Supabase の anon（公開）キー |
+| `SUPABASE_SERVICE_ROLE_KEY` | ✅ | Supabase の service_role キー。招待メール送信・問い合わせ返信・Webhook など管理者操作に使用 |
+| `RESEND_API_KEY` | ✅ | Resend の API キー。メール送信全般に使用 |
+| `RESEND_FROM_EMAIL` | ✅ | 送信元メールアドレス（例: `noreply@yourdomain.com`）。Resend で認証済みドメインのアドレスを指定 |
+| `NEXT_PUBLIC_SITE_URL` | ✅ | アプリの公開 URL（例: `https://yourdomain.com`）。招待リンクの生成に使用。Vercel 環境では `VERCEL_URL` にフォールバックするため任意 |
 | `SUPABASE_INTERNAL_URL` | ローカルのみ | サーバーサイドが内部ネットワーク経由で接続する URL。未設定時は `NEXT_PUBLIC_SUPABASE_URL` にフォールバック |
 | `NEXT_PUBLIC_SUPABASE_STORAGE_KEY` | ローカルのみ | Auth トークンの Cookie 名。ブラウザとサーバー間で Cookie 名を統一するために使用 |
 | `DEV_HOST` | ローカルのみ | EC2 など外部からブラウザでアクセスする際のホスト名または IP。`next.config.ts` の `allowedDevOrigins` と画像の `remotePatterns` に反映される |
@@ -63,6 +67,10 @@ team-board/
 ```env
 NEXT_PUBLIC_SUPABASE_URL=http://<EC2の公開IP>:54321
 NEXT_PUBLIC_SUPABASE_ANON_KEY=<npx supabase status で確認した anon key>
+SUPABASE_SERVICE_ROLE_KEY=<npx supabase status で確認した service_role key>
+RESEND_API_KEY=<Resend ダッシュボードで発行した API キー>
+RESEND_FROM_EMAIL=noreply@<Resend で認証したドメイン>
+NEXT_PUBLIC_SITE_URL=http://<EC2の公開IP>:3000
 SUPABASE_INTERNAL_URL=http://127.0.0.1:54321
 NEXT_PUBLIC_SUPABASE_STORAGE_KEY=sb-local-auth-token
 DEV_HOST=<EC2の公開IP>
@@ -71,7 +79,7 @@ DEV_HOST=<EC2の公開IP>
 ### ステージング（Vercel）の場合
 
 Vercel ダッシュボードの **Settings > Environment Variables** で設定します。
-`NEXT_PUBLIC_SUPABASE_URL` と `NEXT_PUBLIC_SUPABASE_ANON_KEY` のみ設定すれば動作します。
+`VERCEL_URL` は Vercel が自動設定するため `NEXT_PUBLIC_SITE_URL` は任意です。
 
 ---
 
