@@ -1958,6 +1958,38 @@ export default function SettingsPage() {
     </>
   ) : null;
 
+  const leaveTeam = async () => {
+    const confirmed = window.confirm(
+      "チームを退会しますか？\n\nこの操作は取り消せません。退会後はチームのデータにアクセスできなくなります。"
+    );
+    if (!confirmed) return;
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data: myTeamId } = await supabase.rpc("get_my_team_id");
+    if (!myTeamId) return;
+
+    const { data: profiles } = await supabase
+      .from("member_profiles")
+      .select("id")
+      .eq("user_id", user.id);
+
+    if (!profiles || profiles.length === 0) return;
+
+    const profileIds = profiles.map((p) => p.id);
+
+    await supabase
+      .from("team_members")
+      .delete()
+      .eq("team_id", myTeamId)
+      .in("member_profile_id", profileIds);
+
+    router.push("/teams/setup");
+  };
+
   const showCoachTab = accountType === "coach";
   const showGuardianTab = accountType === "guardian" || accountType === "coach";
 
@@ -2527,6 +2559,23 @@ export default function SettingsPage() {
             </div>
           )}
         </>
+      )}
+
+      {/* チームを退会する */}
+      {teamId && (
+        <div className="mt-8 rounded-lg border border-red-200 bg-white p-6">
+          <h2 className="mb-1 text-base font-semibold text-red-700">チームを退会する</h2>
+          <p className="mb-4 text-sm text-gray-500">
+            チームを退会すると、チームのすべてのデータにアクセスできなくなります。
+            この操作は取り消せません。
+          </p>
+          <button
+            onClick={leaveTeam}
+            className="rounded-lg border border-red-300 px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+          >
+            チームを退会する
+          </button>
+        </div>
       )}
 
       {/* プロファイル共有ダイアログ */}
