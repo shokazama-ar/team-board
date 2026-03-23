@@ -1,16 +1,49 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { createClient } from "@/lib/supabase/server";
+import { Ratelimit } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM_DOMAIN = "minibas.ballershub.net";
 
+const ratelimit = new Ratelimit({
+  redis: Redis.fromEnv(),
+  limiter: Ratelimit.slidingWindow(5, "1 m"),
+  analytics: false,
+});
+
 export async function POST(req: NextRequest) {
+  // IP取得: x-forwarded-for ヘッダー優先、なければ "unknown"
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
+  const { success } = await ratelimit.limit(ip);
+  if (!success) {
+    return NextResponse.json(
+      { error: "リクエストが多すぎます。しばらくお待ちください。" },
+      { status: 429 }
+    );
+  }
+
   const body = await req.json();
-  const { team_id, type, inquiry_type_id, name, email, message, custom_fields } = body;
+  const { team_id, type, inquiry_type_id, name, email, message, custom_fields, turnstileToken } = body;
 
   if (!team_id || !name || !email) {
     return NextResponse.json({ error: "必須項目が不足しています" }, { status: 400 });
+  }
+
+  // Cloudflare Turnstile 検証
+  const verifyUrl = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
+  const turnstileRes = await fetch(verifyUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      secret: process.env.TURNSTILE_SECRET_KEY!,
+      response: turnstileToken ?? '',
+    }),
+  });
+  const turnstileData = await turnstileRes.json();
+  if (!turnstileData.success) {
+    return NextResponse.json({ error: 'ボット認証に失敗しました' }, { status: 400 });
   }
 
   const supabase = await createClient();

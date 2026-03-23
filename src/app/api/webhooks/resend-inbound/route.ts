@@ -4,6 +4,7 @@
 // このキーがないと supabaseAdmin の RLS バイパスが機能しません。
 
 import { createClient } from "@supabase/supabase-js";
+import { Webhook } from "svix";
 
 // サービスロールクライアント（RLS バイパス用）
 const supabaseAdmin = createClient(
@@ -12,9 +13,38 @@ const supabaseAdmin = createClient(
 );
 
 export async function POST(req: Request) {
-  try {
-    const payload = await req.json();
+  // 署名検証
+  const secret = process.env.RESEND_WEBHOOK_SECRET;
+  if (!secret) {
+    console.error("RESEND_WEBHOOK_SECRET is not set");
+    return Response.json({ error: "Webhook secret not configured" }, { status: 500 });
+  }
 
+  const svixId = req.headers.get("svix-id");
+  const svixTimestamp = req.headers.get("svix-timestamp");
+  const svixSignature = req.headers.get("svix-signature");
+
+  if (!svixId || !svixTimestamp || !svixSignature) {
+    return Response.json({ error: "Missing svix headers" }, { status: 400 });
+  }
+
+  const rawBody = await req.text();
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let payload: any;
+  try {
+    const wh = new Webhook(secret);
+    payload = wh.verify(rawBody, {
+      "svix-id": svixId,
+      "svix-timestamp": svixTimestamp,
+      "svix-signature": svixSignature,
+    });
+  } catch (err) {
+    console.error("Webhook signature verification failed:", err);
+    return Response.json({ error: "Invalid signature" }, { status: 401 });
+  }
+
+  try {
     // Resend Inbound のペイロード形式
     // {
     //   "type": "email.received",

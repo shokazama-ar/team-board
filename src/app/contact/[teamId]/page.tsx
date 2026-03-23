@@ -2,6 +2,7 @@
 
 import { useState, useEffect, use } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { Turnstile } from "@marsidev/react-turnstile";
 
 // ── 型定義 ───────────────────────────────────────────────────────────────────
 type DisplayInquiryType = {
@@ -60,6 +61,7 @@ export default function ContactPage({
   const [message, setMessage] = useState('');
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, string | string[]>>({});
 
+  const [turnstileToken, setTurnstileToken] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -176,9 +178,9 @@ export default function ContactPage({
       inquiry_type_id: isUuid(selectedTypeId) ? selectedTypeId : null,
       name: name.trim(),
       email: email.trim(),
-
       message: message.trim() || null,
       custom_fields: Object.keys(customFieldValues).length > 0 ? customFieldValues : null,
+      turnstileToken,
     };
 
     const res = await fetch("/api/contact", {
@@ -480,10 +482,16 @@ export default function ContactPage({
                   </div>
                 )}
 
+                {/* Turnstile */}
+                <Turnstile
+                  siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
+                  onSuccess={(token) => setTurnstileToken(token)}
+                />
+
                 {/* Submit */}
                 <button
                   type="submit"
-                  disabled={submitting}
+                  disabled={submitting || !turnstileToken}
                   className="w-full rounded-lg bg-blue-600 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
                 >
                   {submitting ? '送信中...' : '送信する'}

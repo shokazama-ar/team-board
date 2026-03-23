@@ -285,6 +285,25 @@ RLSポリシー:
 
 ---
 
+### `inquiry_reply_templates`
+チームごとの問い合わせ返信テンプレート。管理者が設定画面から管理し、返信フォームのカーソル位置に挿入できる。
+
+| カラム | 型 | 備考 |
+|---|---|---|
+| id | uuid PK | |
+| team_id | uuid FK→teams | CASCADE DELETE |
+| title | text | テンプレート名（管理用ラベル） |
+| body | text | 本文 |
+| sort_order | int | 現在は UI 上の並び替え不要。created_at 昇順で代用 |
+| created_at | timestamptz | |
+| updated_at | timestamptz | |
+
+RLSポリシー:
+- SELECT: チームメンバー全員（返信フォームから読み込むため）
+- INSERT/UPDATE/DELETE: 管理者のみ（`is_admin_of_team(team_id)` 相当の team_members チェック）
+
+---
+
 ### `inquiry_replies`
 問い合わせへの返信・受信メール履歴。
 
