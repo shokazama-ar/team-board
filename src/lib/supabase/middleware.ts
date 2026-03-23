@@ -41,7 +41,7 @@ export async function updateSession(request: NextRequest) {
   ];
 
   // 常時公開（ログイン状態に関わらずアクセス可能）
-  const alwaysPublicPaths = ["/contact", "/api/webhooks", "/accept-invite"];
+  const alwaysPublicPaths = ["/contact", "/api/contact", "/api/webhooks", "/accept-invite"];
 
   const isAuthOnlyPublicPath = authOnlyPublicPaths.some((path) =>
     request.nextUrl.pathname.startsWith(path)
