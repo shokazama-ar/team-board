@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
 
   if (insertError) {
     console.error("inquiry insert error:", insertError);
-    return NextResponse.json({ error: "送信に失敗しました", detail: insertError.message }, { status: 500 });
+    return NextResponse.json({ error: "送信に失敗しました" }, { status: 500 });
   }
 
   const from = `contact-${teamSlug}@${FROM_DOMAIN}`;
