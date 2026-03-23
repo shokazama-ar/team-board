@@ -133,10 +133,10 @@ export async function POST(req: Request) {
       return Response.json({ ok: true });
     }
 
-    // status を new に更新
+    // status を pending（要確認）に更新
     await supabaseAdmin
       .from("inquiries")
-      .update({ status: "new" })
+      .update({ status: "pending" })
       .eq("id", inquiryId);
 
     return Response.json({ ok: true });

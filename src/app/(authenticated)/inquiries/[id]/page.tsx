@@ -6,13 +6,14 @@ import ReplyForm from "./ReplyForm";
 import ReplyThread from "./ReplyThread";
 import MarkDoneButton from "./MarkDoneButton";
 
-type InquiryStatus = "new" | "read" | "replied" | "done";
+type InquiryStatus = "new" | "read" | "replied" | "done" | "pending";
 
 const STATUS_LABELS: Record<InquiryStatus, string> = {
   new: "未読",
   read: "対応中",
   replied: "返信済み",
   done: "完了",
+  pending: "要確認",
 };
 
 const STATUS_STYLES: Record<InquiryStatus, string> = {
@@ -20,6 +21,7 @@ const STATUS_STYLES: Record<InquiryStatus, string> = {
   read: "bg-yellow-50 text-yellow-700 text-xs px-2 py-0.5 rounded-full",
   replied: "bg-green-50 text-green-700 text-xs px-2 py-0.5 rounded-full",
   done: "bg-gray-100 text-gray-500 text-xs px-2 py-0.5 rounded-full",
+  pending: "bg-orange-50 text-orange-700 text-xs px-2 py-0.5 rounded-full",
 };
 
 function formatDateTime(dateStr: string) {

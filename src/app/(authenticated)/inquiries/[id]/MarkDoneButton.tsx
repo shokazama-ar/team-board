@@ -15,7 +15,7 @@ export default function MarkDoneButton({ inquiryId, currentStatus }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  if (currentStatus !== "read" && currentStatus !== "replied") {
+  if (currentStatus !== "read" && currentStatus !== "replied" && currentStatus !== "pending") {
     return null;
   }
 
