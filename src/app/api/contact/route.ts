@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
-import { createClient } from "@/lib/supabase/server";
+import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 
@@ -46,7 +46,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'ボット認証に失敗しました' }, { status: 400 });
   }
 
-  const supabase = await createClient();
+  const supabase = createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
 
   const [{ data: teamName }, { data: teamSlug }] = await Promise.all([
     supabase.rpc("get_team_name", { tid: team_id }),
