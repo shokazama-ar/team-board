@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useState, useEffect, use, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Turnstile } from "@marsidev/react-turnstile";
+import { Turnstile, type TurnstileInstance } from "@marsidev/react-turnstile";
 
 // ── 型定義 ───────────────────────────────────────────────────────────────────
 type DisplayInquiryType = {
@@ -62,6 +62,7 @@ export default function ContactPage({
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, string | string[]>>({});
 
   const [turnstileToken, setTurnstileToken] = useState('');
+  const turnstileRef = useRef<TurnstileInstance>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -193,6 +194,8 @@ export default function ContactPage({
       const data = await res.json().catch(() => ({}));
       setError(data.error ?? "送信に失敗しました。しばらく経ってから再度お試しください。");
       setSubmitting(false);
+      turnstileRef.current?.reset();
+      setTurnstileToken('');
       return;
     }
 
@@ -484,6 +487,7 @@ export default function ContactPage({
 
                 {/* Turnstile */}
                 <Turnstile
+                  ref={turnstileRef}
                   siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
                   onSuccess={(token) => setTurnstileToken(token)}
                 />
