@@ -1,0 +1,2 @@
+-- no-op: trigger GitHub Actions to re-run db push with --include-all
+-- This ensures inquiry_reply_templates and other pending migrations are applied to staging.
