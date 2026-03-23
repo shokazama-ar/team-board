@@ -4,19 +4,22 @@ import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import ReplyForm from "./ReplyForm";
 import ReplyThread from "./ReplyThread";
+import MarkDoneButton from "./MarkDoneButton";
 
-type InquiryStatus = "new" | "read" | "replied";
+type InquiryStatus = "new" | "read" | "replied" | "done";
 
 const STATUS_LABELS: Record<InquiryStatus, string> = {
   new: "未読",
   read: "対応中",
   replied: "返信済み",
+  done: "完了",
 };
 
 const STATUS_STYLES: Record<InquiryStatus, string> = {
   new: "bg-red-50 text-red-700 text-xs px-2 py-0.5 rounded-full",
   read: "bg-yellow-50 text-yellow-700 text-xs px-2 py-0.5 rounded-full",
   replied: "bg-green-50 text-green-700 text-xs px-2 py-0.5 rounded-full",
+  done: "bg-gray-100 text-gray-500 text-xs px-2 py-0.5 rounded-full",
 };
 
 function formatDateTime(dateStr: string) {
@@ -92,14 +95,17 @@ export default async function InquiryDetailPage({
 
       {/* 問い合わせ詳細カード */}
       <div className="rounded-lg border border-gray-200 bg-white p-6 mb-6">
-        {/* ヘッダー行: ステータスバッジ + 受信日時 */}
+        {/* ヘッダー行: ステータスバッジ + 完了ボタン + 受信日時 */}
         <div className="flex items-center justify-between mb-3">
           <span className={STATUS_STYLES[typedStatus]}>
             {STATUS_LABELS[typedStatus]}
           </span>
-          <span className="text-xs text-gray-400">
-            {formatDateTime(inquiry.created_at)}
-          </span>
+          <div className="flex items-center gap-2">
+            <MarkDoneButton inquiryId={inquiry.id} currentStatus={typedStatus} />
+            <span className="text-xs text-gray-400">
+              {formatDateTime(inquiry.created_at)}
+            </span>
+          </div>
         </div>
 
         {/* 名前 */}

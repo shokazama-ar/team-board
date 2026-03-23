@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 
-type InquiryStatus = "new" | "read" | "replied";
+type InquiryStatus = "new" | "read" | "replied" | "done";
 
 type Inquiry = {
   id: string;
@@ -22,12 +22,14 @@ const STATUS_LABELS: Record<InquiryStatus, string> = {
   new: "未読",
   read: "対応中",
   replied: "返信済み",
+  done: "完了",
 };
 
 const STATUS_STYLES: Record<InquiryStatus, string> = {
   new: "bg-red-50 text-red-700 text-xs px-2 py-0.5 rounded-full",
   read: "bg-yellow-50 text-yellow-700 text-xs px-2 py-0.5 rounded-full",
   replied: "bg-green-50 text-green-700 text-xs px-2 py-0.5 rounded-full",
+  done: "bg-gray-100 text-gray-500 text-xs px-2 py-0.5 rounded-full",
 };
 
 const TABS: { label: string; value: string | null }[] = [
@@ -35,6 +37,7 @@ const TABS: { label: string; value: string | null }[] = [
   { label: "未読", value: "new" },
   { label: "対応中", value: "read" },
   { label: "返信済み", value: "replied" },
+  { label: "完了", value: "done" },
 ];
 
 export default function InquiriesPage() {
@@ -43,7 +46,7 @@ export default function InquiriesPage() {
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
-  const [counts, setCounts] = useState({ all: 0, new: 0, read: 0, replied: 0 });
+  const [counts, setCounts] = useState({ all: 0, new: 0, read: 0, replied: 0, done: 0 });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -70,6 +73,7 @@ export default function InquiriesPage() {
         new: statusCounts?.filter((r) => r.status === "new").length ?? 0,
         read: statusCounts?.filter((r) => r.status === "read").length ?? 0,
         replied: statusCounts?.filter((r) => r.status === "replied").length ?? 0,
+        done: statusCounts?.filter((r) => r.status === "done").length ?? 0,
       });
       setLoading(false);
     };
@@ -92,7 +96,9 @@ export default function InquiriesPage() {
                 ? counts.new
                 : tab.value === "read"
                 ? counts.read
-                : counts.replied;
+                : tab.value === "replied"
+                ? counts.replied
+                : counts.done;
             return (
               <button
                 key={tab.label}
