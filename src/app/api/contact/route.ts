@@ -46,6 +46,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'ボット認証に失敗しました' }, { status: 400 });
   }
 
+  // 文字数バリデーション（M-1）
+  if (name.length > 100) {
+    return NextResponse.json({ error: "名前は100文字以内で入力してください" }, { status: 400 });
+  }
+  if (email.length > 255) {
+    return NextResponse.json({ error: "メールアドレスは255文字以内で入力してください" }, { status: 400 });
+  }
+  if (message && message.length > 5000) {
+    return NextResponse.json({ error: "メッセージは5,000文字以内で入力してください" }, { status: 400 });
+  }
+
   const supabase = createServiceClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -63,6 +74,28 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "問い合わせフォームは現在利用できません" }, { status: 403 });
   }
 
+  // custom_fields フィルタリング（M-3）
+  let filteredCustomFields: Record<string, unknown> | null = null;
+  if (custom_fields && Object.keys(custom_fields).length > 0) {
+    if (!inquiry_type_id) {
+      // inquiry_type_id が NULL の場合は custom_fields を全拒否
+      filteredCustomFields = null;
+    } else {
+      // inquiry_form_fields に存在するIDのみを許可
+      const fieldIds = Object.keys(custom_fields);
+      const { data: validFields } = await supabase
+        .from("inquiry_form_fields")
+        .select("id")
+        .eq("inquiry_type_id", inquiry_type_id)
+        .in("id", fieldIds);
+      const validIds = new Set((validFields ?? []).map((f: { id: string }) => f.id));
+      const filtered = Object.fromEntries(
+        Object.entries(custom_fields).filter(([key]) => validIds.has(key))
+      );
+      filteredCustomFields = Object.keys(filtered).length > 0 ? filtered : null;
+    }
+  }
+
   const { data: inserted, error: insertError } = await supabase
     .from("inquiries")
     .insert({
@@ -73,7 +106,7 @@ export async function POST(req: NextRequest) {
       email: email.trim(),
 
       message: message?.trim() || null,
-      custom_fields: custom_fields ?? null,
+      custom_fields: filteredCustomFields,
     })
     .select("id")
     .single();
@@ -97,8 +130,8 @@ export async function POST(req: NextRequest) {
   ];
 
   if (message) lines.push("", "メッセージ:", message);
-  if (custom_fields && Object.keys(custom_fields).length > 0) {
-    const fieldIds = Object.keys(custom_fields);
+  if (filteredCustomFields && Object.keys(filteredCustomFields).length > 0) {
+    const fieldIds = Object.keys(filteredCustomFields);
     const { data: fieldDefs } = await supabase
       .from("inquiry_form_fields")
       .select("id, field_label")
@@ -109,7 +142,7 @@ export async function POST(req: NextRequest) {
     );
 
     lines.push("", "その他の項目:");
-    for (const [key, val] of Object.entries(custom_fields)) {
+    for (const [key, val] of Object.entries(filteredCustomFields)) {
       const label = labelMap.get(key) ?? key;
       const display = Array.isArray(val) ? (val as string[]).join(", ") : String(val);
       lines.push(`  ${label}: ${display}`);

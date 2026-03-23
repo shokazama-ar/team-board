@@ -13,9 +13,14 @@ type Props = {
 export default function MarkDoneButton({ inquiryId, currentStatus }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [isDone, setIsDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   if (currentStatus !== "read" && currentStatus !== "replied" && currentStatus !== "pending") {
+    return null;
+  }
+
+  if (isDone) {
     return null;
   }
 
@@ -35,8 +40,8 @@ export default function MarkDoneButton({ inquiryId, currentStatus }: Props) {
       return;
     }
 
+    setIsDone(true);
     router.refresh();
-    setLoading(false);
   }
 
   return (

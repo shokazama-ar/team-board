@@ -47,5 +47,6 @@ supabase/.temp/
 # claude code
 .claude/
 
-# blueprint tasks (local task management, not for version control)
+# blueprint (local only, not for version control)
 blueprint/tasks/
+blueprint/feedback/
