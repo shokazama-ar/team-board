@@ -75,6 +75,10 @@ export default function MembersPage() {
   const [availableCategories, setAvailableCategories] = useState<Category[]>([]);
   const [playerCategoryMap, setPlayerCategoryMap] = useState<Map<string, Category[]>>(new Map());
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviting, setInviting] = useState(false);
+  const [inviteError, setInviteError] = useState<string | null>(null);
+  const [inviteSuccess, setInviteSuccess] = useState(false);
   const loadData = useCallback(async () => {
     const {
       data: { user },
@@ -216,6 +220,29 @@ export default function MembersPage() {
     });
     if (!error) await loadData();
     setActionLoading(null);
+  };
+
+  const handleInvite = async () => {
+    if (!inviteEmail || !team?.id) return;
+    setInviting(true);
+    setInviteError(null);
+    try {
+      const res = await fetch("/api/invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: inviteEmail, teamId: team.id }),
+      });
+      if (res.status === 409) {
+        setInviteError("このメールアドレスはすでに TeamBoard に登録されています。招待コードをお知らせください。");
+      } else if (!res.ok) {
+        setInviteError("招待メールの送信に失敗しました。");
+      } else {
+        setInviteSuccess(true);
+        setInviteEmail("");
+      }
+    } finally {
+      setInviting(false);
+    }
   };
 
   if (loading) return <div className="text-sm text-gray-500">読み込み中...</div>;
@@ -456,6 +483,34 @@ export default function MembersPage() {
 
       {/* Guardian Section */}
       {renderSection("保護者", guardians, "bg-orange-50 text-orange-700", true)}
+
+      {/* 招待メール送信（管理者のみ） */}
+      {isAdmin && (
+        <div className="rounded-lg border border-gray-200 bg-white p-4 mb-4">
+          <h3 className="mb-3 text-sm font-semibold text-gray-800">新メンバーを招待</h3>
+          {inviteSuccess ? (
+            <p className="text-sm text-green-600">招待メールを送信しました。</p>
+          ) : (
+            <div className="flex gap-2">
+              <input
+                type="email"
+                placeholder="メールアドレス"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              />
+              <button
+                onClick={handleInvite}
+                disabled={inviting || !inviteEmail}
+                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+              >
+                {inviting ? <Loader2 size={14} className="animate-spin" /> : "招待"}
+              </button>
+            </div>
+          )}
+          {inviteError && <p className="mt-2 text-xs text-red-500">{inviteError}</p>}
+        </div>
+      )}
     </div>
   );
 }
