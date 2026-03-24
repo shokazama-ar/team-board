@@ -101,7 +101,7 @@ export default function HelpEventsPage() {
 
       <Section title="カテゴリフィルタ">
         <ul className="list-disc space-y-1.5 pl-5 text-sm text-gray-700">
-          <li>予定一覧の右上にある「自分のカテゴリのみ ◯—◯ すべて」トグルで表示を絞り込めます。</li>
+          <li>予定一覧の右上にある「関連カテゴリのみ ◯—◯ すべて」トグルで表示を絞り込めます。</li>
           <li>自分の選手プロファイルが所属するカテゴリの予定のみ表示します。</li>
           <li>カテゴリが未設定の場合はトグルが表示されず、すべての予定が表示されます。</li>
         </ul>
@@ -110,7 +110,7 @@ export default function HelpEventsPage() {
             <div className="mb-3 flex items-center justify-between">
               <p className="text-base font-bold text-gray-900">予定</p>
               <div className="flex items-center gap-2">
-                <span className="text-gray-500">自分のカテゴリのみ</span>
+                <span className="text-gray-500">関連カテゴリのみ</span>
                 <div className="relative inline-flex h-4 w-7 items-center rounded-full bg-gray-300">
                   <span className="inline-block h-3 w-3 translate-x-0.5 rounded-full bg-white shadow" />
                 </div>

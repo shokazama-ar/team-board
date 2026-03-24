@@ -136,18 +136,6 @@ export default function AnnouncementsPage() {
   return (
     <div className="mx-auto max-w-3xl">
       {isAdmin && (
-        <div className="mb-6 flex items-center justify-end">
-          <Link
-            href="/announcements/new"
-            className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-          >
-            <Plus size={16} strokeWidth={1.5} aria-hidden="true" />
-            追加
-          </Link>
-        </div>
-      )}
-
-      {isAdmin && (
         <div className="mb-6 border-b border-gray-200">
           <nav className="-mb-px flex space-x-6">
             <button
@@ -174,11 +162,11 @@ export default function AnnouncementsPage() {
         </div>
       )}
 
-      {/* カテゴリトグル */}
-      {hasCategories && (
-        <div className="mb-4 flex items-center justify-end gap-2">
+      {/* カテゴリトグル + 追加ボタン */}
+      {hasCategories ? (
+        <div className="mb-4 flex items-center gap-2">
           <span className="text-xs text-gray-500">
-            {showOnlyMyCategories ? "自分のカテゴリのみ" : "すべてのカテゴリを表示中"}
+            {showOnlyMyCategories ? "関連カテゴリのみ" : "すべてのカテゴリを表示中"}
           </span>
           <button
             onClick={() => setShowOnlyMyCategories((v) => !v)}
@@ -194,8 +182,27 @@ export default function AnnouncementsPage() {
             />
           </button>
           <span className="text-xs text-gray-400">すべて</span>
+          {isAdmin && (
+            <Link
+              href="/announcements/new"
+              className="ml-auto flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
+            >
+              <Plus size={14} strokeWidth={1.5} aria-hidden="true" />
+              追加
+            </Link>
+          )}
         </div>
-      )}
+      ) : isAdmin ? (
+        <div className="mb-4 flex items-center justify-end">
+          <Link
+            href="/announcements/new"
+            className="flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
+          >
+            <Plus size={14} strokeWidth={1.5} aria-hidden="true" />
+            追加
+          </Link>
+        </div>
+      ) : null}
 
       {filteredAnnouncements.length === 0 ? (
         <div className="rounded-lg border border-gray-200 bg-white p-6">

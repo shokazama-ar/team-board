@@ -119,10 +119,12 @@ export function CalendarView({
   events,
   date,
   onNavigate,
+  onSelectDate,
 }: {
   events: EventInput[];
   date: Date;
   onNavigate: (date: Date) => void;
+  onSelectDate?: (date: Date, events: EventInput[]) => void;
 }) {
   const router = useRouter();
 
@@ -136,12 +138,25 @@ export function CalendarView({
   }));
 
   return (
-    <div className="h-[660px] rounded-lg border border-gray-200 bg-white p-4">
+    <div className="h-[520px] rounded-lg border border-gray-200 bg-white p-4">
       <style>{`
-        /* 日付数字（.rbc-button-link）のカーソルをデフォルトに
-           ※ react-big-calendar の cursor: pointer は .rbc-button-link に付いている */
         .rbc-month-view .rbc-date-cell .rbc-button-link {
-          cursor: default;
+          cursor: pointer;
+        }
+        .rbc-month-view .rbc-month-row {
+          min-height: 60px !important;
+          max-height: 80px !important;
+        }
+        .rbc-month-view .rbc-row-content {
+          min-height: 0 !important;
+        }
+        .rbc-month-view .rbc-event {
+          padding: 0 2px !important;
+          font-size: 11px !important;
+          line-height: 1.3 !important;
+        }
+        .rbc-month-view .rbc-show-more {
+          font-size: 10px !important;
         }
       `}</style>
       <Calendar
@@ -160,6 +175,20 @@ export function CalendarView({
           month: { header: CustomHeader },
         }}
         onSelectEvent={(event) => router.push(`/events/${(event as CalEvent).id}`)}
+        onDrillDown={(clickedDate) => {
+          if (onSelectDate) {
+            const dayEvents = events.filter((e) => {
+              const eventDate = new Date(e.date);
+              return (
+                eventDate.getFullYear() === clickedDate.getFullYear() &&
+                eventDate.getMonth() === clickedDate.getMonth() &&
+                eventDate.getDate() === clickedDate.getDate()
+              );
+            });
+            onSelectDate(clickedDate, dayEvents);
+          }
+        }}
+        drilldownView={null}
         formats={{
           dayHeaderFormat: (date: Date) => format(date, "M月d日(EEE)", { locale: ja }),
         }}

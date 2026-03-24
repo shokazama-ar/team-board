@@ -72,7 +72,7 @@ export default function HelpAnnouncementsPage() {
 
       <Section title="カテゴリフィルタ">
         <ul className="list-disc space-y-1.5 pl-5 text-sm text-gray-700">
-          <li>お知らせ一覧の右上にある「自分のカテゴリのみ ◯—◯ すべて」トグルで表示を絞り込めます。</li>
+          <li>お知らせ一覧の右上にある「関連カテゴリのみ ◯—◯ すべて」トグルで表示を絞り込めます。</li>
           <li>自分の選手プロファイルが所属するカテゴリのお知らせのみ表示します。</li>
           <li>カテゴリが未設定のお知らせ（全員向け）は、フィルタ設定に関わらず常に表示されます。</li>
         </ul>
@@ -81,7 +81,7 @@ export default function HelpAnnouncementsPage() {
             <div className="mb-3 flex items-center justify-between">
               <p className="text-base font-bold text-gray-900">お知らせ</p>
               <div className="flex items-center gap-2">
-                <span className="text-gray-500">自分のカテゴリのみ</span>
+                <span className="text-gray-500">関連カテゴリのみ</span>
                 <div className="relative inline-flex h-4 w-7 items-center rounded-full bg-gray-300">
                   <span className="inline-block h-3 w-3 translate-x-0.5 rounded-full bg-white shadow" />
                 </div>
@@ -122,7 +122,7 @@ export default function HelpAnnouncementsPage() {
         <MockupFrame title="ダッシュボード — TeamBoard">
           <div className="text-xs">
             <div className="mb-2 flex items-center justify-end gap-2">
-              <span className="text-gray-500">自分のカテゴリのみ</span>
+              <span className="text-gray-500">関連カテゴリのみ</span>
               <div className="relative inline-flex h-4 w-7 items-center rounded-full bg-gray-300">
                 <span className="inline-block h-3 w-3 translate-x-0.5 rounded-full bg-white shadow" />
               </div>

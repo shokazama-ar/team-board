@@ -102,7 +102,7 @@ export default function HelpCategoriesPage() {
               {/* フィルタOFF */}
               <div className="rounded-lg border border-gray-200 bg-white p-3">
                 <div className="mb-2 flex items-center justify-end gap-1.5">
-                  <span className="text-gray-500">自分のカテゴリのみ</span>
+                  <span className="text-gray-500">関連カテゴリのみ</span>
                   <div className="relative inline-flex h-4 w-7 items-center rounded-full bg-gray-300">
                     <span className="inline-block h-3 w-3 translate-x-0.5 rounded-full bg-white shadow" />
                   </div>
@@ -120,7 +120,7 @@ export default function HelpCategoriesPage() {
               {/* フィルタON（すべて） */}
               <div className="rounded-lg border border-gray-200 bg-white p-3">
                 <div className="mb-2 flex items-center justify-end gap-1.5">
-                  <span className="text-gray-400">自分のカテゴリのみ</span>
+                  <span className="text-gray-400">関連カテゴリのみ</span>
                   <div className="relative inline-flex h-4 w-7 items-center rounded-full bg-blue-600">
                     <span className="inline-block h-3 w-3 translate-x-3.5 rounded-full bg-white shadow" />
                   </div>

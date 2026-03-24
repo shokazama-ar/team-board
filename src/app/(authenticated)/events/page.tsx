@@ -48,6 +48,8 @@ export default function EventsPage() {
   const [filterTypeIds, setFilterTypeIds] = useState<Set<string>>(new Set());
   const [showOnlyMyCategories, setShowOnlyMyCategories] = useState(true);
   const [myCategoryIds, setMyCategoryIds] = useState<string[]>([]);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedDateEvents, setSelectedDateEvents] = useState<Event[]>([]);
 
   const loadData = useCallback(async () => {
     const {
@@ -192,6 +194,18 @@ export default function EventsPage() {
     });
   }, [events, filterTypeIds, showOnlyMyCategories, myCategoryIds, hasCategories]);
 
+  // リスト表示用: 過去の予定を除外し、昇順でソート
+  const listEvents = useMemo(() => {
+    const now = new Date();
+    const jstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+    const todayStart = new Date(
+      Date.UTC(jstNow.getUTCFullYear(), jstNow.getUTCMonth(), jstNow.getUTCDate()) - 9 * 60 * 60 * 1000
+    );
+    return filteredEvents
+      .filter((event) => new Date(event.date) >= todayStart)
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  }, [filteredEvents]);
+
   function toggleTypeFilter(id: string) {
     setFilterTypeIds((prev) => {
       const next = new Set(prev);
@@ -296,6 +310,34 @@ export default function EventsPage() {
           onSuccess={loadData}
           onClose={() => setShowImportModal(false)}
         />
+      )}
+      {selectedDate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={() => setSelectedDate(null)}>
+          <div className="mx-4 w-full max-w-md rounded-lg bg-white p-6 shadow-xl" onClick={e => e.stopPropagation()}>
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-base font-bold text-gray-900">
+                {selectedDate.toLocaleDateString("ja-JP", { month: "long", day: "numeric", weekday: "short", timeZone: "Asia/Tokyo" })}
+              </h3>
+              <button onClick={() => setSelectedDate(null)} className="text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>
+            </div>
+            {selectedDateEvents.length === 0 ? (
+              <p className="text-sm text-gray-500">この日の予定はありません</p>
+            ) : (
+              <ul className="space-y-2">
+                {selectedDateEvents.map(event => (
+                  <li
+                    key={event.id}
+                    onClick={() => { setSelectedDate(null); router.push(`/events/${event.id}`); }}
+                    className="cursor-pointer rounded-lg border border-gray-200 p-3 hover:bg-gray-50"
+                  >
+                    <p className="text-sm font-medium text-gray-900">{event.title}</p>
+                    <p className="text-xs text-gray-500">{formatEventDateTime(event.date, event.end_at)}</p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
       )}
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -402,9 +444,9 @@ export default function EventsPage() {
 
       {/* カテゴリトグル */}
       {hasCategories && (
-        <div className="mb-4 flex items-center justify-end gap-2">
+        <div className="mb-4 flex items-center gap-2">
           <span className="text-xs text-gray-500">
-            {showOnlyMyCategories ? "自分のカテゴリのみ" : "すべてのカテゴリを表示中"}
+            {showOnlyMyCategories ? "関連カテゴリのみ" : "すべてのカテゴリを表示中"}
           </span>
           <button
             onClick={() => setShowOnlyMyCategories((v) => !v)}
@@ -420,6 +462,15 @@ export default function EventsPage() {
             />
           </button>
           <span className="text-xs text-gray-400">すべて</span>
+          {currentUserRole === "admin" && (
+            <Link
+              href="/events/new"
+              className="ml-auto flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
+            >
+              <Plus size={14} strokeWidth={1.5} aria-hidden="true" />
+              追加
+            </Link>
+          )}
         </div>
       )}
 
@@ -434,9 +485,14 @@ export default function EventsPage() {
             }))}
             date={currentMonth}
             onNavigate={setCurrentMonth}
+            onSelectDate={(clickedDate, dayEvents) => {
+              setSelectedDate(clickedDate);
+              const ids = new Set(dayEvents.map(e => e.id));
+              setSelectedDateEvents(filteredEvents.filter(e => ids.has(e.id)));
+            }}
           />
         </div>
-      ) : filteredEvents.length === 0 ? (
+      ) : listEvents.length === 0 ? (
         <div className="rounded-lg border border-gray-200 bg-white p-6">
           <p className="text-sm text-gray-500">
             {events.length === 0 ? "まだ予定がありません" : "条件に一致する予定がありません"}
@@ -444,7 +500,7 @@ export default function EventsPage() {
         </div>
       ) : (
         <div className="space-y-3">
-          {filteredEvents.map((event) => {
+          {listEvents.map((event) => {
             const summary = summaries[event.id];
             const types = event.event_event_types
               .map((e) => e.event_types)

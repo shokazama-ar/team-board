@@ -84,9 +84,9 @@ export default function DashboardFilteredContent({
     <>
       {/* Category filter toggle */}
       {hasCategories && (
-        <div className="mt-4 flex items-center justify-end gap-2">
+        <div className="mt-4 flex items-center gap-2">
           <span className="text-xs text-gray-500">
-            {showAll ? "すべてのカテゴリを表示中" : "自分のカテゴリのみ"}
+            {showAll ? "すべてのカテゴリを表示中" : "関連カテゴリのみ"}
           </span>
           <button
             onClick={() => setShowAll((v) => !v)}
