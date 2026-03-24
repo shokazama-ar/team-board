@@ -86,11 +86,9 @@ export default function InquiriesPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <h1 className="text-2xl font-bold mb-6">問い合わせ</h1>
-
       {/* Tab navigation */}
       <div className="mb-6 border-b border-gray-200">
-        <nav className="-mb-px flex space-x-6">
+        <nav className="-mb-px flex flex-wrap gap-x-1">
           {TABS.map((tab) => {
             const isActive = statusFilter === tab.value;
             const count =
@@ -109,7 +107,7 @@ export default function InquiriesPage() {
               <button
                 key={tab.label}
                 onClick={() => setStatusFilter(tab.value)}
-                className={`flex items-center pb-3 text-sm font-medium border-b-2 transition-colors ${
+                className={`flex items-center whitespace-nowrap px-2 pb-3 text-sm font-medium border-b-2 transition-colors ${
                   isActive
                     ? "border-blue-500 text-blue-600"
                     : "border-transparent text-gray-500 hover:text-gray-700"
