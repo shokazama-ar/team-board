@@ -25,6 +25,7 @@ Supabase (PostgreSQL) のテーブル構成。RLSはすべて有効。
 | name | text | |
 | icon_url | text | |
 | invite_code_guardian | text | 保護者用招待コード（唯一の参加経路） |
+| slug | text | 一意。問い合わせ受信メールのローカルパート（contact-{slug}@...）。設定済みチームのみ問い合わせフォームが有効。形式: `^[a-z0-9][a-z0-9-]*[a-z0-9]$` |
 | created_by | uuid | profiles.id |
 
 ---
@@ -216,6 +217,7 @@ RLSポリシー:
 | `grant_coach_role(target_user_id)` | 対象ユーザーにコーチ権限を付与（admin専用）。`account_type='coach'` + `member_profiles.kind='coach'` に更新 |
 | `revoke_coach_role(target_user_id)` | 対象ユーザーのコーチ権限を剥奪（admin専用・自分自身は不可）。guardian に戻す |
 | `get_team_name(tid)` | チームIDからチーム名を返す。認証不要（SECURITY DEFINER）。公開問い合わせフォームから使用 |
+| `get_team_slug(tid)` | チームIDからslugを返す。認証不要（SECURITY DEFINER）。公開問い合わせフォームから使用 |
 | `owns_member_profile_by_id(profile_id)` | プロファイルのオーナーか判定（SECURITY DEFINER）。`member_profile_access` のRLSから呼ばれる |
 | `accept_team_invite_by_token(p_token)` | 招待トークンを検証してチームに参加。`kind='guardian'` の `member_profile` を自動作成し `team_members` に INSERT。`team_invitations.accepted_at` を更新（SECURITY DEFINER） |
 
@@ -235,7 +237,7 @@ RLSポリシー:
 | phone | text | 電話番号（任意） |
 | message | text | メッセージ（任意） |
 | custom_fields | jsonb | カスタムフォーム項目の回答 `{"field_id": "value"}` |
-| status | text | `new`（未読）/ `read`（既読）/ `replied`（返信済み） |
+| status | text | `new`（未読）/ `read`（対応中）/ `replied`（返信済み）/ `done`（完了）/ `pending`（要確認） |
 | created_at | timestamptz | |
 
 RLSポリシー:

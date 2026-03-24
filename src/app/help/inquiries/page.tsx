@@ -17,8 +17,10 @@ export default function HelpInquiriesPage() {
       <Section title="問い合わせ一覧">
         <ul className="list-disc space-y-1.5 pl-5 text-sm text-gray-700">
           <li>ナビの「問い合わせ」から一覧を確認できます。</li>
-          <li>ステータスは「未読」「対応中」「返信済み」で管理されます。タブをクリックするとステータスで絞り込めます。</li>
+          <li>ステータスは「未読」「要確認」「対応中」「返信済み」「完了」の5種類で管理されます。タブをクリックするとステータスで絞り込めます。</li>
           <li>問い合わせを開くと自動的に「対応中」に変わります。</li>
+          <li>返信後は「返信済み」になり、対応完了後は「完了」ボタンで「完了」ステータスに変更できます。</li>
+          <li>返信受信など要対応の場合は「要確認」ステータスになります。</li>
         </ul>
         <MockupFrame title="問い合わせ — TeamBoard">
           <div className="text-xs">
@@ -26,8 +28,10 @@ export default function HelpInquiriesPage() {
               {[
                 { label: "すべて", active: true },
                 { label: "未読", active: false },
+                { label: "要確認", active: false },
                 { label: "対応中", active: false },
                 { label: "返信済み", active: false },
+                { label: "完了", active: false },
               ].map(({ label, active }) => (
                 <span
                   key={label}
@@ -41,6 +45,7 @@ export default function HelpInquiriesPage() {
               {[
                 { name: "田中 太郎", type: "体験・見学希望", status: "未読", statusStyle: "bg-red-50 text-red-700", date: "3/1 10:00" },
                 { name: "鈴木 次郎", type: "入会依頼", status: "返信済み", statusStyle: "bg-green-50 text-green-700", date: "2/20 14:30" },
+                { name: "佐藤 三郎", type: "体験・見学希望", status: "完了", statusStyle: "bg-gray-100 text-gray-500", date: "2/10 09:00" },
               ].map(({ name, type, status, statusStyle, date }) => (
                 <div key={name} className="rounded-lg border border-gray-200 bg-white p-2.5">
                   <div className="flex items-start justify-between gap-2">

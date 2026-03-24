@@ -16,6 +16,11 @@
 | 選手バッジ | `bg-green-50 text-green-700` |
 | 管理者バッジ | `bg-gray-100 text-gray-600` |
 | 警告（未回答） | `border-yellow-300 bg-yellow-50 text-yellow-900` |
+| 問い合わせ：未読 (new) | `bg-red-50 text-red-700` |
+| 問い合わせ：対応中 (read) | `bg-yellow-50 text-yellow-700` |
+| 問い合わせ：返信済み (replied) | `bg-green-50 text-green-700` |
+| 問い合わせ：完了 (done) | `bg-gray-100 text-gray-500` |
+| 問い合わせ：要確認 (pending) | `bg-orange-50 text-orange-700` |
 
 ## イベント種別カラー
 
