@@ -148,18 +148,13 @@ export default function EditEventPage() {
       setLocation(eventData.location ?? "");
       setMemo(eventData.memo ?? "");
 
-      const { data: types } = await supabase
-        .from("event_types")
-        .select("id, name, color, kind")
-        .eq("team_id", eventData.team_id)
-        .order("sort_order");
+      // Parallel fetch: types and existingLinks
+      const [{ data: types }, { data: existingLinks }] = await Promise.all([
+        supabase.from("event_types").select("id, name, color, kind").eq("team_id", eventData.team_id).order("sort_order"),
+        supabase.from("event_event_types").select("event_type_id").eq("event_id", eventId),
+      ]);
 
       if (types) setEventTypes(types as EventType[]);
-
-      const { data: existingLinks } = await supabase
-        .from("event_event_types")
-        .select("event_type_id")
-        .eq("event_id", eventId);
 
       if (existingLinks && existingLinks.length > 0 && types) {
         const typeSet = new Set(

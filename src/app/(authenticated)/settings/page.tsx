@@ -1366,18 +1366,16 @@ export default function SettingsPage() {
       setUserId(user.id);
       setEmail(user.email ?? "");
 
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user.id)
-        .single();
+      // Parallel fetch: profile and teamId
+      const [{ data: profile }, { data: teamIdResult }] = await Promise.all([
+        supabase.from("profiles").select("*").eq("id", user.id).single(),
+        supabase.rpc("get_my_team_id"),
+      ]);
 
       if (profile) {
         setName(profile.name ?? "");
         setAvatarUrl(profile.avatar_url ?? null);
       }
-
-      const { data: teamIdResult } = await supabase.rpc("get_my_team_id");
 
       const { data: membership } = teamIdResult
         ? await supabase
@@ -1396,11 +1394,18 @@ export default function SettingsPage() {
         setActiveTab(membership.role === "admin" ? "admin" : type === "guardian" ? "guardian" : "coach");
         setTeamId(membership.team_id);
 
-        const { data: team } = await supabase
-          .from("teams")
-          .select("name, slug, invite_code_guardian, icon_url")
-          .eq("id", membership.team_id)
-          .single();
+        // Parallel fetch: team, allTypes, reloadMyProfiles, myMembershipsForKind
+        const [
+          { data: team },
+          { data: allTypes },
+          ,
+          { data: myMembershipsForKind },
+        ] = await Promise.all([
+          supabase.from("teams").select("name, slug, invite_code_guardian, icon_url").eq("id", membership.team_id).single(),
+          supabase.from("event_types").select("id, name, color, sort_order, kind").eq("team_id", membership.team_id).order("sort_order"),
+          reloadMyProfiles(membership.team_id, user.id),
+          supabase.from("team_members").select("member_profile_id, member_profiles!inner(user_id, kind)").eq("team_id", membership.team_id).eq("member_profiles.user_id", user.id),
+        ]);
 
         if (team) {
           setTeamName(team.name);
@@ -1409,25 +1414,10 @@ export default function SettingsPage() {
           setTeamIconUrl(team.icon_url ?? null);
         }
 
-        const { data: allTypes } = await supabase
-          .from("event_types")
-          .select("id, name, color, sort_order, kind")
-          .eq("team_id", membership.team_id)
-          .order("sort_order");
-
         if (allTypes) {
           setEventTypes(allTypes.filter((t) => t.kind === "type") as EventType[]);
           setEventCategories(allTypes.filter((t) => t.kind === "category") as EventType[]);
         }
-
-        await reloadMyProfiles(membership.team_id, user.id);
-
-        // コーチプロファイルの担当カテゴリを読み込む
-        const { data: myMembershipsForKind } = await supabase
-          .from("team_members")
-          .select("member_profile_id, member_profiles!inner(user_id, kind)")
-          .eq("team_id", membership.team_id)
-          .eq("member_profiles.user_id", user.id);
 
         const coachIds = (myMembershipsForKind ?? [])
           .filter((m) => (m.member_profiles as unknown as { kind: string } | null)?.kind === "coach")

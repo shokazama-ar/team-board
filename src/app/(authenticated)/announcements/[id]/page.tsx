@@ -78,30 +78,20 @@ export default function AnnouncementDetailPage() {
     const profile = announcementData.profiles as { name: string | null } | null;
     if (profile) setAuthorName(profile.name || "不明");
 
-    const { data: membership } = await supabase
-      .from("team_members")
-      .select("role, member_profiles!inner(user_id)")
-      .eq("team_id", ann.team_id)
-      .eq("member_profiles.user_id", user.id)
-      .limit(1)
-      .single();
+    // Parallel fetch: membership, cats, ac
+    const [
+      { data: membership },
+      { data: cats },
+      { data: ac },
+    ] = await Promise.all([
+      supabase.from("team_members").select("role, member_profiles!inner(user_id)").eq("team_id", ann.team_id).eq("member_profiles.user_id", user.id).limit(1).single(),
+      supabase.from("event_types").select("id, name, color").eq("team_id", ann.team_id).eq("kind", "category").order("sort_order"),
+      supabase.from("announcement_categories").select("event_type_id").eq("announcement_id", announcementId),
+    ]);
 
     if (membership) setCurrentUserRole(membership.role);
-
-    // 全カテゴリ
-    const { data: cats } = await supabase
-      .from("event_types")
-      .select("id, name, color")
-      .eq("team_id", ann.team_id)
-      .eq("kind", "category")
-      .order("sort_order");
     if (cats) setAllCategories(cats);
 
-    // このお知らせのカテゴリ
-    const { data: ac } = await supabase
-      .from("announcement_categories")
-      .select("event_type_id")
-      .eq("announcement_id", announcementId);
     const ids = new Set((ac ?? []).map((r) => r.event_type_id));
     setCategoryIds(ids);
     setEditCategoryIds(new Set(ids));

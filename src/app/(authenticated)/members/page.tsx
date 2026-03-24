@@ -85,32 +85,22 @@ export default function MembersPage() {
     const { data: teamId } = await supabase.rpc("get_my_team_id");
     if (!teamId) return;
 
-    const { data: teamData } = await supabase
-      .from("teams")
-      .select("id, name, icon_url")
-      .eq("id", teamId)
-      .single();
+    // Parallel fetch: teamData, myMemberships, membersData
+    const [
+      { data: teamData },
+      { data: myMemberships },
+      { data: membersData },
+    ] = await Promise.all([
+      supabase.from("teams").select("id, name, icon_url").eq("id", teamId).single(),
+      supabase.from("team_members").select("role, member_profile_id, member_profiles!inner(user_id)").eq("team_id", teamId).eq("member_profiles.user_id", user.id).limit(1),
+      supabase.from("team_members").select("id, member_profile_id, role, created_at, account_type, member_profiles(id, user_id, kind, name, avatar_url, number)").eq("team_id", teamId).order("created_at", { ascending: true }),
+    ]);
 
     if (teamData) setTeam(teamData);
-
-    // Get current user's role (use their first membership in this team)
-    const { data: myMemberships } = await supabase
-      .from("team_members")
-      .select("role, member_profile_id, member_profiles!inner(user_id)")
-      .eq("team_id", teamId)
-      .eq("member_profiles.user_id", user.id)
-      .limit(1);
 
     if (myMemberships && myMemberships.length > 0) {
       setCurrentUserRole(myMemberships[0].role);
     }
-
-    // Load all team members with their profiles
-    const { data: membersData } = await supabase
-      .from("team_members")
-      .select("id, member_profile_id, role, created_at, account_type, member_profiles(id, user_id, kind, name, avatar_url, number)")
-      .eq("team_id", teamId)
-      .order("created_at", { ascending: true });
 
     if (membersData) {
       const enriched: MemberProfile[] = membersData.map((m) => {

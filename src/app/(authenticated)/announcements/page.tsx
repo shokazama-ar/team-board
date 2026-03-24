@@ -61,10 +61,18 @@ export default function AnnouncementsPage() {
       ? [(membership as any).member_profiles.id]
       : [];
 
-    // リンク済みプロファイルIDを取得（保護者が子プロファイルにアクセスできるケース）
-    const { data: linkedAccess } = await supabase
-      .from("member_profile_access")
-      .select("member_profile_id");
+    // Parallel fetch: linkedAccess and announcementsData
+    const [{ data: linkedAccess }, { data: announcementsData }] = await Promise.all([
+      supabase.from("member_profile_access").select("member_profile_id"),
+      supabase
+        .from("announcements")
+        .select(
+          "id, title, author_id, created_at, target_role, profiles!announcements_author_id_fkey(name), announcement_categories(event_types(id, name, color))"
+        )
+        .eq("team_id", membership.team_id)
+        .order("created_at", { ascending: false }),
+    ]);
+
     const linkedProfileIds = (linkedAccess ?? []).map((r: any) => r.member_profile_id);
     const allMyProfileIds = [...new Set([...myProfileIds, ...linkedProfileIds])];
 
@@ -75,14 +83,6 @@ export default function AnnouncementsPage() {
         .in("member_profile_id", allMyProfileIds);
       setMyCategoryIds((myCategories ?? []).map((c: any) => c.event_type_id));
     }
-
-    const { data: announcementsData } = await supabase
-      .from("announcements")
-      .select(
-        "id, title, author_id, created_at, target_role, profiles!announcements_author_id_fkey(name), announcement_categories(event_types(id, name, color))"
-      )
-      .eq("team_id", membership.team_id)
-      .order("created_at", { ascending: false });
 
     if (announcementsData) {
       const formatted = announcementsData.map((a: any) => ({

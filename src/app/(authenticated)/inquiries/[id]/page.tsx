@@ -53,22 +53,25 @@ export default async function InquiryDetailPage({
     notFound();
   }
 
-  const { data: replies } = await supabase
-    .from("inquiry_replies")
-    .select("*")
-    .eq("inquiry_id", id)
-    .order("created_at", { ascending: true });
+  // Parallel fetch: replies and fieldDefs
+  const fieldIds = inquiry.custom_fields ? Object.keys(inquiry.custom_fields) : [];
+  const hasCustomFields = fieldIds.length > 0;
 
-  // custom_fields のラベル解決
+  const [{ data: replies }, fieldDefsResult] = await Promise.all([
+    supabase
+      .from("inquiry_replies")
+      .select("*")
+      .eq("inquiry_id", id)
+      .order("created_at", { ascending: true }),
+    hasCustomFields
+      ? supabase.from("inquiry_form_fields").select("id, field_label").in("id", fieldIds)
+      : Promise.resolve({ data: null }),
+  ]);
+
   let fieldLabels: Record<string, string> = {};
-  if (inquiry.custom_fields && Object.keys(inquiry.custom_fields).length > 0) {
-    const fieldIds = Object.keys(inquiry.custom_fields);
-    const { data: fieldDefs } = await supabase
-      .from("inquiry_form_fields")
-      .select("id, field_label")
-      .in("id", fieldIds);
+  if (hasCustomFields && fieldDefsResult.data) {
     fieldLabels = Object.fromEntries(
-      (fieldDefs ?? []).map((f: { id: string; field_label: string }) => [f.id, f.field_label])
+      (fieldDefsResult.data as { id: string; field_label: string }[]).map((f) => [f.id, f.field_label])
     );
   }
 

@@ -102,12 +102,32 @@ export default function EventDetailPage() {
     }
     setEvent(eventData as unknown as EventDetail);
 
-    // Get current user's role and kind in this team
-    const { data: myMemberships } = await supabase
-      .from("team_members")
-      .select("role, member_profile_id, member_profiles!inner(user_id, kind)")
-      .eq("team_id", eventData.team_id)
-      .eq("member_profiles.user_id", user.id);
+    // Parallel fetch: myMemberships, profile, attendances, teamMembers
+    const [
+      { data: myMemberships },
+      { data: profile },
+      { data: attendances },
+      { data: teamMembers },
+    ] = await Promise.all([
+      supabase
+        .from("team_members")
+        .select("role, member_profile_id, member_profiles!inner(user_id, kind)")
+        .eq("team_id", eventData.team_id)
+        .eq("member_profiles.user_id", user.id),
+      supabase
+        .from("profiles")
+        .select("name, email")
+        .eq("id", eventData.created_by)
+        .single(),
+      supabase
+        .from("attendances")
+        .select("member_profile_id, status")
+        .eq("event_id", eventId),
+      supabase
+        .from("team_members")
+        .select("member_profile_id, member_profiles(user_id, kind, name, number)")
+        .eq("team_id", eventData.team_id),
+    ]);
 
     if (myMemberships && myMemberships.length > 0) {
       const roles = myMemberships.map((m) => m.role);
@@ -121,18 +141,7 @@ export default function EventDetailPage() {
       setIsCoach(hasCoach);
     }
 
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("name, email")
-      .eq("id", eventData.created_by)
-      .single();
     if (profile) setCreatorName(profile.name || profile.email);
-
-    // Load all attendances for this event
-    const { data: attendances } = await supabase
-      .from("attendances")
-      .select("member_profile_id, status")
-      .eq("event_id", eventId);
 
     const attendanceMap = new Map<string, AttendanceStatus>();
     if (attendances) {
@@ -140,12 +149,6 @@ export default function EventDetailPage() {
         attendanceMap.set(a.member_profile_id, a.status as AttendanceStatus);
       }
     }
-
-    // Load all team members with profiles
-    const { data: teamMembers } = await supabase
-      .from("team_members")
-      .select("member_profile_id, member_profiles(user_id, kind, name, number)")
-      .eq("team_id", eventData.team_id);
 
     if (teamMembers) {
       const allMembers: MemberAttendance[] = teamMembers.map((tm) => {
