@@ -2562,7 +2562,7 @@ export default function SettingsPage() {
       )}
 
       {/* チームを退会する */}
-      {teamId && (
+      {teamId && activeTab === "guardian" && (
         <div className="mt-8 rounded-lg border border-red-200 bg-white p-6">
           <h2 className="mb-1 text-base font-semibold text-red-700">チームを退会する</h2>
           <p className="mb-4 text-sm text-gray-500">
