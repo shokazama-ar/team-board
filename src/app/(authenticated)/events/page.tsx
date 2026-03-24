@@ -4,9 +4,21 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CalendarView } from "@/components/events/CalendarView";
+import dynamic from "next/dynamic";
 import { ImportModal } from "@/components/events/ImportModal";
 import { List, CalendarDays, Plus, MapPin, Download, Upload, LayoutList, Loader2 } from "lucide-react";
+
+const CalendarView = dynamic(
+  () => import("@/components/events/CalendarView").then((mod) => mod.CalendarView),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex items-center justify-center h-[520px] rounded-lg border border-gray-200 bg-white">
+        <span className="text-sm text-gray-400">カレンダーを読み込み中...</span>
+      </div>
+    ),
+  }
+);
 
 type EventType = {
   id: string;
@@ -61,68 +73,97 @@ export default function EventsPage() {
     if (!teamId) return;
     setTeamId(teamId);
 
-    const { data: myMembership } = await supabase
-      .from("team_members")
-      .select("role, member_profiles!inner(id, user_id)")
-      .eq("team_id", teamId)
-      .eq("member_profiles.user_id", user.id)
-      .limit(1)
-      .single();
+    // eventsクエリをDB側で日付範囲フィルタ
+    let eventsQuery = supabase
+      .from("events")
+      .select("id, title, event_type, date, end_at, location, created_by, event_event_types(event_types(id, name, color, kind, sort_order))")
+      .eq("team_id", teamId);
+
+    if (view === "calendar") {
+      const y = currentMonth.getFullYear();
+      const m = currentMonth.getMonth();
+      const rangeStart = new Date(y, m - 1, 1);
+      const rangeEnd = new Date(y, m + 2, 0, 23, 59, 59);
+      eventsQuery = eventsQuery
+        .gte("date", rangeStart.toISOString())
+        .lte("date", rangeEnd.toISOString())
+        .order("date", { ascending: false });
+    } else {
+      const now = new Date();
+      const jstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+      const todayStart = new Date(
+        Date.UTC(jstNow.getUTCFullYear(), jstNow.getUTCMonth(), jstNow.getUTCDate()) - 9 * 60 * 60 * 1000
+      );
+      eventsQuery = eventsQuery
+        .gte("date", todayStart.toISOString())
+        .order("date", { ascending: true });
+    }
+
+    // 並列化: membership/linkedAccess/events を同時に取得
+    const [{ data: myMembership }, { data: linkedAccess }, { data: eventsData }] = await Promise.all([
+      supabase
+        .from("team_members")
+        .select("role, member_profiles!inner(id, user_id)")
+        .eq("team_id", teamId)
+        .eq("member_profiles.user_id", user.id)
+        .limit(1)
+        .single(),
+      supabase
+        .from("member_profile_access")
+        .select("member_profile_id"),
+      eventsQuery,
+    ]);
+
     setCurrentUserRole(myMembership?.role ?? "");
 
-    // 自分のカテゴリIDを取得（リンク済みプロファイルも含む）
+    // カテゴリ取得（membership + linkedAccess の結果に依存）
     const myProfileIds = (myMembership as any)?.member_profiles
       ? [(myMembership as any).member_profiles.id]
       : [];
-
-    // リンク済みプロファイルIDを取得（保護者が子プロファイルにアクセスできるケース）
-    const { data: linkedAccess } = await supabase
-      .from("member_profile_access")
-      .select("member_profile_id");
     const linkedProfileIds = (linkedAccess ?? []).map((r: any) => r.member_profile_id);
     const allMyProfileIds = [...new Set([...myProfileIds, ...linkedProfileIds])];
 
-    if (allMyProfileIds.length > 0) {
-      const { data: myCategories } = await supabase
-        .from("member_profile_categories")
-        .select("event_type_id")
-        .in("member_profile_id", allMyProfileIds);
-      setMyCategoryIds((myCategories ?? []).map((c: any) => c.event_type_id));
-    }
+    // カテゴリ取得と出欠取得を並列化
+    const eventIds = (eventsData ?? []).map((e: any) => e.id);
+    const [categoriesResult, attendancesResult] = await Promise.all([
+      allMyProfileIds.length > 0
+        ? supabase
+            .from("member_profile_categories")
+            .select("event_type_id")
+            .in("member_profile_id", allMyProfileIds)
+        : Promise.resolve({ data: null }),
+      eventIds.length > 0
+        ? supabase
+            .from("attendances")
+            .select("event_id, status")
+            .in("event_id", eventIds)
+        : Promise.resolve({ data: null }),
+    ]);
 
-    const { data: eventsData } = await supabase
-      .from("events")
-      .select("id, title, event_type, date, end_at, location, created_by, event_event_types(event_types(id, name, color, kind, sort_order))")
-      .eq("team_id", teamId)
-      .order("date", { ascending: false });
+    if (categoriesResult.data) {
+      setMyCategoryIds(categoriesResult.data.map((c: any) => c.event_type_id));
+    }
 
     if (eventsData) {
       setEvents(eventsData as unknown as Event[]);
+    }
 
-      const eventIds = eventsData.map((e) => e.id);
-      if (eventIds.length > 0) {
-        const { data: attendances } = await supabase
-          .from("attendances")
-          .select("event_id, status")
-          .in("event_id", eventIds);
-
-        if (attendances) {
-          const map: Record<string, AttendanceSummary> = {};
-          for (const a of attendances) {
-            if (!map[a.event_id]) {
-              map[a.event_id] = { present: 0, absent: 0, undecided: 0 };
-            }
-            const s = a.status as keyof AttendanceSummary;
-            if (s in map[a.event_id]) {
-              map[a.event_id][s]++;
-            }
-          }
-          setSummaries(map);
+    if (attendancesResult.data) {
+      const map: Record<string, AttendanceSummary> = {};
+      for (const a of attendancesResult.data) {
+        if (!map[a.event_id]) {
+          map[a.event_id] = { present: 0, absent: 0, undecided: 0 };
+        }
+        const s = a.status as keyof AttendanceSummary;
+        if (s in map[a.event_id]) {
+          map[a.event_id][s]++;
         }
       }
+      setSummaries(map);
     }
+
     setLoading(false);
-  }, [supabase]);
+  }, [supabase, view, currentMonth]);
 
   useEffect(() => {
     loadData();
@@ -193,18 +234,6 @@ export default function EventsPage() {
       return typeMatch && categoryMatch;
     });
   }, [events, filterTypeIds, showOnlyMyCategories, myCategoryIds, hasCategories]);
-
-  // リスト表示用: 過去の予定を除外し、昇順でソート
-  const listEvents = useMemo(() => {
-    const now = new Date();
-    const jstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000);
-    const todayStart = new Date(
-      Date.UTC(jstNow.getUTCFullYear(), jstNow.getUTCMonth(), jstNow.getUTCDate()) - 9 * 60 * 60 * 1000
-    );
-    return filteredEvents
-      .filter((event) => new Date(event.date) >= todayStart)
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  }, [filteredEvents]);
 
   function toggleTypeFilter(id: string) {
     setFilterTypeIds((prev) => {
@@ -492,7 +521,7 @@ export default function EventsPage() {
             }}
           />
         </div>
-      ) : listEvents.length === 0 ? (
+      ) : filteredEvents.length === 0 ? (
         <div className="rounded-lg border border-gray-200 bg-white p-6">
           <p className="text-sm text-gray-500">
             {events.length === 0 ? "まだ予定がありません" : "条件に一致する予定がありません"}
@@ -500,7 +529,7 @@ export default function EventsPage() {
         </div>
       ) : (
         <div className="space-y-3">
-          {listEvents.map((event) => {
+          {filteredEvents.map((event) => {
             const summary = summaries[event.id];
             const types = event.event_event_types
               .map((e) => e.event_types)
