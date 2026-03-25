@@ -1197,6 +1197,8 @@ export default function SettingsPage() {
   const [savingTeam, setSavingTeam] = useState(false);
   const [teamMessage, setTeamMessage] = useState("");
   const [regeneratingGuardian, setRegeneratingGuardian] = useState(false);
+  const [savingSlug, setSavingSlug] = useState(false);
+  const [slugMessage, setSlugMessage] = useState("");
   const [contactUrlCopied, setContactUrlCopied] = useState(false);
   const [guardianCopied, setGuardianCopied] = useState<"code" | "link" | null>(null);
   const [copiedShareCodeId, setCopiedShareCodeId] = useState<string | null>(null);
@@ -1549,11 +1551,24 @@ export default function SettingsPage() {
 
     const { error } = await supabase
       .from("teams")
-      .update({ name: teamName.trim(), slug: slug.trim() || null })
+      .update({ name: teamName.trim() })
       .eq("id", teamId);
 
     setTeamMessage(error ? "保存に失敗しました" : "保存しました");
     setSavingTeam(false);
+  };
+
+  const handleSaveSlug = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!teamId) return;
+    setSavingSlug(true);
+    setSlugMessage("");
+    const { error } = await supabase
+      .from("teams")
+      .update({ slug: slug.trim() || null })
+      .eq("id", teamId);
+    setSlugMessage(error ? "保存に失敗しました" : "保存しました");
+    setSavingSlug(false);
   };
 
   const handleRegenerateGuardianCode = async () => {
@@ -2233,6 +2248,7 @@ export default function SettingsPage() {
       {/* 管理者タブ */}
       {activeTab === "admin" && isAdmin && teamId && (
         <>
+          {/* セクション1: チーム設定 */}
           <h2 className="mb-4 text-lg font-semibold">チーム設定</h2>
 
           <div className="mb-4 flex items-center gap-4">
@@ -2268,27 +2284,6 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            <div>
-              <label htmlFor="teamSlug" className="mb-1 block text-sm font-medium text-gray-700">
-                問い合わせフォームID
-              </label>
-              <div className="flex items-center gap-2">
-                <span className="shrink-0 text-sm text-gray-400">contact-</span>
-                <input
-                  id="teamSlug"
-                  type="text"
-                  value={slug}
-                  onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
-                  placeholder="team-name"
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-                <span className="shrink-0 text-sm text-gray-400">@minibas.ballershub.net</span>
-              </div>
-              <p className="mt-1 text-xs text-gray-400">
-                小文字英数字とハイフンのみ使用可。設定するとお問い合わせフォームが有効になります。
-              </p>
-            </div>
-
             {teamMessage && (
               <div
                 className={`rounded-md p-3 text-sm ${
@@ -2310,101 +2305,47 @@ export default function SettingsPage() {
                 {savingTeam ? "保存中..." : "保存する"}
               </button>
             </div>
-
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                保護者用招待コード
-              </label>
-              <p className="mb-1.5 text-xs text-gray-400">保護者アカウントでチームに参加する際に使用します</p>
-              <div className="flex flex-wrap items-center gap-2">
-                <code className="flex-1 min-w-0 truncate rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm font-mono">
-                  {inviteCodeGuardian}
-                </code>
-                <button
-                  type="button"
-                  onClick={() => setGuardianShareDialogOpen(true)}
-                  title="招待コードを共有"
-                  aria-label="招待コードを共有"
-                  className="flex items-center rounded-lg border border-gray-300 bg-white p-2 text-gray-600 hover:bg-gray-50"
-                >
-                  <Share2 size={16} strokeWidth={1.5} aria-hidden="true" />
-                </button>
-                <button
-                  type="button"
-                  onClick={handleRegenerateGuardianCode}
-                  disabled={regeneratingGuardian}
-                  className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-2.5 py-2 text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50 sm:px-3"
-                >
-                  <RefreshCw size={16} strokeWidth={1.5} aria-hidden="true" />
-                  <span className="hidden sm:inline">{regeneratingGuardian ? "再生成中..." : "再生成"}</span>
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                メンバーを招待
-              </label>
-              <p className="mb-1.5 text-xs text-gray-400">メンバーに招待メールを送ります</p>
-              {inviteSuccess && (
-                <p className="mb-2 text-sm text-green-600">
-                  招待メールを送信しました。
-                  <button onClick={() => setInviteSuccess(false)} className="ml-2 text-blue-600 underline">
-                    別のアドレスを招待
-                  </button>
-                </p>
-              )}
-              {!inviteSuccess && (
-                <div className="flex gap-2">
-                  <input
-                    type="email"
-                    placeholder="メールアドレス"
-                    value={inviteEmail}
-                    onChange={(e) => setInviteEmail(e.target.value)}
-                    className="flex-1 min-w-0 rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleInvite}
-                    disabled={inviting || !inviteEmail}
-                    className="shrink-0 flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
-                  >
-                    {inviting ? <Loader2 size={14} className="animate-spin" /> : "送信"}
-                  </button>
-                </div>
-              )}
-              {inviteError && <p className="mt-2 text-xs text-red-500">{inviteError}</p>}
-            </div>
-
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                問い合わせフォームURL
-              </label>
-              <p className="mb-1.5 text-xs text-gray-400">外部公開用の問い合わせフォームです。未ログインでもアクセスできます</p>
-              <div className="flex items-center gap-2">
-                <code className="flex-1 min-w-0 truncate rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm font-mono">
-                  {origin ? `${origin}/contact/${teamId}` : `/contact/${teamId}`}
-                </code>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const url = `${window.location.origin}/contact/${teamId}`;
-                    copyToClipboard(url).then(() => {
-                      setContactUrlCopied(true);
-                      setTimeout(() => setContactUrlCopied(false), 1500);
-                    });
-                  }}
-                  className="shrink-0 flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
-                >
-                  {contactUrlCopied ? <Check size={16} strokeWidth={1.5} aria-hidden="true" /> : <Copy size={16} strokeWidth={1.5} aria-hidden="true" />}
-                  {contactUrlCopied ? "コピー済み" : "コピー"}
-                </button>
-              </div>
-            </div>
-
           </form>
 
-          {/* イベント種別 */}
+          <div className="mt-4">
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              メンバーを招待
+            </label>
+            <p className="mb-1.5 text-xs text-gray-400">メンバーに招待メールを送ります</p>
+            {inviteSuccess && (
+              <p className="mb-2 text-sm text-green-600">
+                招待メールを送信しました。
+                <button onClick={() => setInviteSuccess(false)} className="ml-2 text-blue-600 underline">
+                  別のアドレスを招待
+                </button>
+              </p>
+            )}
+            {!inviteSuccess && (
+              <div className="flex gap-2">
+                <input
+                  type="email"
+                  placeholder="メールアドレス"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  className="flex-1 min-w-0 rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={handleInvite}
+                  disabled={inviting || !inviteEmail}
+                  className="shrink-0 flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
+                >
+                  {inviting ? <Loader2 size={14} className="animate-spin" /> : "送信"}
+                </button>
+              </div>
+            )}
+            {inviteError && <p className="mt-2 text-xs text-red-500">{inviteError}</p>}
+          </div>
+
+          {/* セクション2: 種別設定 */}
+          <hr className="my-8 border-gray-200" />
+          <h2 className="mb-4 text-lg font-semibold">種別設定</h2>
+
           <EventTypeSection
             title="イベント種別"
             description="予定作成時に選択できる種別（例: 練習・試合）を管理します"
@@ -2418,7 +2359,6 @@ export default function SettingsPage() {
             onUpdate={(id, name) => updateItem(id, name, setEventTypes)}
           />
 
-          {/* 対象カテゴリ */}
           <EventTypeSection
             title="対象カテゴリ"
             description="予定の対象（例: 全体・男子・女子）を管理します"
@@ -2432,13 +2372,92 @@ export default function SettingsPage() {
             onUpdate={(id, name) => updateItem(id, name, setEventCategories)}
           />
 
-          {/* 問い合わせ種別 */}
+          {/* セクション3: 問い合わせ設定 */}
+          <hr className="my-8 border-gray-200" />
+          <h2 className="mb-4 text-lg font-semibold">問い合わせ設定</h2>
+
+          <form onSubmit={handleSaveSlug} className="space-y-4">
+            <div>
+              <label htmlFor="teamSlug" className="mb-1 block text-sm font-medium text-gray-700">
+                問い合わせフォームID
+              </label>
+              <div className="flex items-center gap-2">
+                <span className="shrink-0 text-sm text-gray-400">contact-</span>
+                <input
+                  id="teamSlug"
+                  type="text"
+                  value={slug}
+                  onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+                  placeholder="team-name"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+                <span className="shrink-0 text-sm text-gray-400">@minibas.ballershub.net</span>
+              </div>
+              <p className="mt-1 text-xs text-gray-400">
+                小文字英数字とハイフンのみ使用可。設定するとお問い合わせフォームが有効になります。
+              </p>
+            </div>
+
+            {slugMessage && (
+              <div
+                className={`rounded-md p-3 text-sm ${
+                  slugMessage.includes("失敗")
+                    ? "bg-red-50 text-red-600"
+                    : "bg-green-50 text-green-600"
+                }`}
+              >
+                {slugMessage}
+              </div>
+            )}
+
+            <div className="flex justify-end">
+              <button
+                type="submit"
+                disabled={savingSlug}
+                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                {savingSlug ? "保存中..." : "保存する"}
+              </button>
+            </div>
+          </form>
+
           <InquiryTypeSection teamId={teamId} />
 
-          {/* 返信テンプレート */}
           <ReplyTemplateSection teamId={teamId} />
 
-          {/* 機能説明 */}
+          <div className="mt-6">
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              問い合わせページ
+            </label>
+            <p className="mb-1.5 text-xs text-gray-400">外部公開用の問い合わせフォームです。未ログインでもアクセスできます</p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const url = `${window.location.origin}/contact/${teamId}`;
+                  copyToClipboard(url).then(() => {
+                    setContactUrlCopied(true);
+                    setTimeout(() => setContactUrlCopied(false), 1500);
+                  });
+                }}
+                className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
+              >
+                {contactUrlCopied ? <Check size={16} strokeWidth={1.5} aria-hidden="true" /> : <Copy size={16} strokeWidth={1.5} aria-hidden="true" />}
+                {contactUrlCopied ? "コピー済み" : "URLをコピー"}
+              </button>
+              <a
+                href={`/contact/${teamId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
+              >
+                <ExternalLink size={16} strokeWidth={1.5} aria-hidden="true" />
+                開く
+              </a>
+            </div>
+          </div>
+
+          {/* セクション4: 機能説明 */}
           <hr className="my-8 border-gray-200" />
           <h2 className="mb-1 text-lg font-semibold">機能説明</h2>
           <p className="mb-4 text-sm text-gray-500">各機能の使い方を確認できます。</p>
@@ -2481,73 +2500,6 @@ export default function SettingsPage() {
               チームを削除
             </button>
           </div>
-
-          {/* 保護者用招待コード共有ダイアログ */}
-          {guardianShareDialogOpen && (
-            <div
-              className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-              onClick={() => setGuardianShareDialogOpen(false)}
-            >
-              <div
-                className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="mb-4 flex items-center justify-between">
-                  <h3 className="text-base font-semibold text-gray-800">保護者用招待コードを共有</h3>
-                  <button
-                    type="button"
-                    onClick={() => setGuardianShareDialogOpen(false)}
-                    className="rounded-lg p-1 text-gray-400 hover:bg-gray-100"
-                    aria-label="閉じる"
-                  >
-                    <X size={18} strokeWidth={1.5} />
-                  </button>
-                </div>
-                <div className="mb-3">
-                  <p className="mb-1.5 text-xs font-medium text-gray-500">招待コード</p>
-                  <div className="flex items-center gap-2">
-                    <code className="flex-1 min-w-0 truncate rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-mono">
-                      {inviteCodeGuardian}
-                    </code>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        copyToClipboard(inviteCodeGuardian).then(() => {
-                          setGuardianCopied("code");
-                          setTimeout(() => setGuardianCopied(null), 1500);
-                        });
-                      }}
-                      className="shrink-0 flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
-                    >
-                      {guardianCopied === "code" ? <Check size={16} strokeWidth={1.5} aria-hidden="true" /> : <Copy size={16} strokeWidth={1.5} aria-hidden="true" />}
-                      {guardianCopied === "code" ? "コピー済み" : "コピー"}
-                    </button>
-                  </div>
-                </div>
-                <div>
-                  <p className="mb-1.5 text-xs font-medium text-gray-500">招待リンク</p>
-                  <div className="flex items-center gap-2">
-                    <code className="flex-1 min-w-0 truncate rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-mono">
-                      {origin}/signup?invite={inviteCodeGuardian}
-                    </code>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        copyToClipboard(`${origin}/signup?invite=${inviteCodeGuardian}`).then(() => {
-                          setGuardianCopied("link");
-                          setTimeout(() => setGuardianCopied(null), 1500);
-                        });
-                      }}
-                      className="shrink-0 flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
-                    >
-                      {guardianCopied === "link" ? <Check size={16} strokeWidth={1.5} aria-hidden="true" /> : <Copy size={16} strokeWidth={1.5} aria-hidden="true" />}
-                      {guardianCopied === "link" ? "コピー済み" : "コピー"}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
         </>
       )}
 
