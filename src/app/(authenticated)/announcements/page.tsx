@@ -185,10 +185,10 @@ export default function AnnouncementsPage() {
           {isAdmin && (
             <Link
               href="/announcements/new"
-              className="ml-auto flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
+              aria-label="追加"
+              className="ml-auto flex items-center rounded-lg bg-blue-600 p-2 text-xs font-medium text-white hover:bg-blue-700"
             >
               <Plus size={14} strokeWidth={1.5} aria-hidden="true" />
-              追加
             </Link>
           )}
         </div>
@@ -196,10 +196,10 @@ export default function AnnouncementsPage() {
         <div className="mb-4 flex items-center justify-end">
           <Link
             href="/announcements/new"
-            className="flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
+            aria-label="追加"
+            className="flex items-center rounded-lg bg-blue-600 p-2 text-xs font-medium text-white hover:bg-blue-700"
           >
             <Plus size={14} strokeWidth={1.5} aria-hidden="true" />
-            追加
           </Link>
         </div>
       ) : null}

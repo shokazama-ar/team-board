@@ -2302,7 +2302,7 @@ export default function SettingsPage() {
                 disabled={savingTeam || !teamName.trim()}
                 className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
               >
-                {savingTeam ? "保存中..." : "保存する"}
+                {savingTeam ? "保存中..." : "保存"}
               </button>
             </div>
           </form>
@@ -2416,7 +2416,7 @@ export default function SettingsPage() {
                 disabled={savingSlug}
                 className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
               >
-                {savingSlug ? "保存中..." : "保存する"}
+                {savingSlug ? "保存中..." : "保存"}
               </button>
             </div>
           </form>

@@ -424,14 +424,6 @@ export default function EventsPage() {
               >
                 <LayoutList size={16} strokeWidth={1.5} aria-hidden="true" />
               </Link>
-              <Link
-                href="/events/new"
-                aria-label="追加"
-                className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-              >
-                <Plus size={16} strokeWidth={1.5} aria-hidden="true" />
-                追加
-              </Link>
             </>
           )}
         </div>
@@ -494,10 +486,10 @@ export default function EventsPage() {
           {currentUserRole === "admin" && (
             <Link
               href="/events/new"
-              className="ml-auto flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
+              aria-label="追加"
+              className="ml-auto flex items-center rounded-lg bg-blue-600 p-2 text-xs font-medium text-white hover:bg-blue-700"
             >
               <Plus size={14} strokeWidth={1.5} aria-hidden="true" />
-              追加
             </Link>
           )}
         </div>
