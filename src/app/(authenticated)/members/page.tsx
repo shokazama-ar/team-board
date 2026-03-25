@@ -226,11 +226,12 @@ export default function MembersPage() {
           <li className="px-6 py-4 text-sm text-gray-400">なし</li>
         )}
         {members.map((member) => (
-          <li key={member.id} className={`flex items-center justify-between px-6 py-4 ${actionLoading === member.id ? "opacity-50 pointer-events-none" : ""}`}>
-            <div className="flex min-w-0 flex-1 items-center gap-3">
+          <li key={member.id} className={`px-6 py-4 ${actionLoading === member.id ? "opacity-50 pointer-events-none" : ""}`}>
+            {/* 行1: アイコン + 名前 + 参加日 */}
+            <div className="flex items-center gap-3">
               <ProfileAvatar name={member.name} avatarUrl={member.avatar_url} size={40} />
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-gray-900">
+              <div className="flex min-w-0 flex-1 items-baseline gap-2">
+                <p className="truncate text-sm font-medium text-gray-900">
                   {member.name || "名前未設定"}
                   {member.number && (
                     <span className="ml-1.5 text-xs text-gray-400">#{member.number}</span>
@@ -239,12 +240,13 @@ export default function MembersPage() {
                     <span className="ml-2 text-xs text-gray-400">(あなた)</span>
                   )}
                 </p>
-                <p className="text-xs text-gray-400">
+                <p className="shrink-0 text-xs text-gray-400">
                   参加日: {new Date(member.created_at).toLocaleDateString("ja-JP", { timeZone: "Asia/Tokyo" })}
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            {/* 行2: 管理者ラベル・権限ボタン・削除ボタン */}
+            <div className="mt-2 flex flex-wrap items-center gap-2 pl-[52px]">
               {member.role === "admin" && (
                 <span className="flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">
                   <Shield size={12} strokeWidth={1.5} aria-hidden="true" />
@@ -392,11 +394,12 @@ export default function MembersPage() {
               return <li className="px-6 py-4 text-sm text-gray-400">なし</li>;
             }
             return filtered.map((member) => (
-              <li key={member.id} className={`flex items-center justify-between px-6 py-4 ${actionLoading === member.id ? "opacity-50 pointer-events-none" : ""}`}>
-                <div className="flex min-w-0 flex-1 items-center gap-3">
+              <li key={member.id} className={`px-6 py-4 ${actionLoading === member.id ? "opacity-50 pointer-events-none" : ""}`}>
+                {/* 行1: アイコン + 名前 + 参加日 */}
+                <div className="flex items-center gap-3">
                   <ProfileAvatar name={member.name} avatarUrl={member.avatar_url} size={40} />
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-gray-900">
+                  <div className="flex min-w-0 flex-1 items-baseline gap-2">
+                    <p className="truncate text-sm font-medium text-gray-900">
                       {member.name || "名前未設定"}
                       {member.number && (
                         <span className="ml-1.5 text-xs text-gray-400">#{member.number}</span>
@@ -405,12 +408,13 @@ export default function MembersPage() {
                         <span className="ml-2 text-xs text-gray-400">(あなた)</span>
                       )}
                     </p>
-                    <p className="text-xs text-gray-400">
+                    <p className="shrink-0 text-xs text-gray-400">
                       参加日: {new Date(member.created_at).toLocaleDateString("ja-JP", { timeZone: "Asia/Tokyo" })}
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                {/* 行2: 管理者ラベル・削除ボタン */}
+                <div className="mt-2 flex flex-wrap items-center gap-2 pl-[52px]">
                   {member.role === "admin" && (
                     <span className="flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">
                       <Shield size={12} strokeWidth={1.5} aria-hidden="true" />

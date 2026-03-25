@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 
-type InquiryStatus = "new" | "read" | "replied" | "done" | "pending";
+type InquiryStatus = "new" | "replied" | "done" | "pending";
 
 type Inquiry = {
   id: string;
@@ -20,7 +20,6 @@ type Inquiry = {
 
 const STATUS_LABELS: Record<InquiryStatus, string> = {
   new: "未読",
-  read: "対応中",
   replied: "返信済み",
   done: "完了",
   pending: "要確認",
@@ -28,7 +27,6 @@ const STATUS_LABELS: Record<InquiryStatus, string> = {
 
 const STATUS_STYLES: Record<InquiryStatus, string> = {
   new: "bg-red-50 text-red-700 text-xs px-2 py-0.5 rounded-full",
-  read: "bg-yellow-50 text-yellow-700 text-xs px-2 py-0.5 rounded-full",
   replied: "bg-green-50 text-green-700 text-xs px-2 py-0.5 rounded-full",
   done: "bg-gray-100 text-gray-500 text-xs px-2 py-0.5 rounded-full",
   pending: "bg-orange-50 text-orange-700 text-xs px-2 py-0.5 rounded-full",
@@ -38,7 +36,6 @@ const TABS: { label: string; value: string | null }[] = [
   { label: "すべて", value: null },
   { label: "未読", value: "new" },
   { label: "要確認", value: "pending" },
-  { label: "対応中", value: "read" },
   { label: "返信済み", value: "replied" },
   { label: "完了", value: "done" },
 ];
@@ -49,7 +46,7 @@ export default function InquiriesPage() {
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
-  const [counts, setCounts] = useState({ all: 0, new: 0, read: 0, replied: 0, done: 0, pending: 0 });
+  const [counts, setCounts] = useState({ all: 0, new: 0, replied: 0, done: 0, pending: 0 });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -74,7 +71,6 @@ export default function InquiriesPage() {
       setCounts({
         all: statusCounts?.length ?? 0,
         new: statusCounts?.filter((r) => r.status === "new").length ?? 0,
-        read: statusCounts?.filter((r) => r.status === "read").length ?? 0,
         replied: statusCounts?.filter((r) => r.status === "replied").length ?? 0,
         done: statusCounts?.filter((r) => r.status === "done").length ?? 0,
         pending: statusCounts?.filter((r) => r.status === "pending").length ?? 0,
@@ -96,8 +92,6 @@ export default function InquiriesPage() {
                 ? counts.all
                 : tab.value === "new"
                 ? counts.new
-                : tab.value === "read"
-                ? counts.read
                 : tab.value === "replied"
                 ? counts.replied
                 : tab.value === "pending"

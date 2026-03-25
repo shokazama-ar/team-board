@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import DateTimePicker from "@/components/ui/DateTimePicker";
 import { Loader2 } from "lucide-react";
 
@@ -105,9 +105,10 @@ function CategoryPills({
   );
 }
 
-export default function NewEventPage() {
+function NewEventPageInner() {
   const supabase = createClient();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [teamId, setTeamId] = useState<string>("");
   const [userId, setUserId] = useState<string>("");
   const [title, setTitle] = useState("");
@@ -158,6 +159,13 @@ export default function NewEventPage() {
         setLocationSuggestions(unique);
       });
   }, [teamId, supabase]);
+
+  useEffect(() => {
+    const dateParam = searchParams.get("date");
+    if (dateParam) {
+      setDate(`${dateParam}T00:00`);
+    }
+  }, [searchParams]);
 
   const toggleCategory = (id: string) => {
     setSelectedCategoryIds((prev) =>
@@ -329,5 +337,13 @@ export default function NewEventPage() {
         </div>
       </form>
     </div>
+  );
+}
+
+export default function NewEventPage() {
+  return (
+    <Suspense fallback={<div className="text-sm text-gray-500">読み込み中...</div>}>
+      <NewEventPageInner />
+    </Suspense>
   );
 }

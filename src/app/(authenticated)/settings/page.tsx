@@ -74,6 +74,7 @@ function EventTypeSection({
   const [newColor, setNewColor] = useState(colors[0].value);
   const [adding, setAdding] = useState(false);
   const [message, setMessage] = useState("");
+  const [showAddForm, setShowAddForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
   const [movingId, setMovingId] = useState<string | null>(null);
@@ -87,7 +88,10 @@ function EventTypeSection({
     setMessage("");
     const msg = await onAdd(newName, newColor);
     setMessage(msg);
-    if (msg === "追加しました") setNewName("");
+    if (msg === "追加しました") {
+      setNewName("");
+      setShowAddForm(false);
+    }
     setAdding(false);
   };
 
@@ -201,59 +205,76 @@ function EventTypeSection({
         )}
       </div>
 
-      <form onSubmit={handleSubmit}>
-        <div>
-          <div className="mb-1 flex flex-wrap items-center justify-between">
-            <label className="text-sm font-medium text-gray-700">名前</label>
-            <div className="flex flex-wrap gap-2">
-              {colors.map((c) => (
-                <button
-                  key={c.value}
-                  type="button"
-                  onClick={() => setNewColor(c.value)}
-                  className={`h-4 w-4 rounded-full border-2 transition-all ${
-                    newColor === c.value
-                      ? "scale-110 border-white ring-[3px] ring-gray-800"
-                      : "border-transparent hover:scale-105"
-                  }`}
-                  style={{ backgroundColor: c.value }}
-                  aria-label={c.label}
-                  title={c.label}
-                />
-              ))}
+      {showAddForm ? (
+        <form onSubmit={handleSubmit} className="rounded-lg border border-gray-200 bg-white p-4 space-y-3">
+          <div>
+            <div className="mb-1 flex flex-wrap items-center justify-between">
+              <label className="text-sm font-medium text-gray-700">名前</label>
+              <div className="flex flex-wrap gap-2">
+                {colors.map((c) => (
+                  <button
+                    key={c.value}
+                    type="button"
+                    onClick={() => setNewColor(c.value)}
+                    className={`h-4 w-4 rounded-full border-2 transition-all ${
+                      newColor === c.value
+                        ? "scale-110 border-white ring-[3px] ring-gray-800"
+                        : "border-transparent hover:scale-105"
+                    }`}
+                    style={{ backgroundColor: c.value }}
+                    aria-label={c.label}
+                    title={c.label}
+                  />
+                ))}
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                placeholder={addLabel}
+                className="flex-1 min-w-0 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                autoFocus
+              />
+              <button
+                type="button"
+                onClick={() => { setShowAddForm(false); setNewName(""); }}
+                className="shrink-0 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-500 hover:bg-gray-50"
+              >
+                キャンセル
+              </button>
+              <button
+                type="submit"
+                disabled={adding || !newName.trim()}
+                className="shrink-0 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                {adding ? <Loader2 size={16} className="animate-spin" aria-hidden="true" /> : "追加"}
+              </button>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <input
-              type="text"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              placeholder={addLabel}
-              className="flex-1 min-w-0 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            />
-            <button
-              type="submit"
-              disabled={adding || !newName.trim()}
-              className="shrink-0 flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+          {message && (
+            <div
+              className={`rounded-md p-3 text-sm ${
+                message.includes("失敗") || message.includes("存在")
+                  ? "bg-red-50 text-red-600"
+                  : "bg-green-50 text-green-600"
+              }`}
             >
-              {adding ? <Loader2 size={16} className="animate-spin" aria-hidden="true" /> : <Plus size={16} strokeWidth={1.5} aria-hidden="true" />}
-              {adding ? "追加中..." : "追加"}
-            </button>
-          </div>
-        </div>
-
-        {message && (
-          <div
-            className={`mt-3 rounded-md p-3 text-sm ${
-              message.includes("失敗") || message.includes("存在")
-                ? "bg-red-50 text-red-600"
-                : "bg-green-50 text-green-600"
-            }`}
-          >
-            {message}
-          </div>
-        )}
-      </form>
+              {message}
+            </div>
+          )}
+        </form>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setShowAddForm(true)}
+          className="flex items-center gap-1.5 rounded-lg border border-dashed border-gray-300 px-4 py-2 text-sm text-gray-500 hover:border-gray-400 hover:text-gray-700"
+        >
+          <Plus size={16} strokeWidth={1.5} aria-hidden="true" />
+          追加
+        </button>
+      )}
     </>
   );
 }
@@ -2265,28 +2286,32 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          <form onSubmit={handleSaveTeam} className="space-y-4">
-            <div>
-              <label
-                htmlFor="teamName"
-                className="mb-1 block text-sm font-medium text-gray-700"
+          <form onSubmit={handleSaveTeam}>
+            <label
+              htmlFor="teamName"
+              className="mb-1 block text-sm font-medium text-gray-700"
+            >
+              チーム名
+            </label>
+            <div className="flex gap-2">
+              <input
+                id="teamName"
+                type="text"
+                value={teamName}
+                onChange={(e) => setTeamName(e.target.value)}
+                className="flex-1 min-w-0 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+              <button
+                type="submit"
+                disabled={savingTeam || !teamName.trim()}
+                className="shrink-0 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
               >
-                チーム名
-              </label>
-              <div>
-                <input
-                  id="teamName"
-                  type="text"
-                  value={teamName}
-                  onChange={(e) => setTeamName(e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
+                {savingTeam ? "保存中..." : "保存"}
+              </button>
             </div>
-
             {teamMessage && (
               <div
-                className={`rounded-md p-3 text-sm ${
+                className={`mt-2 rounded-md p-3 text-sm ${
                   teamMessage.includes("失敗")
                     ? "bg-red-50 text-red-600"
                     : "bg-green-50 text-green-600"
@@ -2295,16 +2320,6 @@ export default function SettingsPage() {
                 {teamMessage}
               </div>
             )}
-
-            <div className="flex justify-end">
-              <button
-                type="submit"
-                disabled={savingTeam || !teamName.trim()}
-                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-              >
-                {savingTeam ? "保存中..." : "保存"}
-              </button>
-            </div>
           </form>
 
           <div className="mt-4">

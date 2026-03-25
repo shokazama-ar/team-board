@@ -6,11 +6,10 @@ import ReplyForm from "./ReplyForm";
 import ReplyThread from "./ReplyThread";
 import MarkDoneButton from "./MarkDoneButton";
 
-type InquiryStatus = "new" | "read" | "replied" | "done" | "pending";
+type InquiryStatus = "new" | "replied" | "done" | "pending";
 
 const STATUS_LABELS: Record<InquiryStatus, string> = {
   new: "未読",
-  read: "対応中",
   replied: "返信済み",
   done: "完了",
   pending: "要確認",
@@ -18,7 +17,6 @@ const STATUS_LABELS: Record<InquiryStatus, string> = {
 
 const STATUS_STYLES: Record<InquiryStatus, string> = {
   new: "bg-red-50 text-red-700 text-xs px-2 py-0.5 rounded-full",
-  read: "bg-yellow-50 text-yellow-700 text-xs px-2 py-0.5 rounded-full",
   replied: "bg-green-50 text-green-700 text-xs px-2 py-0.5 rounded-full",
   done: "bg-gray-100 text-gray-500 text-xs px-2 py-0.5 rounded-full",
   pending: "bg-orange-50 text-orange-700 text-xs px-2 py-0.5 rounded-full",
@@ -79,7 +77,7 @@ export default async function InquiryDetailPage({
   if (inquiry.status === "new") {
     await supabase
       .from("inquiries")
-      .update({ status: "read" })
+      .update({ status: "pending" })
       .eq("id", id)
       .eq("status", "new");
   }
