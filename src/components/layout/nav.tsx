@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { Home, Calendar, Megaphone, Users, Mail, Settings, type LucideIcon } from "lucide-react";
+import { Home, Calendar, Megaphone, Users, Mail, Settings, Loader2, type LucideIcon } from "lucide-react";
 
 const navItems: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/", label: "ホーム", icon: Home },
@@ -20,6 +20,11 @@ export function BottomNav({ hasTeam, isAdmin = false, inquiryCount = 0 }: { hasT
   const pathname = usePathname();
   const [hidden, setHidden] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [navigatingTo, setNavigatingTo] = useState<string | null>(null);
+
+  useEffect(() => {
+    setNavigatingTo(null);
+  }, [pathname]);
 
   useEffect(() => {
     const onScroll = () => {
@@ -44,6 +49,7 @@ export function BottomNav({ hasTeam, isAdmin = false, inquiryCount = 0 }: { hasT
         {navItems.map((item) => {
           const isActive =
             item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+          const isNavigating = navigatingTo === item.href && !isActive;
           const isEnabled = (hasTeam || ALWAYS_ACTIVE.includes(item.href))
             && (item.href !== "/inquiries" || isAdmin);
 
@@ -64,12 +70,17 @@ export function BottomNav({ hasTeam, isAdmin = false, inquiryCount = 0 }: { hasT
               key={item.href}
               href={item.href}
               aria-label={item.label}
+              onClick={() => setNavigatingTo(item.href)}
               className={`flex flex-1 flex-col items-center py-3 ${
-                isActive ? "text-blue-600" : "text-gray-500"
+                isActive || isNavigating ? "text-blue-600" : "text-gray-500"
               }`}
             >
               <span className="relative">
-                <item.icon size={24} strokeWidth={1.5} aria-hidden="true" />
+                {isNavigating ? (
+                  <Loader2 size={24} strokeWidth={1.5} className="animate-spin" aria-hidden="true" />
+                ) : (
+                  <item.icon size={24} strokeWidth={1.5} aria-hidden="true" />
+                )}
                 {item.href === "/inquiries" && inquiryCount > 0 && (
                   <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[1.25rem] text-center leading-none">
                     {inquiryCount}
@@ -86,6 +97,11 @@ export function BottomNav({ hasTeam, isAdmin = false, inquiryCount = 0 }: { hasT
 
 export function SideNav({ hasTeam, isAdmin = false, inquiryCount = 0 }: { hasTeam: boolean; isAdmin?: boolean; inquiryCount?: number }) {
   const pathname = usePathname();
+  const [navigatingTo, setNavigatingTo] = useState<string | null>(null);
+
+  useEffect(() => {
+    setNavigatingTo(null);
+  }, [pathname]);
 
   return (
     <nav className="hidden w-56 shrink-0 border-r border-gray-200 bg-white overflow-y-auto md:block">
@@ -93,6 +109,7 @@ export function SideNav({ hasTeam, isAdmin = false, inquiryCount = 0 }: { hasTea
         {navItems.map((item) => {
           const isActive =
             item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+          const isNavigating = navigatingTo === item.href && !isActive;
           const isEnabled = (hasTeam || ALWAYS_ACTIVE.includes(item.href))
             && (item.href !== "/inquiries" || isAdmin);
 
@@ -114,13 +131,18 @@ export function SideNav({ hasTeam, isAdmin = false, inquiryCount = 0 }: { hasTea
             <li key={item.href}>
               <Link
                 href={item.href}
+                onClick={() => setNavigatingTo(item.href)}
                 className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm ${
-                  isActive
+                  isActive || isNavigating
                     ? "bg-blue-50 text-blue-600"
                     : "text-gray-700 hover:bg-gray-50"
                 }`}
               >
-                <item.icon size={20} strokeWidth={1.5} aria-hidden="true" />
+                {isNavigating ? (
+                  <Loader2 size={20} strokeWidth={1.5} className="animate-spin" aria-hidden="true" />
+                ) : (
+                  <item.icon size={20} strokeWidth={1.5} aria-hidden="true" />
+                )}
                 <span>{item.label}</span>
                 {item.href === "/inquiries" && inquiryCount > 0 && (
                   <span className="ml-auto bg-red-500 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[1.25rem] text-center">

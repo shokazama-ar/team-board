@@ -2270,7 +2270,7 @@ export default function SettingsPage() {
       {activeTab === "admin" && isAdmin && teamId && (
         <>
           {/* セクション1: チーム設定 */}
-          <h2 className="mb-4 text-lg font-semibold">チーム設定</h2>
+          <h2 className="mb-4 border-b border-gray-200 pb-2 text-lg font-semibold text-gray-800">チーム設定</h2>
 
           <div className="mb-4 flex items-center gap-4">
             <AvatarUpload
@@ -2348,7 +2348,7 @@ export default function SettingsPage() {
                   type="button"
                   onClick={handleInvite}
                   disabled={inviting || !inviteEmail}
-                  className="shrink-0 flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
+                  className="shrink-0 flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
                 >
                   {inviting ? <Loader2 size={14} className="animate-spin" /> : "送信"}
                 </button>
@@ -2358,8 +2358,7 @@ export default function SettingsPage() {
           </div>
 
           {/* セクション2: 種別設定 */}
-          <hr className="my-8 border-gray-200" />
-          <h2 className="mb-4 text-lg font-semibold">種別設定</h2>
+          <h2 className="mt-10 mb-4 border-b border-gray-200 pb-2 text-lg font-semibold text-gray-800">種別設定</h2>
 
           <EventTypeSection
             title="イベント種別"
@@ -2388,34 +2387,45 @@ export default function SettingsPage() {
           />
 
           {/* セクション3: 問い合わせ設定 */}
-          <hr className="my-8 border-gray-200" />
-          <h2 className="mb-4 text-lg font-semibold">問い合わせ設定</h2>
+          <h2 className="mt-10 mb-4 border-b border-gray-200 pb-2 text-lg font-semibold text-gray-800">問い合わせ設定</h2>
 
-          <form onSubmit={handleSaveSlug} className="space-y-4">
-            <div>
-              <label htmlFor="teamSlug" className="mb-1 block text-sm font-medium text-gray-700">
-                問い合わせフォームID
-              </label>
-              <div className="flex items-center gap-2">
-                <span className="shrink-0 text-sm text-gray-400">contact-</span>
-                <input
-                  id="teamSlug"
-                  type="text"
-                  value={slug}
-                  onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
-                  placeholder="team-name"
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-                <span className="shrink-0 text-sm text-gray-400">@minibas.ballershub.net</span>
-              </div>
+          <form onSubmit={handleSaveSlug}>
+            <label htmlFor="teamSlug" className="mb-1 block text-sm font-medium text-gray-700">
+              問い合わせフォームID
+            </label>
+            {/* 行1: 入力欄 + 保存ボタン */}
+            <div className="flex items-center gap-2">
+              <span className="shrink-0 text-sm text-gray-400">contact-</span>
+              <input
+                id="teamSlug"
+                type="text"
+                value={slug}
+                onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+                placeholder="team-name"
+                className="flex-1 min-w-0 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+              <button
+                type="submit"
+                disabled={savingSlug}
+                className="shrink-0 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                {savingSlug ? "保存中..." : "保存"}
+              </button>
+            </div>
+            {/* 行2: 実際のメールアドレス（slug がある場合のみ表示） */}
+            {slug && (
+              <p className="mt-1 text-xs text-gray-400">
+                メールアドレス: <span className="font-mono">contact-{slug}@minibas.ballershub.net</span>
+              </p>
+            )}
+            {!slug && (
               <p className="mt-1 text-xs text-gray-400">
                 小文字英数字とハイフンのみ使用可。設定するとお問い合わせフォームが有効になります。
               </p>
-            </div>
-
+            )}
             {slugMessage && (
               <div
-                className={`rounded-md p-3 text-sm ${
+                className={`mt-2 rounded-md p-3 text-sm ${
                   slugMessage.includes("失敗")
                     ? "bg-red-50 text-red-600"
                     : "bg-green-50 text-green-600"
@@ -2424,16 +2434,6 @@ export default function SettingsPage() {
                 {slugMessage}
               </div>
             )}
-
-            <div className="flex justify-end">
-              <button
-                type="submit"
-                disabled={savingSlug}
-                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-              >
-                {savingSlug ? "保存中..." : "保存"}
-              </button>
-            </div>
           </form>
 
           <InquiryTypeSection teamId={teamId} />
@@ -2473,8 +2473,7 @@ export default function SettingsPage() {
           </div>
 
           {/* セクション4: 機能説明 */}
-          <hr className="my-8 border-gray-200" />
-          <h2 className="mb-1 text-lg font-semibold">機能説明</h2>
+          <h2 className="mt-10 mb-1 border-b border-gray-200 pb-2 text-lg font-semibold text-gray-800">機能説明</h2>
           <p className="mb-4 text-sm text-gray-500">各機能の使い方を確認できます。</p>
           <ul className="space-y-2">
             {[

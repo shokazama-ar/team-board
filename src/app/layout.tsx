@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Noto_Sans_JP } from "next/font/google";
+import NextTopLoader from "nextjs-toploader";
 import "./globals.css";
 
 const notoSansJP = Noto_Sans_JP({
@@ -24,6 +25,7 @@ export default function RootLayout({
         className={`${notoSansJP.variable} font-sans antialiased`}
         suppressHydrationWarning
       >
+        <NextTopLoader color="#2563eb" showSpinner={false} height={3} />
         {children}
       </body>
     </html>
