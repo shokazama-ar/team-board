@@ -220,6 +220,21 @@ export function CalendarView({
             onSelectDate(clickedDate, dayEvents, lastClickPos.current);
           }
         }}
+        selectable={true}
+        onSelectSlot={(slotInfo) => {
+          if (onSelectDate) {
+            const clickedDate = slotInfo.start as Date;
+            const dayEvents = events.filter((e) => {
+              const eventDate = new Date(e.date);
+              return (
+                eventDate.getFullYear() === clickedDate.getFullYear() &&
+                eventDate.getMonth() === clickedDate.getMonth() &&
+                eventDate.getDate() === clickedDate.getDate()
+              );
+            });
+            onSelectDate(clickedDate, dayEvents, lastClickPos.current);
+          }
+        }}
         drilldownView={null}
         formats={{
           dayHeaderFormat: (date: Date) => format(date, "M月d日(EEE)", { locale: ja }),
