@@ -97,8 +97,7 @@ function EventTypeSection({
 
   return (
     <>
-      <hr className="my-8 border-gray-200" />
-      <h2 className="mb-1 text-lg font-semibold">{title}</h2>
+      <p className="mb-1 mt-6 text-sm font-semibold text-gray-700">{title}</p>
       <p className="mb-4 text-sm text-gray-500">{description}</p>
 
       <div className="mb-4 space-y-2">
@@ -744,9 +743,8 @@ function InquiryTypeSection({ teamId }: InquiryTypeSectionProps) {
 
   return (
     <>
-      <hr className="my-8 border-gray-200" />
-      <div className="mb-4">
-        <h2 className="text-lg font-semibold">問い合わせ種別</h2>
+      <div className="mb-4 mt-6">
+        <p className="mb-1 text-sm font-semibold text-gray-700">問い合わせ種別</p>
         <p className="mt-1 text-sm text-gray-500">問い合わせフォームで選択できる種別を管理します</p>
       </div>
 
@@ -1079,9 +1077,8 @@ function ReplyTemplateSection({ teamId }: ReplyTemplateSectionProps) {
 
   return (
     <>
-      <hr className="my-8 border-gray-200" />
-      <div className="mb-4">
-        <h2 className="text-lg font-semibold">返信テンプレート</h2>
+      <div className="mb-4 mt-6">
+        <p className="mb-1 text-sm font-semibold text-gray-700">返信テンプレート</p>
         <p className="mt-1 text-sm text-gray-500">問い合わせへの返信時に使用するテンプレートを管理します</p>
       </div>
 
@@ -2270,7 +2267,7 @@ export default function SettingsPage() {
       {activeTab === "admin" && isAdmin && teamId && (
         <>
           {/* セクション1: チーム設定 */}
-          <h2 className="mb-4 border-b border-gray-200 pb-2 text-lg font-semibold text-gray-800">チーム設定</h2>
+          <h2 className="-mx-4 mb-4 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-800">チーム設定</h2>
 
           <div className="mb-4 flex items-center gap-4">
             <AvatarUpload
@@ -2357,8 +2354,44 @@ export default function SettingsPage() {
             {inviteError && <p className="mt-2 text-xs text-red-500">{inviteError}</p>}
           </div>
 
-          {/* セクション2: 種別設定 */}
-          <h2 className="mt-10 mb-4 border-b border-gray-200 pb-2 text-lg font-semibold text-gray-800">種別設定</h2>
+          {/* 招待コード */}
+          <div className="mt-4">
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              招待コード
+            </label>
+            <p className="mb-1.5 text-xs text-gray-400">保護者がチームに参加するためのコードです</p>
+            {inviteCodeGuardian && (
+              <p className="mb-2 font-mono text-sm text-gray-800">{inviteCodeGuardian}</p>
+            )}
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  copyToClipboard(inviteCodeGuardian).then(() => {
+                    setGuardianCopied("code");
+                    setTimeout(() => setGuardianCopied(null), 1500);
+                  });
+                }}
+                disabled={!inviteCodeGuardian}
+                className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+              >
+                {guardianCopied === "code" ? <Check size={16} strokeWidth={1.5} aria-hidden="true" /> : <Copy size={16} strokeWidth={1.5} aria-hidden="true" />}
+                {guardianCopied === "code" ? "コピー済み" : "コードをコピー"}
+              </button>
+              <button
+                type="button"
+                onClick={handleRegenerateGuardianCode}
+                disabled={regeneratingGuardian}
+                className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+              >
+                <RefreshCw size={16} strokeWidth={1.5} className={regeneratingGuardian ? "animate-spin" : ""} aria-hidden="true" />
+                再生成
+              </button>
+            </div>
+          </div>
+
+          {/* セクション2: カテゴリ設定 */}
+          <h2 className="-mx-4 mt-8 mb-4 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-800">カテゴリ設定</h2>
 
           <EventTypeSection
             title="イベント種別"
@@ -2387,7 +2420,7 @@ export default function SettingsPage() {
           />
 
           {/* セクション3: 問い合わせ設定 */}
-          <h2 className="mt-10 mb-4 border-b border-gray-200 pb-2 text-lg font-semibold text-gray-800">問い合わせ設定</h2>
+          <h2 className="-mx-4 mt-8 mb-4 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-800">問い合わせ設定</h2>
 
           <form onSubmit={handleSaveSlug}>
             <label htmlFor="teamSlug" className="mb-1 block text-sm font-medium text-gray-700">
@@ -2473,7 +2506,7 @@ export default function SettingsPage() {
           </div>
 
           {/* セクション4: 機能説明 */}
-          <h2 className="mt-10 mb-1 border-b border-gray-200 pb-2 text-lg font-semibold text-gray-800">機能説明</h2>
+          <h2 className="-mx-4 mt-8 mb-4 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-800">機能説明</h2>
           <p className="mb-4 text-sm text-gray-500">各機能の使い方を確認できます。</p>
           <ul className="space-y-2">
             {[
