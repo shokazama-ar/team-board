@@ -5,7 +5,6 @@ import type { ToolbarProps } from "react-big-calendar";
 import { format, parse, startOfWeek, getDay } from "date-fns";
 import { ja } from "date-fns/locale";
 import "react-big-calendar/lib/css/react-big-calendar.css";
-import { useRouter } from "next/navigation";
 import { useRef } from "react";
 
 const locales = { ja };
@@ -127,7 +126,6 @@ export function CalendarView({
   onNavigate: (date: Date) => void;
   onSelectDate?: (date: Date, events: EventInput[], position?: { x: number; y: number }) => void;
 }) {
-  const router = useRouter();
   const lastClickPos = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
   const calEvents: CalEvent[] = events.map((e) => ({
@@ -181,7 +179,34 @@ export function CalendarView({
           toolbar: CustomToolbar,
           month: { header: CustomHeader },
         }}
-        onSelectEvent={(event) => router.push(`/events/${(event as CalEvent).id}`)}
+        onSelectEvent={(event) => {
+          if (onSelectDate) {
+            const calEvent = event as CalEvent;
+            const clickedDate = new Date(calEvent.start);
+            const dayEvents = events.filter((e) => {
+              const eventDate = new Date(e.date);
+              return (
+                eventDate.getFullYear() === clickedDate.getFullYear() &&
+                eventDate.getMonth() === clickedDate.getMonth() &&
+                eventDate.getDate() === clickedDate.getDate()
+              );
+            });
+            onSelectDate(clickedDate, dayEvents, lastClickPos.current);
+          }
+        }}
+        onShowMore={(_events, date) => {
+          if (onSelectDate) {
+            const dayEvents = events.filter((e) => {
+              const eventDate = new Date(e.date);
+              return (
+                eventDate.getFullYear() === date.getFullYear() &&
+                eventDate.getMonth() === date.getMonth() &&
+                eventDate.getDate() === date.getDate()
+              );
+            });
+            onSelectDate(date, dayEvents, lastClickPos.current);
+          }
+        }}
         onDrillDown={(clickedDate) => {
           if (onSelectDate) {
             const dayEvents = events.filter((e) => {
