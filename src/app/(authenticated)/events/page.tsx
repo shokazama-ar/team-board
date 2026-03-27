@@ -62,6 +62,11 @@ export default function EventsPage() {
   const [myCategoryIds, setMyCategoryIds] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedDateEvents, setSelectedDateEvents] = useState<Event[]>([]);
+  const [contextMenu, setContextMenu] = useState<{
+    date: Date;
+    events: Event[];
+    position: { x: number; y: number };
+  } | null>(null);
 
   const loadData = useCallback(async () => {
     const {
@@ -340,6 +345,52 @@ export default function EventsPage() {
           onClose={() => setShowImportModal(false)}
         />
       )}
+      {contextMenu && (
+        <div
+          className="fixed inset-0 z-50"
+          onClick={() => setContextMenu(null)}
+        >
+          <div
+            className="absolute rounded-lg border border-gray-200 bg-white shadow-xl overflow-hidden min-w-[160px]"
+            style={{
+              left: Math.min(contextMenu.position.x, window.innerWidth - 180),
+              top: Math.min(contextMenu.position.y, window.innerHeight - 120),
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-4 py-2 text-xs font-semibold text-gray-500 border-b border-gray-100 bg-gray-50">
+              {contextMenu.date.toLocaleDateString("ja-JP", { month: "long", day: "numeric", weekday: "short", timeZone: "Asia/Tokyo" })}
+            </div>
+            <button
+              onClick={() => {
+                if (contextMenu.events.length === 0) return;
+                setSelectedDate(contextMenu.date);
+                setSelectedDateEvents(contextMenu.events);
+                setContextMenu(null);
+              }}
+              disabled={contextMenu.events.length === 0}
+              className={`flex w-full items-center gap-2 px-4 py-2.5 text-sm text-left transition-colors ${
+                contextMenu.events.length === 0
+                  ? "opacity-40 cursor-not-allowed text-gray-400"
+                  : "text-gray-700 hover:bg-gray-50 cursor-pointer"
+              }`}
+            >
+              <CalendarDays size={14} strokeWidth={1.5} aria-hidden="true" />
+              表示
+            </button>
+            {currentUserRole === "admin" && (
+              <Link
+                href={`/events/new?date=${contextMenu.date.toLocaleDateString("sv-SE", { timeZone: "Asia/Tokyo" })}`}
+                onClick={() => setContextMenu(null)}
+                className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                <Plus size={14} strokeWidth={1.5} aria-hidden="true" />
+                追加
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
       {selectedDate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={() => setSelectedDate(null)}>
           <div
@@ -590,13 +641,16 @@ export default function EventsPage() {
             }))}
             date={currentMonth}
             onNavigate={setCurrentMonth}
-            onSelectDate={(clickedDate, dayEvents) => {
-              setSelectedDate(clickedDate);
+            onSelectDate={(clickedDate, dayEvents, position) => {
               const ids = new Set(dayEvents.map(e => e.id));
               const dateEvents = filteredEvents
                 .filter(e => ids.has(e.id))
                 .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-              setSelectedDateEvents(dateEvents);
+              setContextMenu({
+                date: clickedDate,
+                events: dateEvents,
+                position: position ?? { x: window.innerWidth / 2, y: window.innerHeight / 2 },
+              });
             }}
           />
         </div>

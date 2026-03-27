@@ -6,6 +6,7 @@ import { format, parse, startOfWeek, getDay } from "date-fns";
 import { ja } from "date-fns/locale";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import { useRouter } from "next/navigation";
+import { useRef } from "react";
 
 const locales = { ja };
 // startOfWeek は date-fns の関数をそのまま渡す（ライブラリ内部で locale を注入する）
@@ -124,9 +125,10 @@ export function CalendarView({
   events: EventInput[];
   date: Date;
   onNavigate: (date: Date) => void;
-  onSelectDate?: (date: Date, events: EventInput[]) => void;
+  onSelectDate?: (date: Date, events: EventInput[], position?: { x: number; y: number }) => void;
 }) {
   const router = useRouter();
+  const lastClickPos = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
   const calEvents: CalEvent[] = events.map((e) => ({
     id: e.id,
@@ -138,7 +140,12 @@ export function CalendarView({
   }));
 
   return (
-    <div className="h-[520px] rounded-lg border border-gray-200 bg-white p-4">
+    <div
+      className="h-[520px] rounded-lg border border-gray-200 bg-white p-4"
+      onClickCapture={(e) => {
+        lastClickPos.current = { x: e.clientX, y: e.clientY };
+      }}
+    >
       <style>{`
         .rbc-month-view .rbc-date-cell .rbc-button-link {
           cursor: pointer;
@@ -185,7 +192,7 @@ export function CalendarView({
                 eventDate.getDate() === clickedDate.getDate()
               );
             });
-            onSelectDate(clickedDate, dayEvents);
+            onSelectDate(clickedDate, dayEvents, lastClickPos.current);
           }
         }}
         drilldownView={null}

@@ -49,6 +49,7 @@ type SectionProps = {
   title: string;
   description: string;
   addLabel: string;
+  addButtonLabel: string;
   items: EventType[];
   colors: { label: string; value: string }[];
   onMoveUp: (index: number) => Promise<void>;
@@ -62,6 +63,7 @@ function EventTypeSection({
   title,
   description,
   addLabel,
+  addButtonLabel,
   items,
   colors,
   onMoveUp,
@@ -271,7 +273,7 @@ function EventTypeSection({
           className="flex items-center gap-1.5 rounded-lg border border-dashed border-gray-300 px-4 py-2 text-sm text-gray-500 hover:border-gray-400 hover:text-gray-700"
         >
           <Plus size={16} strokeWidth={1.5} aria-hidden="true" />
-          追加
+          {addButtonLabel}
         </button>
       )}
     </>
@@ -447,7 +449,7 @@ function AddProfileForm({
         className="flex items-center gap-1.5 rounded-lg border border-dashed border-gray-300 px-4 py-2 text-sm text-gray-500 hover:border-gray-400 hover:text-gray-700"
       >
         <UserPlus size={16} strokeWidth={1.5} aria-hidden="true" />
-        追加
+        選手プロファイルを追加
       </button>
     );
   }
@@ -805,7 +807,7 @@ function InquiryTypeSection({ teamId }: InquiryTypeSectionProps) {
             className="flex items-center gap-1.5 rounded-lg border border-dashed border-gray-300 px-4 py-2 text-sm text-gray-500 hover:border-gray-400 hover:text-gray-700"
           >
             <Plus size={16} strokeWidth={1.5} aria-hidden="true" />
-            追加
+            問い合わせ種別を追加
           </button>
         </div>
       )}
@@ -2397,6 +2399,7 @@ export default function SettingsPage() {
             title="イベント種別"
             description="予定作成時に選択できる種別（例: 練習・試合）を管理します"
             addLabel="例: 合宿"
+            addButtonLabel="イベント種別を追加"
             items={eventTypes}
             colors={PRESET_COLORS}
             onMoveUp={(i) => moveItem(eventTypes, setEventTypes, i, "up")}
@@ -2410,6 +2413,7 @@ export default function SettingsPage() {
             title="対象カテゴリ"
             description="予定の対象（例: 全体・男子・女子）を管理します"
             addLabel="例: OB"
+            addButtonLabel="カテゴリを追加"
             items={eventCategories}
             colors={PRESET_COLORS}
             onMoveUp={(i) => moveItem(eventCategories, setEventCategories, i, "up")}
