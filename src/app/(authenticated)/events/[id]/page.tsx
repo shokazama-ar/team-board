@@ -33,7 +33,7 @@ type AttendanceStatus = "present" | "absent" | "undecided";
 type MyProfile = {
   profile_id: string;
   name: string | null;
-  kind: "coach" | "player";
+  kind: "coach" | "player" | "guardian";
   status: AttendanceStatus | null;
 };
 
@@ -102,12 +102,13 @@ export default function EventDetailPage() {
     }
     setEvent(eventData as unknown as EventDetail);
 
-    // Parallel fetch: myMemberships, profile, attendances, teamMembers
+    // Parallel fetch: myMemberships, profile, attendances, teamMembers, linkedAccess
     const [
       { data: myMemberships },
       { data: profile },
       { data: attendances },
       { data: teamMembers },
+      { data: linkedAccess },
     ] = await Promise.all([
       supabase
         .from("team_members")
@@ -127,6 +128,9 @@ export default function EventDetailPage() {
         .from("team_members")
         .select("member_profile_id, member_profiles(user_id, kind, name, number)")
         .eq("team_id", eventData.team_id),
+      supabase
+        .from("member_profile_access")
+        .select("member_profile_id"),
     ]);
 
     if (myMemberships && myMemberships.length > 0) {
@@ -170,14 +174,15 @@ export default function EventDetailPage() {
       setCoaches(allMembers.filter((m) => m.kind === "coach"));
       setPlayers(allMembers.filter((m) => m.kind === "player"));
 
-      // My profiles = profiles owned by current user
+      // My profiles = profiles owned by current user OR linked via member_profile_access
+      const linkedProfileIds = new Set((linkedAccess ?? []).map((r) => r.member_profile_id));
       const mine: MyProfile[] = teamMembers
         .filter((tm) => {
           const mp = tm.member_profiles as unknown as { user_id: string; kind: string; name: string | null; number: string | null } | null;
-          return mp?.user_id === user.id;
+          return mp?.user_id === user.id || linkedProfileIds.has(tm.member_profile_id);
         })
         .map((tm) => {
-          const mp = tm.member_profiles as unknown as { user_id: string; kind: "coach" | "player"; name: string | null; number: string | null } | null;
+          const mp = tm.member_profiles as unknown as { user_id: string; kind: "coach" | "player" | "guardian"; name: string | null; number: string | null } | null;
           return {
             profile_id: tm.member_profile_id,
             name: mp?.name ?? null,

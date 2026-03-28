@@ -11,7 +11,7 @@ type MemberProfile = {
   role: "admin" | "member";
   created_at: string;
   account_type: "coach" | "guardian";
-  kind: "coach" | "player";
+  kind: "coach" | "player" | "guardian";
   name: string | null;
   avatar_url: string | null;
   number: string | null;
@@ -103,15 +103,38 @@ export default function MembersPage() {
     }
 
     if (membersData) {
+      // member_profiles.name が空文字のケースに備え、user_id → profiles.name の Map を作成
+      const userIdsWithEmptyName = membersData
+        .map((m) => {
+          const mp = m.member_profiles as unknown as { user_id: string; name: string | null } | null;
+          return (!mp?.name?.trim() && mp?.user_id) ? mp.user_id : null;
+        })
+        .filter((uid): uid is string => uid !== null);
+
+      let profileNameMap = new Map<string, string>();
+      if (userIdsWithEmptyName.length > 0) {
+        const { data: profileNames } = await supabase
+          .from("profiles")
+          .select("id, name")
+          .in("id", userIdsWithEmptyName);
+        if (profileNames) {
+          for (const p of profileNames) {
+            if (p.name) profileNameMap.set(p.id, p.name);
+          }
+        }
+      }
+
       const enriched: MemberProfile[] = membersData.map((m) => {
         const mp = m.member_profiles as unknown as {
           id: string;
           user_id: string;
-          kind: "coach" | "player";
+          kind: "coach" | "player" | "guardian";
           name: string | null;
           avatar_url: string | null;
           number: string | null;
         } | null;
+        // name が空文字または NULL の場合は profiles テーブルの名前で補完
+        const resolvedName = mp?.name?.trim() || (mp?.user_id ? profileNameMap.get(mp.user_id) ?? null : null);
         return {
           id: m.id,
           member_profile_id: m.member_profile_id,
@@ -119,7 +142,7 @@ export default function MembersPage() {
           created_at: m.created_at,
           account_type: (m.account_type ?? "coach") as "coach" | "guardian",
           kind: mp?.kind ?? "player",
-          name: mp?.name ?? null,
+          name: resolvedName,
           avatar_url: mp?.avatar_url ?? null,
           number: mp?.number ?? null,
           owner_user_id: mp?.user_id ?? "",
