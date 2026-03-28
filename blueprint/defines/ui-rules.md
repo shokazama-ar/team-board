@@ -14,6 +14,7 @@
 | 危険なアクション | `border-red-300 text-red-600 hover:bg-red-50` |
 | コーチバッジ | `bg-blue-50 text-blue-700` |
 | 選手バッジ | `bg-green-50 text-green-700` |
+| 保護者バッジ | `bg-orange-50 text-orange-700` |
 | 管理者バッジ | `bg-gray-100 text-gray-600` |
 | 警告（未回答） | `border-yellow-300 bg-yellow-50 text-yellow-900` |
 | 問い合わせ：未読 (new) | `bg-red-50 text-red-700` |
@@ -154,6 +155,20 @@ function copyToClipboard(text: string): Promise<void> {
   </div>
 )}
 ```
+
+## 出欠一覧表示ルール（events/[id]/page.tsx）
+
+- **出欠一覧（選手・コーチタブ）**: 出欠回答済み（`status` が `present`/`absent`/`undecided`）のメンバーのみ表示する。未回答（`status === null`）は非表示。
+- **集計サマリー**: 未回答人数（`noAnswer`）は引き続きサマリー行に表示する。
+- **保護者ユーザーの出欠登録**: `myProfiles` に `member_profile_access` 経由のリンク済み選手プロファイルも含まれる。保護者は guardian プロファイルと、リンク先選手プロファイルの両方の出欠を登録できる。
+
+## guardian ロール対応
+
+- `member_profiles.kind` は `"coach" | "player" | "guardian"` の3種類。
+- `team_members.account_type` は `"coach" | "guardian"` の2種類。
+- `member_profile_access` テーブルで保護者ユーザーがリンク先選手プロファイルへのアクセス権を持つ。
+- `link_profile_by_share_code(code)` RPC でリンク作成。
+- RLS関数 `owns_member_profile(profile_id)` はオーナーまたは `member_profile_access` 経由のアクセス権保持者を「所有者扱い」にする。
 
 ## タイムゾーン
 

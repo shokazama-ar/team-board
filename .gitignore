@@ -50,3 +50,4 @@ supabase/.temp/
 # blueprint (local only, not for version control)
 blueprint/tasks/
 blueprint/feedback/
+blueprint/migration-guide-local-to-cloud.md

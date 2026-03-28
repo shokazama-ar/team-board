@@ -69,6 +69,7 @@ export default function EventDetailPage() {
   const [currentUserId, setCurrentUserId] = useState<string>("");
   const [currentUserRole, setCurrentUserRole] = useState<string>("");
   const [isCoach, setIsCoach] = useState(false);
+  const [isGuardian, setIsGuardian] = useState(false);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
 
@@ -102,13 +103,20 @@ export default function EventDetailPage() {
     }
     setEvent(eventData as unknown as EventDetail);
 
-    // Parallel fetch: myMemberships, profile, attendances, teamMembers, linkedAccess
+    // Collect category event_type IDs from the event
+    const categoryEventTypeIds: string[] = (eventData.event_event_types ?? [])
+      .map((e) => e.event_types as unknown as EventType | null)
+      .filter((et): et is EventType => et !== null && et.kind === "category")
+      .map((et) => et.id);
+
+    // Parallel fetch: myMemberships, profile, attendances, teamMembers, linkedAccess, profileCategories
     const [
       { data: myMemberships },
       { data: profile },
       { data: attendances },
       { data: teamMembers },
       { data: linkedAccess },
+      { data: profileCategoriesData },
     ] = await Promise.all([
       supabase
         .from("team_members")
@@ -131,6 +139,12 @@ export default function EventDetailPage() {
       supabase
         .from("member_profile_access")
         .select("member_profile_id"),
+      categoryEventTypeIds.length > 0
+        ? supabase
+            .from("member_profile_categories")
+            .select("member_profile_id, event_type_id")
+            .in("event_type_id", categoryEventTypeIds)
+        : Promise.resolve({ data: [] as { member_profile_id: string; event_type_id: string }[], error: null }),
     ]);
 
     if (myMemberships && myMemberships.length > 0) {
@@ -143,6 +157,12 @@ export default function EventDetailPage() {
         return mp?.kind === "coach";
       });
       setIsCoach(hasCoach);
+
+      const hasGuardian = myMemberships.some((m) => {
+        const mp = m.member_profiles as unknown as { user_id: string; kind: string } | null;
+        return mp?.kind === "guardian";
+      });
+      setIsGuardian(hasGuardian);
     }
 
     if (profile) setCreatorName(profile.name || profile.email);
@@ -190,7 +210,17 @@ export default function EventDetailPage() {
             status: attendanceMap.get(tm.member_profile_id) ?? null,
           };
         });
-      setMyProfiles(mine);
+
+      // Filter myProfiles by event target categories
+      const profileCategoryRows = profileCategoriesData ?? [];
+      const qualifiedProfileIds = new Set(
+        profileCategoryRows.map((r) => r.member_profile_id)
+      );
+      const filteredMine = categoryEventTypeIds.length > 0
+        ? mine.filter((p) => qualifiedProfileIds.has(p.profile_id))
+        : mine;
+
+      setMyProfiles(filteredMine);
     }
 
     setLoading(false);
@@ -367,7 +397,7 @@ export default function EventDetailPage() {
         <h2 className="mb-4 text-lg font-bold">出欠</h2>
 
         {/* 自分のプロファイルごとに出欠ボタン */}
-        {myProfiles.length > 0 && (
+        {myProfiles.length > 0 && !isGuardian && (
           <div className="mb-5 space-y-3">
             <p className="text-sm font-medium text-gray-700">あなたの回答</p>
             {myProfiles.map((profile) => (
@@ -467,10 +497,10 @@ export default function EventDetailPage() {
         {/* 出欠一覧 */}
         {(activeTab === "player" || !isCoach) && (
           <div className="divide-y divide-gray-100">
-            {players.length === 0 ? (
-              <p className="py-2 text-sm text-gray-400">選手はいません</p>
+            {players.filter((m) => m.status !== null).length === 0 ? (
+              <p className="py-2 text-sm text-gray-400">回答済みの選手はいません</p>
             ) : (
-              players.map((member) => (
+              players.filter((m) => m.status !== null).map((member) => (
                 <div key={member.profile_id} className="flex items-center justify-between py-2">
                   <span className="text-sm text-gray-900">
                     {member.name || "名前未設定"}
@@ -478,15 +508,9 @@ export default function EventDetailPage() {
                       <span className="ml-1.5 text-xs text-gray-400">#{member.number}</span>
                     )}
                   </span>
-                  {member.status ? (
-                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_BADGE_STYLES[member.status]}`}>
-                      {STATUS_LABELS[member.status]}
-                    </span>
-                  ) : (
-                    <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500">
-                      未回答
-                    </span>
-                  )}
+                  <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_BADGE_STYLES[member.status!]}`}>
+                    {STATUS_LABELS[member.status!]}
+                  </span>
                 </div>
               ))
             )}
@@ -495,23 +519,17 @@ export default function EventDetailPage() {
 
         {isCoach && activeTab === "coach" && (
           <div className="divide-y divide-gray-100">
-            {coaches.length === 0 ? (
-              <p className="py-2 text-sm text-gray-400">コーチはいません</p>
+            {coaches.filter((m) => m.status !== null).length === 0 ? (
+              <p className="py-2 text-sm text-gray-400">回答済みのコーチはいません</p>
             ) : (
-              coaches.map((member) => (
+              coaches.filter((m) => m.status !== null).map((member) => (
                 <div key={member.profile_id} className="flex items-center justify-between py-2">
                   <span className="text-sm text-gray-900">
                     {member.name || "名前未設定"}
                   </span>
-                  {member.status ? (
-                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_BADGE_STYLES[member.status]}`}>
-                      {STATUS_LABELS[member.status]}
-                    </span>
-                  ) : (
-                    <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500">
-                      未回答
-                    </span>
-                  )}
+                  <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_BADGE_STYLES[member.status!]}`}>
+                    {STATUS_LABELS[member.status!]}
+                  </span>
                 </div>
               ))
             )}
