@@ -14,14 +14,24 @@ export default function HelpAnnouncementsPage() {
         <MockupFrame title="お知らせ — TeamBoard">
           <div className="text-xs">
             <div className="mb-3 flex items-center justify-between">
-              <p className="text-base font-bold text-gray-900">お知らせ</p>
-              <div className="rounded-lg ring-2 ring-blue-400 ring-offset-1">
-                <span className="flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 font-medium text-white">
-                  + 新規作成
+              <div className="flex gap-4 border-b border-gray-200 pb-2">
+                <span className="border-b-2 border-blue-500 pb-2 font-medium text-blue-600">全員向け</span>
+                <span className="pb-2 text-gray-500">管理者向け</span>
+              </div>
+            </div>
+            <div className="mb-3 flex items-center gap-2">
+              <span className="text-gray-500">関連カテゴリのみ</span>
+              <div className="relative inline-flex h-4 w-7 items-center rounded-full bg-gray-300">
+                <span className="inline-block h-3 w-3 translate-x-0.5 rounded-full bg-white shadow" />
+              </div>
+              <span className="text-gray-400">すべて</span>
+              <div className="ml-auto rounded-lg ring-2 ring-blue-400 ring-offset-1">
+                <span className="flex items-center rounded-lg bg-blue-600 p-2 font-medium text-white">
+                  <svg className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
                 </span>
               </div>
             </div>
-            <p className="mb-2 text-[10px] text-blue-500">↑ 管理者アカウントのみ表示されます</p>
+            <p className="mb-2 text-[10px] text-blue-500">↑ 管理者アカウントのみ「＋」ボタンが表示されます</p>
             <div className="space-y-2">
               {[
                 { title: "3月の練習スケジュール", author: "山田 管理者", date: "3月1日（金）" },
@@ -56,9 +66,9 @@ export default function HelpAnnouncementsPage() {
             <div className="mb-4 rounded-lg p-2 ring-2 ring-green-400 ring-offset-1">
               <p className="mb-2 font-medium text-gray-700">対象カテゴリ</p>
               <div className="flex flex-wrap gap-1.5">
-                <span className="rounded-full border-2 border-blue-500 bg-blue-50 px-2 py-0.5 font-medium text-blue-600">A組</span>
-                <span className="rounded-full border-2 border-gray-200 bg-white px-2 py-0.5 text-gray-500">B組</span>
-                <span className="rounded-full border-2 border-gray-200 bg-white px-2 py-0.5 text-gray-500">全体</span>
+                <span className="rounded border-2 border-blue-500 bg-blue-50 px-2 py-0.5 font-medium text-blue-600">A組</span>
+                <span className="rounded border-2 border-gray-200 bg-white px-2 py-0.5 text-gray-500">B組</span>
+                <span className="rounded border-2 border-gray-200 bg-white px-2 py-0.5 text-gray-500">全体</span>
               </div>
               <div className="mt-2 space-y-1 text-[10px]">
                 <p className="text-green-600">↑ A組を選択 → A組の選手を持つメンバーにのみ表示</p>
@@ -72,21 +82,18 @@ export default function HelpAnnouncementsPage() {
 
       <Section title="カテゴリフィルタ">
         <ul className="list-disc space-y-1.5 pl-5 text-sm text-gray-700">
-          <li>お知らせ一覧の右上にある「関連カテゴリのみ ◯—◯ すべて」トグルで表示を絞り込めます。</li>
+          <li>お知らせ一覧の「関連カテゴリのみ」トグルで表示を絞り込めます。</li>
           <li>自分の選手プロファイルが所属するカテゴリのお知らせのみ表示します。</li>
           <li>カテゴリが未設定のお知らせ（全員向け）は、フィルタ設定に関わらず常に表示されます。</li>
         </ul>
         <MockupFrame title="お知らせ — TeamBoard">
           <div className="text-xs">
-            <div className="mb-3 flex items-center justify-between">
-              <p className="text-base font-bold text-gray-900">お知らせ</p>
-              <div className="flex items-center gap-2">
-                <span className="text-gray-500">関連カテゴリのみ</span>
-                <div className="relative inline-flex h-4 w-7 items-center rounded-full bg-gray-300">
-                  <span className="inline-block h-3 w-3 translate-x-0.5 rounded-full bg-white shadow" />
-                </div>
-                <span className="text-gray-400">すべて</span>
+            <div className="mb-3 flex items-center gap-2">
+              <span className="text-gray-500">関連カテゴリのみ</span>
+              <div className="relative inline-flex h-4 w-7 items-center rounded-full bg-gray-300">
+                <span className="inline-block h-3 w-3 translate-x-0.5 rounded-full bg-white shadow" />
               </div>
+              <span className="text-gray-400">すべて</span>
             </div>
             <div className="space-y-2">
               {[
@@ -94,7 +101,7 @@ export default function HelpAnnouncementsPage() {
                 { title: "全体ミーティングのご案内", cat: null, color: null },
               ].map(({ title, cat, color }) => (
                 <div key={title} className="rounded-lg border border-gray-200 bg-white p-2.5">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <span className="font-medium text-gray-900">{title}</span>
                     {cat && (
                       <span
@@ -160,18 +167,18 @@ export default function HelpAnnouncementsPage() {
 
       <Section title="管理者向けお知らせ">
         <ul className="list-disc space-y-1.5 pl-5 text-sm text-gray-700">
-          <li>お知らせ一覧には<b>「全員向け」</b>と<b>「管理者向け」</b>の2つのタブがあります。</li>
+          <li>お知らせ一覧には<b>「全員向け」</b>と<b>「管理者向け」</b>の2つのタブがあります（管理者のみ表示）。</li>
           <li>「管理者向け」タブには、管理者（コーチ）のみに表示されるお知らせが表示されます。保護者アカウントには表示されません。</li>
           <li>お知らせ作成時に対象を「管理者向け」に設定すると、このタブに分類されます。</li>
           <li>チームへの問い合わせ（体験希望・入会依頼など）は、ナビの「問い合わせ」から独立したページで確認・返信できます。</li>
         </ul>
         <MockupFrame title="お知らせ › 管理者向け — TeamBoard">
           <div className="text-xs">
-            <div className="mb-3 flex gap-2 border-b border-gray-200 pb-2">
+            <div className="mb-3 flex gap-4 border-b border-gray-200 pb-2">
               {["全員向け", "管理者向け"].map((tab) => (
                 <span
                   key={tab}
-                  className={`px-3 py-1 ${tab === "管理者向け" ? "border-b-2 border-blue-600 font-medium text-blue-600" : "text-gray-500"}`}
+                  className={`pb-2 ${tab === "管理者向け" ? "border-b-2 border-blue-600 font-medium text-blue-600" : "text-gray-500"}`}
                 >
                   {tab}
                 </span>
@@ -183,7 +190,10 @@ export default function HelpAnnouncementsPage() {
                 { title: "来季スケジュール案（管理者確認用）", author: "山田 管理者", date: "2月20日（火）" },
               ].map(({ title, author, date }) => (
                 <div key={title} className="rounded-lg border border-gray-200 bg-white p-3">
-                  <p className="font-semibold text-gray-900">{title}</p>
+                  <div className="flex items-start gap-2">
+                    <p className="flex-1 font-semibold text-gray-900">{title}</p>
+                    <span className="shrink-0 rounded bg-gray-100 px-1.5 py-0.5 text-[9px] text-gray-600">管理者向け</span>
+                  </div>
                   <p className="mt-0.5 text-gray-400">{author} ・ {date}</p>
                 </div>
               ))}

@@ -10,7 +10,7 @@ export default function HelpCategoriesPage() {
         <div className="space-y-3 text-sm text-gray-700">
           <div className="rounded-lg border border-gray-100 bg-gray-50 p-4">
             <p className="mb-1 font-semibold text-gray-800">イベント種別（例: 練習・試合・合宿）</p>
-            <p>予定の<b>内容</b>を分類します。ダッシュボードやカレンダーで色分け表示されます。設定画面で自由に追加できます。</p>
+            <p>予定の<b>内容</b>を分類します。一覧やカレンダーで色分け表示されます。設定画面で自由に追加できます。</p>
           </div>
           <div className="rounded-lg border border-gray-100 bg-gray-50 p-4">
             <p className="mb-1 font-semibold text-gray-800">対象カテゴリ（例: A組・男子・全体）</p>
@@ -38,9 +38,9 @@ export default function HelpCategoriesPage() {
             <div className="rounded-lg p-2 ring-2 ring-blue-400 ring-offset-1">
               <p className="mb-2 font-medium text-gray-700">対象カテゴリ</p>
               <div className="flex flex-wrap gap-1.5">
-                <span className="rounded-full border-2 border-blue-500 bg-blue-50 px-2 py-0.5 font-medium text-blue-600">A組</span>
-                <span className="rounded-full border-2 border-gray-200 bg-white px-2 py-0.5 text-gray-500">B組</span>
-                <span className="rounded-full border-2 border-gray-200 bg-white px-2 py-0.5 text-gray-500">全体</span>
+                <span className="rounded border-2 border-blue-500 bg-blue-50 px-2 py-0.5 font-medium text-blue-600">A組</span>
+                <span className="rounded border-2 border-gray-200 bg-white px-2 py-0.5 text-gray-500">B組</span>
+                <span className="rounded border-2 border-gray-200 bg-white px-2 py-0.5 text-gray-500">全体</span>
               </div>
               <p className="mt-1.5 text-[10px] text-blue-500">↑ 予定の「対象者」を絞り込む（複数選択可）</p>
             </div>
@@ -48,10 +48,11 @@ export default function HelpCategoriesPage() {
         </MockupFrame>
       </Section>
 
-      <Section title="選手へのカテゴリ割り当て">
+      <Section title="選手・コーチへのカテゴリ割り当て">
         <ul className="list-disc space-y-1.5 pl-5 text-sm text-gray-700">
-          <li>コーチは設定画面の「コーチ」タブの「カテゴリ割り当て」から、各選手にカテゴリを割り当てます。</li>
-          <li>1人の選手に複数カテゴリを設定できます。</li>
+          <li>設定画面の「コーチ」タブ内にある「選手・コーチのカテゴリ割り当て」ボタンから、各選手・コーチにカテゴリを割り当てます。</li>
+          <li>1人に複数カテゴリを設定できます。</li>
+          <li>割り当てはモーダル内の「選手」「コーチ」タブで切り替えて操作します。</li>
         </ul>
         <MockupFrame title="設定 — TeamBoard">
           <div className="text-xs">
@@ -65,15 +66,24 @@ export default function HelpCategoriesPage() {
                 </span>
               ))}
             </div>
-            <div className="rounded-lg p-2 ring-2 ring-green-400 ring-offset-1">
-              <p className="mb-2 font-semibold text-gray-700">選手カテゴリ割り当て</p>
-              <div className="space-y-2">
+            <div className="mb-3 flex items-center justify-between rounded-lg border border-gray-200 bg-white px-3 py-2.5">
+              <p className="font-medium text-gray-700">選手・コーチのカテゴリ割り当て</p>
+              <span className="rounded border border-gray-300 px-2 py-0.5 text-[10px] text-gray-600">編集</span>
+            </div>
+            {/* モーダルイメージ */}
+            <div className="rounded-lg border-2 border-blue-300 bg-blue-50 p-3 ring-2 ring-blue-400 ring-offset-1">
+              <p className="mb-2 text-[10px] text-blue-600">↑ 「編集」をクリックするとモーダルが開きます</p>
+              <div className="mb-2 flex gap-2 border-b border-blue-200 pb-1">
+                <span className="border-b-2 border-green-500 pb-1 text-[10px] font-medium text-green-600">選手</span>
+                <span className="pb-1 text-[10px] text-gray-500">コーチ</span>
+              </div>
+              <div className="space-y-1.5">
                 {[
                   { name: "田中 次郎", cats: ["A組", "全体"] },
                   { name: "鈴木 花子", cats: ["B組", "全体"] },
                   { name: "佐藤 一郎", cats: ["A組"] },
                 ].map(({ name, cats }) => (
-                  <div key={name} className="flex items-center justify-between rounded border border-gray-100 px-2 py-1.5">
+                  <div key={name} className="flex items-center justify-between rounded border border-blue-200 bg-white px-2 py-1">
                     <span className="text-gray-700">{name}</span>
                     <div className="flex gap-1">
                       {cats.map((cat) => (
@@ -83,7 +93,7 @@ export default function HelpCategoriesPage() {
                   </div>
                 ))}
               </div>
-              <p className="mt-2 text-[10px] text-green-600">↑ 各選手に複数のカテゴリを割り当てられます</p>
+              <p className="mt-2 text-[10px] text-blue-600">↑ 各選手に複数のカテゴリを割り当てられます</p>
             </div>
           </div>
         </MockupFrame>
@@ -99,10 +109,10 @@ export default function HelpCategoriesPage() {
         <MockupFrame title="ダッシュボード — TeamBoard">
           <div className="text-xs">
             <div className="grid gap-4 md:grid-cols-2">
-              {/* フィルタOFF */}
+              {/* フィルタOFF（関連カテゴリのみ） */}
               <div className="rounded-lg border border-gray-200 bg-white p-3">
                 <div className="mb-2 flex items-center justify-end gap-1.5">
-                  <span className="text-gray-500">関連カテゴリのみ</span>
+                  <span className="font-medium text-gray-700">関連カテゴリのみ</span>
                   <div className="relative inline-flex h-4 w-7 items-center rounded-full bg-gray-300">
                     <span className="inline-block h-3 w-3 translate-x-0.5 rounded-full bg-white shadow" />
                   </div>
@@ -112,7 +122,7 @@ export default function HelpCategoriesPage() {
                 <div className="space-y-1">
                   <div className="rounded border border-gray-100 px-2 py-1 text-gray-700">
                     <span>第10回練習</span>
-                    <span className="ml-1 rounded-full bg-blue-500 px-1 py-0.5 text-[9px] text-white">A組</span>
+                    <span className="ml-1 rounded px-1 py-0.5 text-[9px]" style={{ borderWidth: 1, borderColor: "#2563eb", color: "#2563eb" }}>A組</span>
                   </div>
                 </div>
                 <p className="mt-1.5 text-[10px] text-gray-400">A組のイベントのみ表示</p>
@@ -129,10 +139,10 @@ export default function HelpCategoriesPage() {
                 <p className="mb-1 font-semibold text-gray-700">直近のイベント</p>
                 <div className="space-y-1">
                   <div className="rounded border border-gray-100 px-2 py-1 text-gray-700">
-                    第10回練習 <span className="ml-1 rounded-full bg-blue-500 px-1 py-0.5 text-[9px] text-white">A組</span>
+                    第10回練習 <span className="ml-1 rounded px-1 py-0.5 text-[9px]" style={{ borderWidth: 1, borderColor: "#2563eb", color: "#2563eb" }}>A組</span>
                   </div>
                   <div className="rounded border border-gray-100 px-2 py-1 text-gray-700">
-                    春季合宿 <span className="ml-1 rounded-full bg-green-500 px-1 py-0.5 text-[9px] text-white">B組</span>
+                    春季合宿 <span className="ml-1 rounded px-1 py-0.5 text-[9px]" style={{ borderWidth: 1, borderColor: "#16a34a", color: "#16a34a" }}>B組</span>
                   </div>
                   <div className="rounded border border-gray-100 px-2 py-1 text-gray-700">全体ミーティング</div>
                 </div>
