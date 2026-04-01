@@ -1252,6 +1252,12 @@ export default function SettingsPage() {
   const [playerCategoryModalTab, setPlayerCategoryModalTab] = useState<"coach" | "player">("player");
 
   // Member profiles state
+  type ProfileAccessItem = {
+    id: string;
+    user_id: string;
+    user_name: string | null;
+    status: "pending" | "accepted" | "rejected";
+  };
   type MemberProfileItem = {
     id: string;
     member_profile_id: string;
@@ -1260,8 +1266,30 @@ export default function SettingsPage() {
     avatar_url: string | null;
     number: string | null;
     role: string;
+    accessItems?: ProfileAccessItem[];
   };
   const [myProfiles, setMyProfiles] = useState<MemberProfileItem[]>([]);
+
+  // 共有リクエスト（受信側 — guardianタブ）
+  type ReceivedAccessItem = {
+    id: string;
+    member_profile_id: string;
+    profile_name: string | null;
+    owner_name: string | null;
+    status: "pending" | "accepted";
+  };
+  const [receivedAccess, setReceivedAccess] = useState<ReceivedAccessItem[]>([]);
+  const [respondingAccessId, setRespondingAccessId] = useState<string | null>(null);
+
+  // チーム内guardianユーザー一覧（送信側の検索ソース）
+  type TeamGuardianUser = { user_id: string; name: string | null };
+  const [teamGuardianUsers, setTeamGuardianUsers] = useState<TeamGuardianUser[]>([]);
+
+  // 共有リクエスト送信（送信側）
+  const [shareSearchText, setShareSearchText] = useState<Record<string, string>>({});
+  const [selectedShareUserId, setSelectedShareUserId] = useState<Record<string, string>>({});
+  const [sendingShareRequest, setSendingShareRequest] = useState<string | null>(null);
+  const [shareRequestMessage, setShareRequestMessage] = useState<Record<string, string>>({});
 
   const reloadMyProfiles = useCallback(async (tid: string, uid: string) => {
     const { data: myMemberships } = await supabase
@@ -1269,28 +1297,62 @@ export default function SettingsPage() {
       .select("id, role, member_profile_id, member_profiles!inner(user_id, kind, name, avatar_url, number)")
       .eq("team_id", tid)
       .eq("member_profiles.user_id", uid);
-    if (myMemberships) {
-      setMyProfiles(
-        myMemberships.map((m) => {
-          const mp = m.member_profiles as unknown as {
-            user_id: string;
-            kind: "coach" | "player";
-            name: string | null;
-            avatar_url: string | null;
-            number: string | null;
-          } | null;
-          return {
-            id: m.id,
-            member_profile_id: m.member_profile_id,
-            kind: mp?.kind ?? "player",
-            profile_name: mp?.name ?? null,
-            avatar_url: mp?.avatar_url ?? null,
-            number: mp?.number ?? null,
-            role: m.role,
-          };
-        })
-      );
+    if (!myMemberships) return;
+
+    const profileIds = myMemberships.map((m) => m.member_profile_id);
+
+    // 各プロファイルの member_profile_access（送信側）を取得
+    const { data: accessRows } = profileIds.length > 0
+      ? await supabase
+          .from("member_profile_access")
+          .select("id, member_profile_id, user_id, status")
+          .in("member_profile_id", profileIds)
+          .neq("status", "rejected")
+      : { data: [] as { id: string; member_profile_id: string; user_id: string; status: string }[] };
+
+    // accessRows の user_id から名前を取得
+    const accessUserIds = [...new Set((accessRows ?? []).map((r) => r.user_id))];
+    const accessNameMap: Record<string, string | null> = {};
+    if (accessUserIds.length > 0) {
+      const { data: accessProfiles } = await supabase
+        .from("profiles")
+        .select("id, name")
+        .in("id", accessUserIds);
+      (accessProfiles ?? []).forEach((p) => { accessNameMap[p.id] = p.name; });
     }
+
+    const accessByProfileId: Record<string, ProfileAccessItem[]> = {};
+    for (const r of accessRows ?? []) {
+      if (!accessByProfileId[r.member_profile_id]) accessByProfileId[r.member_profile_id] = [];
+      accessByProfileId[r.member_profile_id].push({
+        id: r.id,
+        user_id: r.user_id,
+        user_name: accessNameMap[r.user_id] ?? null,
+        status: r.status as "pending" | "accepted" | "rejected",
+      });
+    }
+
+    setMyProfiles(
+      myMemberships.map((m) => {
+        const mp = m.member_profiles as unknown as {
+          user_id: string;
+          kind: "coach" | "player";
+          name: string | null;
+          avatar_url: string | null;
+          number: string | null;
+        } | null;
+        return {
+          id: m.id,
+          member_profile_id: m.member_profile_id,
+          kind: mp?.kind ?? "player",
+          profile_name: mp?.name ?? null,
+          avatar_url: mp?.avatar_url ?? null,
+          number: mp?.number ?? null,
+          role: m.role,
+          accessItems: accessByProfileId[m.member_profile_id] ?? [],
+        };
+      })
+    );
   }, [supabase]);
 
   useEffect(() => {
@@ -1371,6 +1433,65 @@ export default function SettingsPage() {
             .select("event_type_id")
             .in("member_profile_id", coachIds);
           setCoachCategoryIds(new Set((coachCats ?? []).map((c) => c.event_type_id)));
+        }
+
+        // チーム内guardianユーザー一覧（共有リクエスト送信の検索ソース）
+        const { data: guardianMembers } = await supabase
+          .from("team_members")
+          .select("user_id")
+          .eq("team_id", membership.team_id)
+          .eq("account_type", "guardian");
+        const guardianUserIds = [...new Set((guardianMembers ?? []).map((m) => m.user_id).filter(Boolean))] as string[];
+        if (guardianUserIds.length > 0) {
+          const { data: guardianProfiles } = await supabase
+            .from("profiles")
+            .select("id, name")
+            .in("id", guardianUserIds);
+          setTeamGuardianUsers(
+            (guardianProfiles ?? [])
+              .filter((p) => p.id !== user.id)
+              .map((p) => ({ user_id: p.id, name: p.name }))
+          );
+        }
+
+        // 受信した共有リクエスト（guardianタブ用）
+        const { data: receivedRows } = await supabase
+          .from("member_profile_access")
+          .select("id, member_profile_id, status, member_profiles(name)")
+          .eq("user_id", user.id)
+          .in("status", ["pending", "accepted"]);
+        if (receivedRows && receivedRows.length > 0) {
+          // リクエスト送信者（プロファイルオーナー）名を取得
+          const profileIds = receivedRows.map((r) => r.member_profile_id);
+          const { data: ownerMembers } = await supabase
+            .from("team_members")
+            .select("member_profile_id, user_id")
+            .in("member_profile_id", profileIds);
+          const ownerUserIds = [...new Set((ownerMembers ?? []).map((m) => m.user_id))] as string[];
+          const ownerNameMap: Record<string, string | null> = {};
+          if (ownerUserIds.length > 0) {
+            const { data: ownerProfiles } = await supabase
+              .from("profiles")
+              .select("id, name")
+              .in("id", ownerUserIds);
+            (ownerProfiles ?? []).forEach((p) => { ownerNameMap[p.id] = p.name; });
+          }
+          const profileOwnerMap: Record<string, string> = {};
+          (ownerMembers ?? []).forEach((m) => { profileOwnerMap[m.member_profile_id] = m.user_id; });
+
+          setReceivedAccess(
+            receivedRows.map((r) => {
+              const mp = r.member_profiles as unknown as { name: string | null } | null;
+              const ownerUserId = profileOwnerMap[r.member_profile_id];
+              return {
+                id: r.id,
+                member_profile_id: r.member_profile_id,
+                profile_name: mp?.name ?? null,
+                owner_name: ownerUserId ? (ownerNameMap[ownerUserId] ?? null) : null,
+                status: r.status as "pending" | "accepted",
+              };
+            })
+          );
         }
       }
 
@@ -1766,6 +1887,138 @@ export default function SettingsPage() {
                 setMyProfiles((prev) => prev.filter((mp) => mp.id !== p.id));
               }}
             />
+            {/* 共有管理エリア（送信側） */}
+            <div className="rounded-b-lg border-x border-b border-gray-200 bg-gray-50 px-4 py-3 -mt-1">
+              <p className="mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">プロファイル共有</p>
+              {/* 承認済み一覧 */}
+              {(p.accessItems ?? []).filter((a) => a.status === "accepted").length > 0 && (
+                <div className="mb-3">
+                  <p className="mb-1 text-xs text-gray-500">共有中:</p>
+                  <ul className="space-y-1">
+                    {(p.accessItems ?? []).filter((a) => a.status === "accepted").map((acc) => (
+                      <li key={acc.id} className="flex items-center justify-between gap-2">
+                        <span className="text-sm text-gray-700">{acc.user_name ?? "名前未設定"}</span>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (!window.confirm(`${acc.user_name ?? "このユーザー"}との共有を解除しますか？`)) return;
+                            await supabase.from("member_profile_access").delete().eq("id", acc.id);
+                            await reloadMyProfiles(teamId, userId);
+                          }}
+                          className="rounded border border-red-200 px-2 py-0.5 text-xs text-red-500 hover:bg-red-50"
+                        >
+                          解除
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {/* 承認待ち一覧 */}
+              {(p.accessItems ?? []).filter((a) => a.status === "pending").length > 0 && (
+                <div className="mb-3">
+                  <p className="mb-1 text-xs text-gray-500">承認待ち:</p>
+                  <ul className="space-y-1">
+                    {(p.accessItems ?? []).filter((a) => a.status === "pending").map((acc) => (
+                      <li key={acc.id} className="flex items-center justify-between gap-2">
+                        <span className="text-sm text-gray-400">{acc.user_name ?? "名前未設定"}</span>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (!window.confirm("リクエストをキャンセルしますか？")) return;
+                            await supabase.from("member_profile_access").delete().eq("id", acc.id);
+                            await reloadMyProfiles(teamId, userId);
+                          }}
+                          className="rounded border border-gray-200 px-2 py-0.5 text-xs text-gray-400 hover:bg-gray-100"
+                        >
+                          取消
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {/* リクエスト送信フォーム */}
+              {teamGuardianUsers.length > 0 ? (
+                <div>
+                  <p className="mb-1 text-xs text-gray-500">共有リクエストを送る:</p>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1 min-w-0">
+                      <input
+                        type="text"
+                        value={shareSearchText[p.member_profile_id] ?? ""}
+                        onChange={(e) => {
+                          setShareSearchText((prev) => ({ ...prev, [p.member_profile_id]: e.target.value }));
+                          setSelectedShareUserId((prev) => ({ ...prev, [p.member_profile_id]: "" }));
+                        }}
+                        placeholder="名前で検索..."
+                        className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
+                      />
+                      {(shareSearchText[p.member_profile_id] ?? "").length > 0 && !selectedShareUserId[p.member_profile_id] && (() => {
+                        const q = (shareSearchText[p.member_profile_id] ?? "").toLowerCase();
+                        const filtered = teamGuardianUsers.filter((u) =>
+                          (u.name ?? "").toLowerCase().includes(q) &&
+                          !(p.accessItems ?? []).some((a) => a.user_id === u.user_id && a.status !== "rejected")
+                        );
+                        if (filtered.length === 0) return null;
+                        return (
+                          <ul className="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg">
+                            {filtered.map((u) => (
+                              <li key={u.user_id}>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedShareUserId((prev) => ({ ...prev, [p.member_profile_id]: u.user_id }));
+                                    setShareSearchText((prev) => ({ ...prev, [p.member_profile_id]: u.name ?? "" }));
+                                  }}
+                                  className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+                                >
+                                  {u.name ?? "名前未設定"}
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        );
+                      })()}
+                    </div>
+                    <button
+                      type="button"
+                      disabled={!selectedShareUserId[p.member_profile_id] || sendingShareRequest === p.member_profile_id}
+                      onClick={async () => {
+                        const targetUserId = selectedShareUserId[p.member_profile_id];
+                        if (!targetUserId) return;
+                        setSendingShareRequest(p.member_profile_id);
+                        setShareRequestMessage((prev) => ({ ...prev, [p.member_profile_id]: "" }));
+                        const { error } = await supabase.rpc("send_profile_share_request", {
+                          p_profile_id: p.member_profile_id,
+                          p_target_user_id: targetUserId,
+                        });
+                        if (error) {
+                          const msg = error.message.includes("already exists") ? "既にリクエスト済みです" : "送信に失敗しました";
+                          setShareRequestMessage((prev) => ({ ...prev, [p.member_profile_id]: msg }));
+                        } else {
+                          setShareSearchText((prev) => ({ ...prev, [p.member_profile_id]: "" }));
+                          setSelectedShareUserId((prev) => ({ ...prev, [p.member_profile_id]: "" }));
+                          setShareRequestMessage((prev) => ({ ...prev, [p.member_profile_id]: "リクエストを送りました" }));
+                          await reloadMyProfiles(teamId, userId);
+                        }
+                        setSendingShareRequest(null);
+                      }}
+                      className="shrink-0 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-40"
+                    >
+                      {sendingShareRequest === p.member_profile_id ? "送信中..." : "送信"}
+                    </button>
+                  </div>
+                  {shareRequestMessage[p.member_profile_id] && (
+                    <p className={`mt-1 text-xs ${shareRequestMessage[p.member_profile_id].includes("失敗") || shareRequestMessage[p.member_profile_id].includes("既に") ? "text-red-500" : "text-green-600"}`}>
+                      {shareRequestMessage[p.member_profile_id]}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-xs text-gray-400">（チームに保護者メンバーがいません）</p>
+              )}
+            </div>
           </div>
         ))}
       </div>
@@ -2017,6 +2270,101 @@ export default function SettingsPage() {
         <>
           {profileFormJsx}
           {memberProfilesJsx}
+          {/* 共有リクエスト（受信側） */}
+          {teamId && receivedAccess.length > 0 && (
+            <>
+              <hr className="my-8 border-gray-200" />
+              <h2 className="mb-1 text-lg font-semibold">プロファイル共有</h2>
+              <p className="mb-4 text-sm text-gray-500">他のメンバーからの選手プロファイル共有リクエストを管理します。</p>
+              {/* 承認待ち */}
+              {receivedAccess.filter((r) => r.status === "pending").length > 0 && (
+                <div className="mb-4">
+                  <p className="mb-2 text-sm font-medium text-gray-700">承認待ちのリクエスト</p>
+                  <div className="space-y-2">
+                    {receivedAccess.filter((r) => r.status === "pending").map((r) => (
+                      <div key={r.id} className="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-gray-900">{r.profile_name ?? "名前未設定"}</p>
+                          {r.owner_name && (
+                            <p className="text-xs text-gray-400">{r.owner_name} が作成</p>
+                          )}
+                        </div>
+                        <div className="flex shrink-0 gap-2">
+                          <button
+                            type="button"
+                            disabled={respondingAccessId === r.id}
+                            onClick={async () => {
+                              setRespondingAccessId(r.id);
+                              const { error } = await supabase.rpc("respond_profile_share_request", {
+                                p_access_id: r.id,
+                                p_new_status: "accepted",
+                              });
+                              if (!error) {
+                                setReceivedAccess((prev) =>
+                                  prev.map((item) => item.id === r.id ? { ...item, status: "accepted" as const } : item)
+                                );
+                              }
+                              setRespondingAccessId(null);
+                            }}
+                            className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                          >
+                            承認
+                          </button>
+                          <button
+                            type="button"
+                            disabled={respondingAccessId === r.id}
+                            onClick={async () => {
+                              setRespondingAccessId(r.id);
+                              const { error } = await supabase.rpc("respond_profile_share_request", {
+                                p_access_id: r.id,
+                                p_new_status: "rejected",
+                              });
+                              if (!error) {
+                                setReceivedAccess((prev) => prev.filter((item) => item.id !== r.id));
+                              }
+                              setRespondingAccessId(null);
+                            }}
+                            className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                          >
+                            拒否
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {/* 承認済みプロファイル */}
+              {receivedAccess.filter((r) => r.status === "accepted").length > 0 && (
+                <div>
+                  <p className="mb-2 text-sm font-medium text-gray-700">共有済みプロファイル</p>
+                  <div className="space-y-2">
+                    {receivedAccess.filter((r) => r.status === "accepted").map((r) => (
+                      <div key={r.id} className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white px-4 py-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-gray-900">{r.profile_name ?? "名前未設定"}</p>
+                          {r.owner_name && (
+                            <p className="text-xs text-gray-400">{r.owner_name} が作成</p>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (!window.confirm(`「${r.profile_name ?? "このプロファイル"}」の共有を解除しますか？`)) return;
+                            await supabase.from("member_profile_access").delete().eq("id", r.id);
+                            setReceivedAccess((prev) => prev.filter((item) => item.id !== r.id));
+                          }}
+                          className="shrink-0 rounded border border-red-200 px-2 py-1 text-xs text-red-500 hover:bg-red-50"
+                        >
+                          解除
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
           {/* 機能説明 */}
           <hr className="my-8 border-gray-200" />
           <h2 className="mb-1 text-lg font-semibold">機能説明</h2>
