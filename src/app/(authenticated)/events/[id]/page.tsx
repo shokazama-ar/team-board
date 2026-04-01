@@ -192,8 +192,17 @@ export default function EventDetailPage() {
         };
       });
 
-      setCoaches(allMembers.filter((m) => m.kind === "coach"));
-      setPlayers(allMembers.filter((m) => m.kind === "player"));
+      // Filter coaches/players by event target categories if applicable
+      const profileCategoryRows = profileCategoriesData ?? [];
+      const qualifiedProfileIds = new Set(
+        profileCategoryRows.map((r) => r.member_profile_id)
+      );
+      const filteredMembers = categoryEventTypeIds.length > 0
+        ? allMembers.filter((m) => qualifiedProfileIds.has(m.profile_id))
+        : allMembers;
+
+      setCoaches(filteredMembers.filter((m) => m.kind === "coach"));
+      setPlayers(filteredMembers.filter((m) => m.kind === "player"));
 
       // My profiles = profiles owned by current user OR linked via member_profile_access
       const linkedProfileIds = new Set((linkedAccess ?? []).map((r) => r.member_profile_id));
@@ -212,11 +221,6 @@ export default function EventDetailPage() {
           };
         });
 
-      // Filter myProfiles by event target categories
-      const profileCategoryRows = profileCategoriesData ?? [];
-      const qualifiedProfileIds = new Set(
-        profileCategoryRows.map((r) => r.member_profile_id)
-      );
       const filteredMine = categoryEventTypeIds.length > 0
         ? mine.filter((p) => qualifiedProfileIds.has(p.profile_id))
         : mine;

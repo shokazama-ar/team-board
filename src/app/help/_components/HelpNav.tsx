@@ -10,7 +10,7 @@ const NAV_ITEMS = [
   { href: "/help/events", label: "予定と出欠管理" },
   { href: "/help/announcements", label: "お知らせ" },
   { href: "/help/categories", label: "カテゴリ機能" },
-  { href: "/help/invite", label: "招待コード" },
+  { href: "/help/invite", label: "メンバー招待" },
   { href: "/help/inquiries", label: "問い合わせ管理" },
   { href: "/help/members", label: "メンバー管理" },
 ];

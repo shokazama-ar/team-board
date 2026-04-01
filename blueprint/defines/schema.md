@@ -24,7 +24,6 @@ Supabase (PostgreSQL) のテーブル構成。RLSはすべて有効。
 | id | uuid | |
 | name | text | |
 | icon_url | text | |
-| invite_code_guardian | text | 保護者用招待コード（唯一の参加経路） |
 | slug | text | 一意。問い合わせ受信メールのローカルパート（contact-{slug}@...）。設定済みチームのみ問い合わせフォームが有効。形式: `^[a-z0-9][a-z0-9-]*[a-z0-9]$` |
 | created_by | uuid | profiles.id |
 
@@ -41,7 +40,6 @@ Supabase (PostgreSQL) のテーブル構成。RLSはすべて有効。
 | name | text | プロファイル表示名 |
 | avatar_url | text | |
 | number | text | 背番号（任意） |
-| share_code | text | プロファイル共有コード（UUID形式）。`/profile/[share_code]` で公開ページを表示 |
 
 ---
 
@@ -61,6 +59,7 @@ Supabase (PostgreSQL) のテーブル構成。RLSはすべて有効。
 
 ### `member_profile_access`
 プレイヤープロファイルへのアクセス権限テーブル。保護者アカウントが子供のプロファイルを管理できるようリンクを保持する。
+双方向承認フロー（2026-04-01 再設計）に対応するため、`status` と `requested_by` カラムを追加する。
 
 | カラム | 型 | 備考 |
 |---|---|---|
@@ -68,11 +67,14 @@ Supabase (PostgreSQL) のテーブル構成。RLSはすべて有効。
 | member_profile_id | uuid | member_profiles.id |
 | user_id | uuid | アクセスを許可されたユーザー（auth.users.id） |
 | granted_by | uuid | アクセス権を付与したユーザー（auth.users.id） |
+| status | text | `'pending'` / `'accepted'` / `'rejected'`（新フロー用。既存行はデフォルト `'accepted'`） |
+| requested_by | uuid | リクエストを送ったユーザーの user_id（プロファイル作成者）（新フロー用） |
 | created_at | timestamptz | |
 
-RLSポリシー:
+RLSポリシー（新フロー後）:
 - SELECT: `user_id = auth.uid()` または `owns_member_profile_by_id(member_profile_id)`
-- INSERT: プロファイルオーナーのみ（`owns_member_profile_by_id(member_profile_id)` かつ `granted_by = auth.uid()`）
+- INSERT: プロファイルの作成者本人（自分のプロファイルへのアクセスリクエスト発行）
+- UPDATE: 共有先ユーザー本人（`status` を `accepted` / `rejected` に変更）
 - DELETE: `user_id = auth.uid()` または `owns_member_profile_by_id(member_profile_id)`
 
 ---
@@ -168,6 +170,86 @@ RLSポリシー:
 | announcement_id | uuid | announcements.id |
 | event_type_id | uuid | event_types.id（kind='category'のもの） |
 
+---
+
+## 選手プロファイル共有の設計方針（再設計: 2026-04-01）
+
+> 設計日: 2026-04-01（GMからの指示に基づき全面再設計）
+
+### 設計概要
+
+選手プロファイルの**作成者自身**が共有相手（guardian）を検索・指定・管理する設計に変更する。
+share_code による受動的な紐付けフローを廃止し、作成者主導の双方向承認フローに移行する。
+
+---
+
+### 廃止する機能
+
+| 対象 | 種別 | 理由 |
+|---|---|---|
+| `member_profiles.share_code` | DROP COLUMN | 新フローでは不要 |
+| `member_profiles.invite_code_guardian` | DROP COLUMN | 即時廃止（移行期間不要） |
+| `link_profile_by_share_code` RPC | DROP FUNCTION | share_code 廃止により不要 |
+| `regenerate_profile_share_code` RPC | DROP FUNCTION | share_code 廃止により不要 |
+| `/teams/join-profile` ページ | 廃止 | 後継ページなし |
+| 設定画面の「共有コード」表示セクション | 廃止 | 新 UI に置き換え |
+
+---
+
+### 新しい UX フロー
+
+#### 共有する側（プロファイル作成者）
+
+1. 選手プロファイル編集画面（または専用の「共有管理」エリア）でチーム内ユーザーを名前・メールアドレスで検索する
+2. 対象ユーザーを選択して「共有リクエストを送る」を実行する
+3. 共有中の guardian 一覧を確認し、任意のタイミングで「共有解除」できる
+
+#### 共有を受ける側（guardian）
+
+1. 選手プロファイルの作成エリア（画面）を開くと、受信した共有リクエストが表示される
+2. 「承認」または「拒否」を選択する（承認で `member_profile_access` に行が追加される）
+3. 承認済みのプロファイルを一覧で確認し、任意のタイミングで「共有解除」できる
+
+---
+
+### テーブル・カラムの変更概要
+
+#### `member_profiles`
+
+| カラム | 変更 | 内容 |
+|---|---|---|
+| `share_code` | DROP | 廃止 |
+| `invite_code_guardian` | DROP | 廃止 |
+
+#### `member_profile_access`（既存テーブル）
+
+既存データはそのまま有効（アクセス権を失わせない）。
+構造は維持しつつ、以下のカラムを追加してリクエスト状態を管理する。
+
+| カラム | 変更 | 内容 |
+|---|---|---|
+| `status` | ADD COLUMN | `'pending'` / `'accepted'` / `'rejected'` のいずれか |
+| `requested_by` | ADD COLUMN | リクエストを送ったユーザーの user_id（プロファイル作成者） |
+
+RLS 変更概要:
+- INSERT: プロファイルの作成者本人（自分のプロファイルへのアクセスリクエスト発行）
+- UPDATE: 共有先ユーザー本人（`status` を `accepted` / `rejected` に変更）
+- DELETE: プロファイル作成者または共有先ユーザー本人（双方から解除可能）
+- SELECT: `user_id = auth.uid()` または `profile_id` のオーナー本人
+
+---
+
+### 影響する画面一覧
+
+| 画面 | 変更内容 |
+|---|---|
+| 選手プロファイル詳細・編集画面 | 共有リクエスト送信 UI・共有中 guardian 一覧・解除ボタンを追加 |
+| guardian の「プロファイル作成エリア」 | 受信リクエスト一覧・承認/拒否 UI を追加 |
+| `/teams/join-profile` | 廃止（share_code フロー自体を削除） |
+| 設定画面（共有コード表示） | 廃止 |
+
+---
+
 ## RLS重要事項
 
 - `team_members` の SELECT ポリシーで `member_profiles` を JOIN すると無限ループになる場合がある
@@ -210,10 +292,7 @@ RLSポリシー:
 | `is_member_of_team(tid)` | チームメンバーか判定（SECURITY DEFINER） |
 | `is_admin_of_team(tid)` | 管理者か判定 |
 | `add_profile_to_team(target_team_id, profile_name, profile_kind)` | プロファイル追加 |
-| `join_team_with_profile(code)` | 保護者招待コードでチーム参加。`kind='guardian'` の member_profile を自動作成（`profiles.name` をデフォルト名） |
 | `create_team_with_member(team_name, profile_name, profile_kind, team_account_type)` | チーム作成と同時にメンバー登録。`team_account_type` で `coach`/`guardian` を指定 |
-| `check_invite_code_type(code)` | 招待コードの種別を返す（`'guardian'`/`null`）。認証不要（SECURITY DEFINER） |
-| `regenerate_guardian_invite_code(target_team_id)` | 保護者用招待コード再生成 |
 | `grant_coach_role(target_user_id)` | 対象ユーザーにコーチ権限を付与（admin専用）。`account_type='coach'` + `member_profiles.kind='coach'` に更新 |
 | `revoke_coach_role(target_user_id)` | 対象ユーザーのコーチ権限を剥奪（admin専用・自分自身は不可）。guardian に戻す |
 | `get_team_name(tid)` | チームIDからチーム名を返す。認証不要（SECURITY DEFINER）。公開問い合わせフォームから使用 |

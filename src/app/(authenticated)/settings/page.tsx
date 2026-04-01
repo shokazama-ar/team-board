@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { RefreshCw, Trash2, AlertTriangle, Plus, X, ChevronUp, ChevronDown, Pencil, Check, UserPlus, ExternalLink, Copy, Share2, Loader2 } from "lucide-react";
+import { RefreshCw, Trash2, AlertTriangle, Plus, X, ChevronUp, ChevronDown, Pencil, Check, UserPlus, ExternalLink, Copy, Loader2 } from "lucide-react";
 import { AvatarUpload } from "@/components/ui/AvatarUpload";
 
 function copyToClipboard(text: string): Promise<void> {
@@ -1211,18 +1211,13 @@ export default function SettingsPage() {
   const [teamName, setTeamName] = useState("");
   const [slug, setSlug] = useState("");
   const [teamIconUrl, setTeamIconUrl] = useState<string | null>(null);
-  const [inviteCodeGuardian, setInviteCodeGuardian] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
   const [accountType, setAccountType] = useState<"coach" | "guardian">("coach");
   const [savingTeam, setSavingTeam] = useState(false);
   const [teamMessage, setTeamMessage] = useState("");
-  const [regeneratingGuardian, setRegeneratingGuardian] = useState(false);
   const [savingSlug, setSavingSlug] = useState(false);
   const [slugMessage, setSlugMessage] = useState("");
   const [contactUrlCopied, setContactUrlCopied] = useState(false);
-  const [guardianCopied, setGuardianCopied] = useState<"code" | "link" | null>(null);
-  const [copiedShareCodeId, setCopiedShareCodeId] = useState<string | null>(null);
-  const [shareDialogProfileId, setShareDialogProfileId] = useState<string | null>(null);
 
   // Tab state
   const [activeTab, setActiveTab] = useState<"coach" | "guardian" | "admin">("coach");
@@ -1265,45 +1260,16 @@ export default function SettingsPage() {
     avatar_url: string | null;
     number: string | null;
     role: string;
-    share_code?: string | null;
-    accessors?: { id: string; user_id: string; name: string | null; created_at: string }[];
-  };
-  type LinkedProfileItem = {
-    profile_id: string;
-    kind: "coach" | "player";
-    profile_name: string | null;
-    avatar_url: string | null;
-    number: string | null;
-    owner_user_id: string;
-    owner_name: string | null;
   };
   const [myProfiles, setMyProfiles] = useState<MemberProfileItem[]>([]);
-  const [linkedProfiles, setLinkedProfiles] = useState<LinkedProfileItem[]>([]);
 
   const reloadMyProfiles = useCallback(async (tid: string, uid: string) => {
     const { data: myMemberships } = await supabase
       .from("team_members")
-      .select("id, role, member_profile_id, member_profiles!inner(user_id, kind, name, avatar_url, number, share_code, member_profile_access(id, user_id, created_at))")
+      .select("id, role, member_profile_id, member_profiles!inner(user_id, kind, name, avatar_url, number)")
       .eq("team_id", tid)
       .eq("member_profiles.user_id", uid);
     if (myMemberships) {
-      // accessor の名前を別途 profiles テーブルから取得
-      const allAccessorUserIds = myMemberships.flatMap((m) => {
-        const mp = m.member_profiles as unknown as {
-          member_profile_access: { user_id: string }[] | null;
-        } | null;
-        return (mp?.member_profile_access ?? []).map((a) => a.user_id);
-      });
-      const uniqueAccessorIds = [...new Set(allAccessorUserIds)];
-      const accessorNameMap: Record<string, string | null> = {};
-      if (uniqueAccessorIds.length > 0) {
-        const { data: accessorProfiles } = await supabase
-          .from("profiles")
-          .select("id, name")
-          .in("id", uniqueAccessorIds);
-        (accessorProfiles ?? []).forEach((p) => { accessorNameMap[p.id] = p.name; });
-      }
-
       setMyProfiles(
         myMemberships.map((m) => {
           const mp = m.member_profiles as unknown as {
@@ -1312,15 +1278,7 @@ export default function SettingsPage() {
             name: string | null;
             avatar_url: string | null;
             number: string | null;
-            share_code: string | null;
-            member_profile_access: { id: string; user_id: string; created_at: string }[] | null;
           } | null;
-          const accessors = (mp?.member_profile_access ?? []).map((a) => ({
-            id: a.id,
-            user_id: a.user_id,
-            name: accessorNameMap[a.user_id] ?? null,
-            created_at: a.created_at,
-          }));
           return {
             id: m.id,
             member_profile_id: m.member_profile_id,
@@ -1329,45 +1287,6 @@ export default function SettingsPage() {
             avatar_url: mp?.avatar_url ?? null,
             number: mp?.number ?? null,
             role: m.role,
-            share_code: mp?.share_code ?? null,
-            accessors,
-          };
-        })
-      );
-    }
-
-    // リンク済みプロファイル（自分がオーナーでないが access 権限を持つプロファイル）
-    const { data: accessEntries } = await supabase
-      .from("member_profile_access")
-      .select("member_profile_id, member_profiles(id, kind, name, avatar_url, number, user_id)")
-      .eq("user_id", uid);
-    if (accessEntries) {
-      const ownerIds = [...new Set(
-        accessEntries.map((a) => (a.member_profiles as unknown as { user_id: string } | null)?.user_id).filter(Boolean) as string[]
-      )];
-      const ownerNameMap: Record<string, string | null> = {};
-      if (ownerIds.length > 0) {
-        const { data: ownerProfiles } = await supabase.from("profiles").select("id, name").in("id", ownerIds);
-        (ownerProfiles ?? []).forEach((p) => { ownerNameMap[p.id] = p.name; });
-      }
-      setLinkedProfiles(
-        accessEntries.map((a) => {
-          const mp = a.member_profiles as unknown as {
-            id: string;
-            kind: "coach" | "player";
-            name: string | null;
-            avatar_url: string | null;
-            number: string | null;
-            user_id: string;
-          } | null;
-          return {
-            profile_id: a.member_profile_id,
-            kind: mp?.kind ?? "player",
-            profile_name: mp?.name ?? null,
-            avatar_url: mp?.avatar_url ?? null,
-            number: mp?.number ?? null,
-            owner_user_id: mp?.user_id ?? "",
-            owner_name: ownerNameMap[mp?.user_id ?? ""] ?? null,
           };
         })
       );
@@ -1423,7 +1342,7 @@ export default function SettingsPage() {
           ,
           { data: myMembershipsForKind },
         ] = await Promise.all([
-          supabase.from("teams").select("name, slug, invite_code_guardian, icon_url").eq("id", membership.team_id).single(),
+          supabase.from("teams").select("name, slug, icon_url").eq("id", membership.team_id).single(),
           supabase.from("event_types").select("id, name, color, sort_order, kind").eq("team_id", membership.team_id).order("sort_order"),
           reloadMyProfiles(membership.team_id, user.id),
           supabase.from("team_members").select("member_profile_id, member_profiles!inner(user_id, kind)").eq("team_id", membership.team_id).eq("member_profiles.user_id", user.id),
@@ -1432,7 +1351,6 @@ export default function SettingsPage() {
         if (team) {
           setTeamName(team.name);
           setSlug(team.slug ?? "");
-          setInviteCodeGuardian(team.invite_code_guardian);
           setTeamIconUrl(team.icon_url ?? null);
         }
 
@@ -1589,30 +1507,6 @@ export default function SettingsPage() {
       .eq("id", teamId);
     setSlugMessage(error ? "保存に失敗しました" : "保存しました");
     setSavingSlug(false);
-  };
-
-  const handleRegenerateGuardianCode = async () => {
-    if (!teamId) return;
-    const confirmed = window.confirm(
-      "保護者用招待コードを再生成すると、以前のコードは無効になります。よろしいですか？"
-    );
-    if (!confirmed) return;
-
-    setRegeneratingGuardian(true);
-    setTeamMessage("");
-
-    const { data: newCode, error } = await supabase.rpc(
-      "regenerate_guardian_invite_code",
-      { target_team_id: teamId }
-    );
-
-    if (error) {
-      setTeamMessage("再生成に失敗しました");
-    } else {
-      setInviteCodeGuardian(newCode);
-      setTeamMessage("保護者用招待コードを再生成しました");
-    }
-    setRegeneratingGuardian(false);
   };
 
   const handleInvite = async () => {
@@ -1872,98 +1766,9 @@ export default function SettingsPage() {
                 setMyProfiles((prev) => prev.filter((mp) => mp.id !== p.id));
               }}
             />
-            {/* プロファイル共有セクション（選手かつ自分がオーナーのみ） */}
-            {p.kind === "player" && (
-              <div className="rounded-b-lg border-x border-b border-gray-200 bg-gray-50 px-4 py-3 -mt-1">
-                <p className="mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">プロファイル共有</p>
-                <div className="flex flex-wrap items-center gap-2 mb-3">
-                  <code className="flex-1 min-w-0 truncate rounded border border-gray-200 bg-white px-2 py-1 text-sm font-mono text-gray-700">
-                    {p.share_code ?? "—"}
-                  </code>
-                  <button
-                    type="button"
-                    onClick={() => setShareDialogProfileId(p.member_profile_id)}
-                    title="共有コードを共有"
-                    aria-label="共有コードを共有"
-                    className="flex items-center rounded-lg border border-gray-300 bg-white p-2 text-gray-600 hover:bg-gray-50"
-                  >
-                    <Share2 size={16} strokeWidth={1.5} aria-hidden="true" />
-                  </button>
-                </div>
-                {(p.accessors ?? []).length > 0 ? (
-                  <div>
-                    <p className="mb-1 text-xs text-gray-500">共有済みアカウント:</p>
-                    <ul className="space-y-1">
-                      {(p.accessors ?? []).map((acc) => (
-                        <li key={acc.id} className="flex items-center justify-between gap-2">
-                          <span className="text-sm text-gray-700">{acc.name ?? "名前未設定"}</span>
-                          <button
-                            type="button"
-                            onClick={async () => {
-                              if (!window.confirm(`${acc.name ?? "このユーザー"}のアクセスを解除しますか？`)) return;
-                              await supabase.rpc("revoke_profile_access", {
-                                target_profile_id: p.member_profile_id,
-                                target_user_id: acc.user_id,
-                              });
-                              await reloadMyProfiles(teamId, userId);
-                            }}
-                            className="rounded border border-red-200 px-2 py-0.5 text-xs text-red-500 hover:bg-red-50"
-                          >
-                            解除
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : (
-                  <p className="text-xs text-gray-400">（共有なし）</p>
-                )}
-              </div>
-            )}
           </div>
         ))}
       </div>
-
-      {/* リンク済みプロファイル（他のアカウントが作成、自分がアクセス権を持つ） */}
-      {linkedProfiles.length > 0 && (
-        <>
-          <hr className="my-6 border-gray-200" />
-          <h3 className="mb-1 text-base font-semibold text-gray-700">リンク済みプロファイル</h3>
-          <p className="mb-3 text-sm text-gray-500">このアカウントで管理しているプロファイル（他のアカウントが作成）:</p>
-          <div className="space-y-2 mb-4">
-            {linkedProfiles.map((lp) => (
-              <div key={lp.profile_id} className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white px-4 py-3">
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="text-base">👦</span>
-                  <div className="min-w-0">
-                    <span className="text-sm font-medium text-gray-900 truncate">
-                      {lp.profile_name ?? "名前未設定"}
-                      {lp.number && <span className="ml-1.5 text-xs text-gray-400">#{lp.number}</span>}
-                    </span>
-                    {lp.owner_name && (
-                      <p className="text-xs text-gray-400">{lp.owner_name} が作成</p>
-                    )}
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    if (!window.confirm(`「${lp.profile_name ?? "このプロファイル"}」へのリンクを解除しますか？`)) return;
-                    await supabase.rpc("revoke_profile_access", {
-                      target_profile_id: lp.profile_id,
-                      target_user_id: userId,
-                    });
-                    await reloadMyProfiles(teamId, userId);
-                  }}
-                  className="shrink-0 rounded border border-red-200 px-2 py-1 text-xs text-red-500 hover:bg-red-50"
-                >
-                  リンクを解除
-                </button>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
 
       <div className="flex flex-wrap gap-2">
         <AddProfileForm
@@ -1971,14 +1776,6 @@ export default function SettingsPage() {
           showKindSelector={false}
           onAdded={() => reloadMyProfiles(teamId, userId)}
         />
-        <button
-          type="button"
-          onClick={() => router.push("/teams/join-profile")}
-          className="flex items-center gap-1.5 rounded-lg border border-dashed border-gray-300 px-4 py-2 text-sm text-gray-500 hover:border-gray-400 hover:text-gray-700"
-        >
-          <Plus size={16} strokeWidth={1.5} aria-hidden="true" />
-          共有コードでプロファイルにリンク
-        </button>
       </div>
     </>
   ) : null;
@@ -2356,42 +2153,6 @@ export default function SettingsPage() {
             {inviteError && <p className="mt-2 text-xs text-red-500">{inviteError}</p>}
           </div>
 
-          {/* 招待コード */}
-          <div className="mt-4">
-            <label className="mb-1 block text-sm font-medium text-gray-700">
-              招待コード
-            </label>
-            <p className="mb-1.5 text-xs text-gray-400">保護者がチームに参加するためのコードです</p>
-            {inviteCodeGuardian && (
-              <p className="mb-2 font-mono text-sm text-gray-800">{inviteCodeGuardian}</p>
-            )}
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  copyToClipboard(inviteCodeGuardian).then(() => {
-                    setGuardianCopied("code");
-                    setTimeout(() => setGuardianCopied(null), 1500);
-                  });
-                }}
-                disabled={!inviteCodeGuardian}
-                className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50"
-              >
-                {guardianCopied === "code" ? <Check size={16} strokeWidth={1.5} aria-hidden="true" /> : <Copy size={16} strokeWidth={1.5} aria-hidden="true" />}
-                {guardianCopied === "code" ? "コピー済み" : "コードをコピー"}
-              </button>
-              <button
-                type="button"
-                onClick={handleRegenerateGuardianCode}
-                disabled={regeneratingGuardian}
-                className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50"
-              >
-                <RefreshCw size={16} strokeWidth={1.5} className={regeneratingGuardian ? "animate-spin" : ""} aria-hidden="true" />
-                再生成
-              </button>
-            </div>
-          </div>
-
           {/* セクション2: カテゴリ設定 */}
           <h2 className="-mx-4 mt-8 mb-4 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-800">カテゴリ設定</h2>
 
@@ -2570,79 +2331,6 @@ export default function SettingsPage() {
           </button>
         </div>
       )}
-
-      {/* プロファイル共有ダイアログ */}
-      {shareDialogProfileId !== null && (() => {
-        const sp = myProfiles.find((p) => p.member_profile_id === shareDialogProfileId);
-        if (!sp) return null;
-        return (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-            onClick={() => setShareDialogProfileId(null)}
-          >
-            <div
-              className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-base font-semibold text-gray-800">プロファイル共有</h3>
-                <button
-                  type="button"
-                  onClick={() => setShareDialogProfileId(null)}
-                  className="rounded-lg p-1 text-gray-400 hover:bg-gray-100"
-                  aria-label="閉じる"
-                >
-                  <X size={18} strokeWidth={1.5} />
-                </button>
-              </div>
-              <div className="mb-4">
-                <p className="mb-1.5 text-xs font-medium text-gray-500">共有コード</p>
-                <div className="flex items-center gap-2">
-                  <code className="flex-1 min-w-0 truncate rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-mono">
-                    {sp.share_code ?? "—"}
-                  </code>
-                  {sp.share_code && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        copyToClipboard(sp.share_code!).then(() => {
-                          setCopiedShareCodeId(sp.member_profile_id);
-                          setTimeout(() => setCopiedShareCodeId(null), 1500);
-                        });
-                      }}
-                      className="shrink-0 flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
-                    >
-                      {copiedShareCodeId === sp.member_profile_id ? (
-                        <><Check size={16} strokeWidth={1.5} aria-hidden="true" /> コピー済み</>
-                      ) : (
-                        <><Copy size={16} strokeWidth={1.5} aria-hidden="true" /> コピー</>
-                      )}
-                    </button>
-                  )}
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={async () => {
-                  if (!window.confirm("共有コードを再生成すると、以前のコードは無効になります。よろしいですか？")) return;
-                  const { data, error } = await supabase.rpc("regenerate_profile_share_code", {
-                    target_profile_id: sp.member_profile_id,
-                  });
-                  if (!error && data) {
-                    setMyProfiles((prev) =>
-                      prev.map((mp) => (mp.id === sp.id ? { ...mp, share_code: data as string } : mp))
-                    );
-                  }
-                }}
-                className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
-              >
-                <RefreshCw size={14} strokeWidth={1.5} aria-hidden="true" />
-                再生成
-              </button>
-            </div>
-          </div>
-        );
-      })()}
 
       {/* プレイヤーカテゴリ編集モーダル */}
       {playerCategoryModalOpen && (

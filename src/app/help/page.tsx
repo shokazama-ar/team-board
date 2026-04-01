@@ -19,8 +19,8 @@ const TOPICS = [
   },
   {
     href: "/help/invite",
-    label: "招待コード",
-    description: "新しいメンバーをチームに招待する方法です。",
+    label: "メンバー招待",
+    description: "管理者がメールで新しいメンバーをチームに招待する方法です。",
   },
   {
     href: "/help/inquiries",
