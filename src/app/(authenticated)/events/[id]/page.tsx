@@ -11,6 +11,7 @@ type EventType = {
   name: string;
   color: string;
   kind: string;
+  sort_order: number;
 };
 
 type EventDetail = {
@@ -93,7 +94,7 @@ export default function EventDetailPage() {
 
     const { data: eventData } = await supabase
       .from("events")
-      .select("id, team_id, title, event_type, date, end_at, location, memo, created_by, created_at, event_event_types(event_types(id, name, color, kind))")
+      .select("id, team_id, title, event_type, date, end_at, location, memo, created_by, created_at, event_event_types(event_types(id, name, color, kind, sort_order))")
       .eq("id", eventId)
       .single();
 
@@ -303,9 +304,13 @@ export default function EventDetailPage() {
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-2xl font-bold">{event.title}</h1>
-              {event.event_event_types
+              {[...event.event_event_types
                 .map((e) => e.event_types)
-                .filter(Boolean)
+                .filter(Boolean)]
+                .sort((a, b) => {
+                  if (a!.kind !== b!.kind) return a!.kind === "type" ? -1 : 1;
+                  return a!.sort_order - b!.sort_order;
+                })
                 .map((et) => (
                   <span
                     key={et!.id}

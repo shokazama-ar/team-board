@@ -16,7 +16,7 @@ export type EventWithCategories = {
   event_type: string;
   date: string;
   location: string | null;
-  categories: { id: string; name: string; color: string }[];
+  categories: { id: string; name: string; color: string; sort_order: number }[];
 };
 
 export type AnnouncementWithCategories = {

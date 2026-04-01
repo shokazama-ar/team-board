@@ -250,10 +250,10 @@ export default function MembersPage() {
         )}
         {members.map((member) => (
           <li key={member.id} className={`px-6 py-4 ${actionLoading === member.id ? "opacity-50 pointer-events-none" : ""}`}>
-            {/* 行1: アイコン + 名前 + 参加日 */}
+            {/* 行1: アイコン + 名前（左寄せ）+ 参加日（右寄せ） */}
             <div className="flex items-center gap-3">
               <ProfileAvatar name={member.name} avatarUrl={member.avatar_url} size={40} />
-              <div className="flex min-w-0 flex-1 items-baseline gap-2">
+              <div className="flex min-w-0 flex-1 items-center gap-2">
                 <p className="truncate text-sm font-medium text-gray-900">
                   {member.name || "名前未設定"}
                   {member.number && (
@@ -263,65 +263,67 @@ export default function MembersPage() {
                     <span className="ml-2 text-xs text-gray-400">(あなた)</span>
                   )}
                 </p>
-                <p className="shrink-0 text-xs text-gray-400">
+                <p className="ml-auto shrink-0 text-xs text-gray-400">
                   参加日: {new Date(member.created_at).toLocaleDateString("ja-JP", { timeZone: "Asia/Tokyo" })}
                 </p>
               </div>
             </div>
-            {/* 行2: 管理者ラベル・権限ボタン・削除ボタン */}
-            <div className="mt-2 flex flex-wrap items-center gap-2 pl-[52px]">
-              {member.role === "admin" && (
-                <span className="flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">
-                  <Shield size={12} strokeWidth={1.5} aria-hidden="true" />
-                  管理者
-                </span>
-              )}
-              {isAdmin && member.owner_user_id !== currentUserId && (
-                <>
-                  {showRoleActions && (
-                    <>
-                      <button
-                        onClick={() => toggleRole(member.id, member.role)}
-                        disabled={actionLoading === member.id}
-                        className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50 disabled:opacity-50"
-                      >
-                        {member.role === "admin" ? "-管理者権限" : "+管理者権限"}
-                      </button>
-                      {member.account_type === "guardian" ? (
+            {/* 行2: 管理者ラベル・権限ボタン・削除ボタン（右寄せ）*/}
+            {(member.role === "admin" || (isAdmin && member.owner_user_id !== currentUserId)) && (
+              <div className="mt-2 flex flex-wrap items-center justify-end gap-2">
+                {member.role === "admin" && (
+                  <span className="flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">
+                    <Shield size={12} strokeWidth={1.5} aria-hidden="true" />
+                    管理者
+                  </span>
+                )}
+                {isAdmin && member.owner_user_id !== currentUserId && (
+                  <>
+                    {showRoleActions && (
+                      <>
                         <button
-                          onClick={() => grantCoach(member.owner_user_id)}
-                          disabled={actionLoading === member.owner_user_id}
-                          className="rounded border border-blue-300 px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 disabled:opacity-50"
+                          onClick={() => toggleRole(member.id, member.role)}
+                          disabled={actionLoading === member.id}
+                          className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50 disabled:opacity-50"
                         >
-                          +コーチ権限
+                          {member.role === "admin" ? "-管理者権限" : "+管理者権限"}
                         </button>
-                      ) : (
-                        <button
-                          onClick={() => revokeCoach(member.owner_user_id)}
-                          disabled={actionLoading === member.owner_user_id}
-                          className="rounded border border-orange-300 px-2 py-1 text-xs text-orange-600 hover:bg-orange-50 disabled:opacity-50"
-                        >
-                          -コーチ権限
-                        </button>
-                      )}
-                    </>
-                  )}
-                  <button
-                    onClick={() => removeMember(member.id, member.name ?? "")}
-                    disabled={actionLoading === member.id}
-                    title="削除"
-                    aria-label="削除"
-                    className="flex items-center rounded border border-red-300 px-2 py-1 text-xs text-red-600 hover:bg-red-50 disabled:opacity-50"
-                  >
-                    {actionLoading === member.id ? (
-                      <Loader2 size={12} className="animate-spin" aria-hidden="true" />
-                    ) : (
-                      <Trash2 size={12} strokeWidth={1.5} aria-hidden="true" />
+                        {member.account_type === "guardian" ? (
+                          <button
+                            onClick={() => grantCoach(member.owner_user_id)}
+                            disabled={actionLoading === member.owner_user_id}
+                            className="rounded border border-blue-300 px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 disabled:opacity-50"
+                          >
+                            +コーチ権限
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => revokeCoach(member.owner_user_id)}
+                            disabled={actionLoading === member.owner_user_id}
+                            className="rounded border border-orange-300 px-2 py-1 text-xs text-orange-600 hover:bg-orange-50 disabled:opacity-50"
+                          >
+                            -コーチ権限
+                          </button>
+                        )}
+                      </>
                     )}
-                  </button>
-                </>
-              )}
-            </div>
+                    <button
+                      onClick={() => removeMember(member.id, member.name ?? "")}
+                      disabled={actionLoading === member.id}
+                      title="削除"
+                      aria-label="削除"
+                      className="flex items-center rounded border border-red-300 px-2 py-1 text-xs text-red-600 hover:bg-red-50 disabled:opacity-50"
+                    >
+                      {actionLoading === member.id ? (
+                        <Loader2 size={12} className="animate-spin" aria-hidden="true" />
+                      ) : (
+                        <Trash2 size={12} strokeWidth={1.5} aria-hidden="true" />
+                      )}
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
           </li>
         ))}
       </ul>
@@ -418,10 +420,10 @@ export default function MembersPage() {
             }
             return filtered.map((member) => (
               <li key={member.id} className={`px-6 py-4 ${actionLoading === member.id ? "opacity-50 pointer-events-none" : ""}`}>
-                {/* 行1: アイコン + 名前 + 参加日 */}
+                {/* 行1: アイコン + 名前（左寄せ）+ 参加日（右寄せ） */}
                 <div className="flex items-center gap-3">
                   <ProfileAvatar name={member.name} avatarUrl={member.avatar_url} size={40} />
-                  <div className="flex min-w-0 flex-1 items-baseline gap-2">
+                  <div className="flex min-w-0 flex-1 items-center gap-2">
                     <p className="truncate text-sm font-medium text-gray-900">
                       {member.name || "名前未設定"}
                       {member.number && (
@@ -431,21 +433,21 @@ export default function MembersPage() {
                         <span className="ml-2 text-xs text-gray-400">(あなた)</span>
                       )}
                     </p>
-                    <p className="shrink-0 text-xs text-gray-400">
+                    <p className="ml-auto shrink-0 text-xs text-gray-400">
                       参加日: {new Date(member.created_at).toLocaleDateString("ja-JP", { timeZone: "Asia/Tokyo" })}
                     </p>
                   </div>
                 </div>
-                {/* 行2: 管理者ラベル・削除ボタン */}
-                <div className="mt-2 flex flex-wrap items-center gap-2 pl-[52px]">
-                  {member.role === "admin" && (
-                    <span className="flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">
-                      <Shield size={12} strokeWidth={1.5} aria-hidden="true" />
-                      管理者
-                    </span>
-                  )}
-                  {isAdmin && member.owner_user_id !== currentUserId && (
-                    <>
+                {/* 行2: 管理者ラベル・削除ボタン（右寄せ）*/}
+                {(member.role === "admin" || (isAdmin && member.owner_user_id !== currentUserId)) && (
+                  <div className="mt-2 flex flex-wrap items-center justify-end gap-2">
+                    {member.role === "admin" && (
+                      <span className="flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">
+                        <Shield size={12} strokeWidth={1.5} aria-hidden="true" />
+                        管理者
+                      </span>
+                    )}
+                    {isAdmin && member.owner_user_id !== currentUserId && (
                       <button
                         onClick={() => removeMember(member.id, member.name ?? "")}
                         disabled={actionLoading === member.id}
@@ -459,9 +461,9 @@ export default function MembersPage() {
                           <Trash2 size={12} strokeWidth={1.5} aria-hidden="true" />
                         )}
                       </button>
-                    </>
-                  )}
-                </div>
+                    )}
+                  </div>
+                )}
               </li>
             ));
           })()}

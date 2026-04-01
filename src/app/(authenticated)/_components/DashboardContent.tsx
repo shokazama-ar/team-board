@@ -54,7 +54,7 @@ export default async function DashboardContent({ userId }: { userId: string }) {
         .eq("team_id", membership.team_id),
       supabase
         .from("events")
-        .select("id, title, event_type, date, location, event_event_types(event_types(id, name, color, kind))")
+        .select("id, title, event_type, date, location, event_event_types(event_types(id, name, color, kind, sort_order))")
         .eq("team_id", membership.team_id)
         .gte("date", todayStart)
         .lte("date", sevenDaysLaterEnd)
@@ -135,7 +135,8 @@ export default async function DashboardContent({ userId }: { userId: string }) {
     categories: (e.event_event_types ?? [])
       .map((eet: any) => eet.event_types)
       .filter((et: any) => et && et.kind === "category")
-      .map((et: any) => ({ id: et.id, name: et.name, color: et.color })),
+      .sort((a: any, b: any) => a.sort_order - b.sort_order)
+      .map((et: any) => ({ id: et.id, name: et.name, color: et.color, sort_order: et.sort_order })),
   }));
 
   // お知らせをカテゴリつきに変換

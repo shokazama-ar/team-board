@@ -646,11 +646,18 @@ export default function EventsPage() {
               const dateEvents = filteredEvents
                 .filter(e => ids.has(e.id))
                 .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-              setContextMenu({
-                date: clickedDate,
-                events: dateEvents,
-                position: position ?? { x: window.innerWidth / 2, y: window.innerHeight / 2 },
-              });
+              if (currentUserRole !== "admin") {
+                // 非管理者: コンテキストメニューを出さず直接イベント一覧モーダルを表示
+                setSelectedDate(clickedDate);
+                setSelectedDateEvents(dateEvents);
+              } else {
+                // 管理者: 従来どおりコンテキストメニューを表示
+                setContextMenu({
+                  date: clickedDate,
+                  events: dateEvents,
+                  position: position ?? { x: window.innerWidth / 2, y: window.innerHeight / 2 },
+                });
+              }
             }}
           />
         </div>
