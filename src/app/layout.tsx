@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Noto_Sans_JP } from "next/font/google";
 import NextTopLoader from "nextjs-toploader";
+import { ViewportZoomReset } from "@/components/ViewportZoomReset";
 import "./globals.css";
 
 const notoSansJP = Noto_Sans_JP({
@@ -26,6 +27,7 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         <NextTopLoader color="#2563eb" showSpinner={false} height={3} />
+        <ViewportZoomReset />
         {children}
       </body>
     </html>
