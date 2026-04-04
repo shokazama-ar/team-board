@@ -26,6 +26,9 @@ Supabase (PostgreSQL) のテーブル構成。RLSはすべて有効。
 | icon_url | text | |
 | slug | text | 一意。問い合わせ受信メールのローカルパート（contact-{slug}@...）。設定済みチームのみ問い合わせフォームが有効。形式: `^[a-z0-9][a-z0-9-]*[a-z0-9]$` |
 | created_by | uuid | profiles.id |
+| google_calendar_id | text | 同期先GoogleカレンダーID（Googleカレンダー連携） |
+| google_refresh_token | text | OAuth2リフレッシュトークン（管理者）（Googleカレンダー連携） |
+| google_sync_enabled | bool | 連携ON/OFF（デフォルトfalse）（Googleカレンダー連携） |
 
 ---
 
@@ -93,6 +96,7 @@ RLSポリシー（新フロー後）:
 | location | text | |
 | memo | text | |
 | created_by | uuid | profiles.id |
+| google_event_id | text | GoogleカレンダーイベントID（紐付け用）（Googleカレンダー連携） |
 
 ---
 
@@ -107,6 +111,7 @@ RLSポリシー（新フロー後）:
 | color | text | hex カラーコード |
 | sort_order | int | |
 | kind | enum | `type`（種別）/ `category`（対象） |
+| google_sync_enabled | bool | カテゴリ別同期設定（デフォルトtrue）（Googleカレンダー連携） |
 
 ---
 

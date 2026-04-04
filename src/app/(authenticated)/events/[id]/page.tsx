@@ -265,6 +265,14 @@ export default function EventDetailPage() {
     if (!confirmed) return;
 
     setDeleting(true);
+
+    // Googleカレンダーから先に削除（DBから消える前に）
+    fetch("/api/google-calendar/event", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ event_id: event.id, action: "delete" }),
+    }).catch(() => {});
+
     const { error } = await supabase.from("events").delete().eq("id", event.id);
     if (!error) router.push("/events");
     setDeleting(false);

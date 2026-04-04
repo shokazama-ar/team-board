@@ -212,6 +212,13 @@ function NewEventPageInner() {
       );
     }
 
+    // Googleカレンダー同期（非同期・エラー無視）
+    fetch("/api/google-calendar/event", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ event_id: newEvent.id, action: "create" }),
+    }).catch(() => {});
+
     router.push("/events");
   };
 

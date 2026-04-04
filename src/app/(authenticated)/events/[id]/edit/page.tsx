@@ -220,6 +220,13 @@ export default function EditEventPage() {
       );
     }
 
+    // Googleカレンダー同期（非同期・エラー無視）
+    fetch("/api/google-calendar/event", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ event_id: eventId, action: "update" }),
+    }).catch(() => {});
+
     router.push(`/events/${eventId}`);
   };
 

@@ -1219,6 +1219,19 @@ export default function SettingsPage() {
   const [slugMessage, setSlugMessage] = useState("");
   const [contactUrlCopied, setContactUrlCopied] = useState(false);
 
+  // Google Calendar state
+  const [googleConnected, setGoogleConnected] = useState(false);
+  const [googleCalendarId, setGoogleCalendarId] = useState<string | null>(null);
+  const [googleSyncEnabled, setGoogleSyncEnabled] = useState(false);
+  const [googleCalendars, setGoogleCalendars] = useState<{ id: string; summary: string; primary?: boolean }[]>([]);
+  const [loadingCalendars, setLoadingCalendars] = useState(false);
+  const [savingGoogleSettings, setSavingGoogleSettings] = useState(false);
+  const [googleSettingsMessage, setGoogleSettingsMessage] = useState("");
+  const [syncing, setSyncing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState("");
+  const [googleEventTypeSync, setGoogleEventTypeSync] = useState<Record<string, boolean>>({});
+  const [savingEventTypeSync, setSavingEventTypeSync] = useState<string | null>(null);
+
   // Tab state
   const [activeTab, setActiveTab] = useState<"coach" | "guardian" | "admin">("coach");
 
@@ -1407,8 +1420,8 @@ export default function SettingsPage() {
           ,
           { data: myMembershipsForKind },
         ] = await Promise.all([
-          supabase.from("teams").select("name, slug, icon_url").eq("id", membership.team_id).single(),
-          supabase.from("event_types").select("id, name, color, sort_order, kind").eq("team_id", membership.team_id).order("sort_order"),
+          supabase.from("teams").select("name, slug, icon_url, google_calendar_id, google_refresh_token, google_sync_enabled").eq("id", membership.team_id).single(),
+          supabase.from("event_types").select("id, name, color, sort_order, kind, google_sync_enabled").eq("team_id", membership.team_id).order("sort_order"),
           reloadMyProfiles(membership.team_id, user.id),
           supabase.from("team_members").select("member_profile_id, member_profiles!inner(user_id, kind)").eq("team_id", membership.team_id).eq("member_profiles.user_id", user.id),
         ]);
@@ -1417,11 +1430,18 @@ export default function SettingsPage() {
           setTeamName(team.name);
           setSlug(team.slug ?? "");
           setTeamIconUrl(team.icon_url ?? null);
+          setGoogleConnected(!!(team as unknown as { google_refresh_token: string | null }).google_refresh_token);
+          setGoogleCalendarId((team as unknown as { google_calendar_id: string | null }).google_calendar_id ?? null);
+          setGoogleSyncEnabled(!!(team as unknown as { google_sync_enabled: boolean | null }).google_sync_enabled);
         }
 
         if (allTypes) {
-          setEventTypes(allTypes.filter((t) => t.kind === "type") as EventType[]);
-          setEventCategories(allTypes.filter((t) => t.kind === "category") as EventType[]);
+          const typedTypes = allTypes as unknown as (EventType & { google_sync_enabled: boolean | null })[];
+          setEventTypes(typedTypes.filter((t) => t.kind === "type") as EventType[]);
+          setEventCategories(typedTypes.filter((t) => t.kind === "category") as EventType[]);
+          const syncMap: Record<string, boolean> = {};
+          typedTypes.forEach((t) => { syncMap[t.id] = t.google_sync_enabled !== false; });
+          setGoogleEventTypeSync(syncMap);
         }
 
         const coachIds = (myMembershipsForKind ?? [])
@@ -1502,6 +1522,116 @@ export default function SettingsPage() {
     };
     loadData();
   }, [supabase, reloadMyProfiles]);
+
+  // Google連携後のメッセージ表示
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("google_success")) {
+      setGoogleSettingsMessage("Googleアカウントと連携しました");
+      // URL クリーンアップ
+      const url = new URL(window.location.href);
+      url.searchParams.delete("google_success");
+      window.history.replaceState({}, "", url.toString());
+    } else if (params.get("google_error")) {
+      setGoogleSettingsMessage("Google連携に失敗しました。もう一度お試しください。");
+      const url = new URL(window.location.href);
+      url.searchParams.delete("google_error");
+      window.history.replaceState({}, "", url.toString());
+    }
+  }, []);
+
+  // Google連携済みならカレンダー一覧を取得
+  useEffect(() => {
+    if (!googleConnected || !isAdmin) return;
+    const fetchCalendars = async () => {
+      setLoadingCalendars(true);
+      try {
+        const res = await fetch("/api/google-calendar/calendars");
+        if (res.ok) {
+          const data = await res.json();
+          setGoogleCalendars(data.calendars ?? []);
+        }
+      } catch {
+        // サイレントエラー
+      } finally {
+        setLoadingCalendars(false);
+      }
+    };
+    fetchCalendars();
+  }, [googleConnected, isAdmin]);
+
+  // ── Google Calendar helpers ──────────────────────────────────────────────
+
+  const handleSaveGoogleSettings = async () => {
+    if (!teamId) return;
+    setSavingGoogleSettings(true);
+    setGoogleSettingsMessage("");
+    const { error } = await supabase
+      .from("teams")
+      .update({
+        google_calendar_id: googleCalendarId,
+        google_sync_enabled: googleSyncEnabled,
+      })
+      .eq("id", teamId);
+    if (error) {
+      setGoogleSettingsMessage("保存に失敗しました");
+    } else {
+      setGoogleSettingsMessage("保存しました");
+    }
+    setSavingGoogleSettings(false);
+  };
+
+  const handleDisconnectGoogle = async () => {
+    if (!teamId) return;
+    const confirmed = window.confirm("Google連携を解除しますか？");
+    if (!confirmed) return;
+    const { error } = await supabase
+      .from("teams")
+      .update({
+        google_refresh_token: null,
+        google_calendar_id: null,
+        google_sync_enabled: false,
+      })
+      .eq("id", teamId);
+    if (!error) {
+      setGoogleConnected(false);
+      setGoogleCalendarId(null);
+      setGoogleSyncEnabled(false);
+      setGoogleCalendars([]);
+      setGoogleSettingsMessage("Google連携を解除しました");
+    }
+  };
+
+  const handleBulkSync = async () => {
+    setSyncing(true);
+    setSyncMessage("");
+    try {
+      const res = await fetch("/api/google-calendar/sync", { method: "POST" });
+      const data = await res.json();
+      if (res.ok) {
+        setSyncMessage(`同期完了: ${data.synced}件追加、${data.skipped}件スキップ`);
+      } else {
+        setSyncMessage(data.error ?? "同期に失敗しました");
+      }
+    } catch {
+      setSyncMessage("同期に失敗しました");
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const handleToggleEventTypeSync = async (typeId: string, value: boolean) => {
+    setSavingEventTypeSync(typeId);
+    const { error } = await supabase
+      .from("event_types")
+      .update({ google_sync_enabled: value })
+      .eq("id", typeId);
+    if (!error) {
+      setGoogleEventTypeSync((prev) => ({ ...prev, [typeId]: value }));
+    }
+    setSavingEventTypeSync(null);
+  };
 
   // ── Generic helpers ─────────────────────────────────────────────────────
   const moveItem = async (
@@ -2738,6 +2868,163 @@ export default function SettingsPage() {
               </li>
             ))}
           </ul>
+
+          {/* Google Calendar連携セクション */}
+          <div className="mt-8">
+            <h2 className="-mx-4 mb-4 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-800">Googleカレンダー連携</h2>
+
+            {!googleConnected ? (
+              <div>
+                <p className="mb-3 text-sm text-gray-600">
+                  Googleアカウントと連携すると、TeamBoardのイベントをGoogleカレンダーに自動同期できます。
+                </p>
+                <a
+                  href="/api/auth/google"
+                  className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  Googleアカウントで連携する
+                </a>
+              </div>
+            ) : (
+              <div className="space-y-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-green-700">連携済み</p>
+                    <p className="text-xs text-gray-500">Googleアカウントと連携しています</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleDisconnectGoogle}
+                    className="text-xs text-red-500 underline hover:text-red-700"
+                  >
+                    連携解除
+                  </button>
+                </div>
+
+                {/* 同期ON/OFF */}
+                <div className="flex items-center justify-between rounded-lg border border-gray-200 p-3">
+                  <div>
+                    <p className="text-sm font-medium text-gray-700">同期を有効にする</p>
+                    <p className="text-xs text-gray-500">OFFにすると新しいイベントの同期が停止されます</p>
+                  </div>
+                  <label className="relative inline-flex cursor-pointer items-center">
+                    <input
+                      type="checkbox"
+                      className="peer sr-only"
+                      checked={googleSyncEnabled}
+                      onChange={(e) => setGoogleSyncEnabled(e.target.checked)}
+                    />
+                    <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none" />
+                  </label>
+                </div>
+
+                {/* カレンダー選択 */}
+                <div>
+                  <p className="mb-2 text-sm font-medium text-gray-700">同期先カレンダー</p>
+                  {loadingCalendars ? (
+                    <p className="text-sm text-gray-400">読み込み中...</p>
+                  ) : googleCalendars.length === 0 ? (
+                    <p className="text-sm text-gray-400">カレンダーが見つかりません</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {googleCalendars.map((cal) => (
+                        <label key={cal.id} className="flex cursor-pointer items-center gap-2">
+                          <input
+                            type="radio"
+                            name="google-calendar"
+                            value={cal.id}
+                            checked={googleCalendarId === cal.id}
+                            onChange={() => setGoogleCalendarId(cal.id)}
+                            className="accent-blue-600"
+                          />
+                          <span className="text-sm text-gray-700">
+                            {cal.summary}
+                            {cal.primary && (
+                              <span className="ml-1 text-xs text-gray-400">(メイン)</span>
+                            )}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* 保存ボタン */}
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={handleSaveGoogleSettings}
+                    disabled={savingGoogleSettings}
+                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    {savingGoogleSettings ? "保存中..." : "設定を保存"}
+                  </button>
+                  {googleSettingsMessage && (
+                    <p className="text-sm text-gray-600">{googleSettingsMessage}</p>
+                  )}
+                </div>
+
+                {/* イベント種別ごとの同期設定 */}
+                {[...eventTypes, ...eventCategories].length > 0 && (
+                  <div>
+                    <p className="mb-2 text-sm font-medium text-gray-700">イベント種別ごとの同期設定</p>
+                    <div className="divide-y divide-gray-100 rounded-lg border border-gray-200">
+                      {[...eventTypes, ...eventCategories].map((et) => (
+                        <div key={et.id} className="flex items-center justify-between px-4 py-2">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="inline-block h-3 w-3 rounded-full"
+                              style={{ backgroundColor: et.color }}
+                            />
+                            <span className="text-sm text-gray-700">{et.name}</span>
+                            <span className="text-xs text-gray-400">
+                              {et.kind === "type" ? "種別" : "カテゴリ"}
+                            </span>
+                          </div>
+                          <label className="relative inline-flex cursor-pointer items-center">
+                            <input
+                              type="checkbox"
+                              className="peer sr-only"
+                              checked={googleEventTypeSync[et.id] !== false}
+                              disabled={savingEventTypeSync === et.id}
+                              onChange={(e) => handleToggleEventTypeSync(et.id, e.target.checked)}
+                            />
+                            <div className="peer h-5 w-9 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-disabled:opacity-50" />
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 一括同期 */}
+                <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                  <p className="mb-1 text-sm font-medium text-gray-700">既存イベントを一括同期</p>
+                  <p className="mb-3 text-xs text-gray-500">
+                    まだGoogleカレンダーに同期されていない既存のイベントを一括で追加します。
+                  </p>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={handleBulkSync}
+                      disabled={syncing || !googleCalendarId || !googleSyncEnabled}
+                      className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                    >
+                      {syncing ? "同期中..." : "一括同期を実行"}
+                    </button>
+                    {syncMessage && (
+                      <p className="text-sm text-gray-600">{syncMessage}</p>
+                    )}
+                  </div>
+                  {!googleCalendarId && (
+                    <p className="mt-2 text-xs text-amber-600">
+                      同期先カレンダーを選択して設定を保存してください
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
 
           <div className="mt-8 rounded-lg border border-red-200 bg-red-50 p-4">
             <h3 className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-red-700">
