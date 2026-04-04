@@ -1291,6 +1291,9 @@ export default function SettingsPage() {
   const [sendingShareRequest, setSendingShareRequest] = useState<string | null>(null);
   const [shareRequestMessage, setShareRequestMessage] = useState<Record<string, string>>({});
 
+  // 共有モーダル管理
+  const [shareModalProfileId, setShareModalProfileId] = useState<string | null>(null);
+
   const reloadMyProfiles = useCallback(async (tid: string, uid: string) => {
     const { data: myMemberships } = await supabase
       .from("team_members")
@@ -1847,6 +1850,218 @@ export default function SettingsPage() {
     </form>
   );
 
+  // ── プロファイル共有モーダル ───────────────────────────────────────────
+  const shareModalProfile = myProfiles.find(
+    (p) => p.member_profile_id === shareModalProfileId
+  ) ?? null;
+
+  const profileShareModalJsx = shareModalProfile ? (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+      onClick={() => setShareModalProfileId(null)}
+    >
+      <div
+        className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-base font-semibold text-gray-900">
+            プロファイル共有 — {shareModalProfile.profile_name ?? "名前未設定"}
+          </h3>
+          <button
+            type="button"
+            onClick={() => setShareModalProfileId(null)}
+            className="rounded-full p-1 text-gray-400 hover:bg-gray-100"
+            aria-label="閉じる"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* 承認済み一覧 */}
+        {(shareModalProfile.accessItems ?? []).filter((a) => a.status === "accepted").length > 0 && (
+          <div className="mb-4">
+            <p className="mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">共有中</p>
+            <ul className="space-y-1">
+              {(shareModalProfile.accessItems ?? [])
+                .filter((a) => a.status === "accepted")
+                .map((acc) => (
+                  <li key={acc.id} className="flex items-center justify-between gap-2">
+                    <span className="text-sm text-gray-700">{acc.user_name ?? "名前未設定"}</span>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (!window.confirm(`${acc.user_name ?? "このユーザー"}との共有を解除しますか？`)) return;
+                        await supabase.from("member_profile_access").delete().eq("id", acc.id);
+                        await reloadMyProfiles(teamId!, userId!);
+                      }}
+                      className="rounded border border-red-200 px-2 py-0.5 text-xs text-red-500 hover:bg-red-50"
+                    >
+                      解除
+                    </button>
+                  </li>
+                ))}
+            </ul>
+          </div>
+        )}
+
+        {/* 承認待ち一覧 */}
+        {(shareModalProfile.accessItems ?? []).filter((a) => a.status === "pending").length > 0 && (
+          <div className="mb-4">
+            <p className="mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">承認待ち</p>
+            <ul className="space-y-1">
+              {(shareModalProfile.accessItems ?? [])
+                .filter((a) => a.status === "pending")
+                .map((acc) => (
+                  <li key={acc.id} className="flex items-center justify-between gap-2">
+                    <span className="text-sm text-gray-400">{acc.user_name ?? "名前未設定"}</span>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (!window.confirm("リクエストをキャンセルしますか？")) return;
+                        await supabase.from("member_profile_access").delete().eq("id", acc.id);
+                        await reloadMyProfiles(teamId!, userId!);
+                      }}
+                      className="rounded border border-gray-200 px-2 py-0.5 text-xs text-gray-400 hover:bg-gray-100"
+                    >
+                      取消
+                    </button>
+                  </li>
+                ))}
+            </ul>
+          </div>
+        )}
+
+        {/* リクエスト送信フォーム */}
+        <div>
+          <p className="mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">共有リクエストを送る</p>
+          {teamGuardianUsers.length > 0 ? (
+            <div>
+              <div className="flex gap-2">
+                <div className="relative flex-1 min-w-0">
+                  <input
+                    type="text"
+                    value={shareSearchText[shareModalProfile.member_profile_id] ?? ""}
+                    onChange={(e) => {
+                      setShareSearchText((prev) => ({
+                        ...prev,
+                        [shareModalProfile.member_profile_id]: e.target.value,
+                      }));
+                      setSelectedShareUserId((prev) => ({
+                        ...prev,
+                        [shareModalProfile.member_profile_id]: "",
+                      }));
+                    }}
+                    placeholder="名前で検索..."
+                    className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
+                  />
+                  {(shareSearchText[shareModalProfile.member_profile_id] ?? "").length > 0 &&
+                    !selectedShareUserId[shareModalProfile.member_profile_id] &&
+                    (() => {
+                      const q = (shareSearchText[shareModalProfile.member_profile_id] ?? "").toLowerCase();
+                      const filtered = teamGuardianUsers.filter(
+                        (u) =>
+                          (u.name ?? "").toLowerCase().includes(q) &&
+                          !(shareModalProfile.accessItems ?? []).some(
+                            (a) => a.user_id === u.user_id && a.status !== "rejected"
+                          )
+                      );
+                      if (filtered.length === 0) return null;
+                      return (
+                        <ul className="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg">
+                          {filtered.map((u) => (
+                            <li key={u.user_id}>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedShareUserId((prev) => ({
+                                    ...prev,
+                                    [shareModalProfile.member_profile_id]: u.user_id,
+                                  }));
+                                  setShareSearchText((prev) => ({
+                                    ...prev,
+                                    [shareModalProfile.member_profile_id]: u.name ?? "",
+                                  }));
+                                }}
+                                className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+                              >
+                                {u.name ?? "名前未設定"}
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      );
+                    })()}
+                </div>
+                <button
+                  type="button"
+                  disabled={
+                    !selectedShareUserId[shareModalProfile.member_profile_id] ||
+                    sendingShareRequest === shareModalProfile.member_profile_id
+                  }
+                  onClick={async () => {
+                    const targetUserId = selectedShareUserId[shareModalProfile.member_profile_id];
+                    if (!targetUserId) return;
+                    setSendingShareRequest(shareModalProfile.member_profile_id);
+                    setShareRequestMessage((prev) => ({
+                      ...prev,
+                      [shareModalProfile.member_profile_id]: "",
+                    }));
+                    const { error } = await supabase.rpc("send_profile_share_request", {
+                      p_profile_id: shareModalProfile.member_profile_id,
+                      p_target_user_id: targetUserId,
+                    });
+                    if (error) {
+                      const msg = error.message.includes("already exists")
+                        ? "既にリクエスト済みです"
+                        : "送信に失敗しました";
+                      setShareRequestMessage((prev) => ({
+                        ...prev,
+                        [shareModalProfile.member_profile_id]: msg,
+                      }));
+                    } else {
+                      setShareSearchText((prev) => ({
+                        ...prev,
+                        [shareModalProfile.member_profile_id]: "",
+                      }));
+                      setSelectedShareUserId((prev) => ({
+                        ...prev,
+                        [shareModalProfile.member_profile_id]: "",
+                      }));
+                      setShareRequestMessage((prev) => ({
+                        ...prev,
+                        [shareModalProfile.member_profile_id]: "リクエストを送りました",
+                      }));
+                      await reloadMyProfiles(teamId!, userId!);
+                    }
+                    setSendingShareRequest(null);
+                  }}
+                  className="shrink-0 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-40"
+                >
+                  {sendingShareRequest === shareModalProfile.member_profile_id ? "送信中..." : "送信"}
+                </button>
+              </div>
+              {shareRequestMessage[shareModalProfile.member_profile_id] && (
+                <p
+                  className={`mt-1 text-xs ${
+                    shareRequestMessage[shareModalProfile.member_profile_id].includes("失敗") ||
+                    shareRequestMessage[shareModalProfile.member_profile_id].includes("既に")
+                      ? "text-red-500"
+                      : "text-green-600"
+                  }`}
+                >
+                  {shareRequestMessage[shareModalProfile.member_profile_id]}
+                </p>
+              )}
+            </div>
+          ) : (
+            <p className="text-xs text-gray-400">（チームに保護者メンバーがいません）</p>
+          )}
+        </div>
+      </div>
+    </div>
+  ) : null;
+
   // ── チームプロファイル一覧（コーチ・保護者タブ共通） ──────────────────
   const memberProfilesJsx = teamId ? (
     <>
@@ -1887,137 +2102,15 @@ export default function SettingsPage() {
                 setMyProfiles((prev) => prev.filter((mp) => mp.id !== p.id));
               }}
             />
-            {/* 共有管理エリア（送信側） */}
-            <div className="rounded-b-lg border-x border-b border-gray-200 bg-gray-50 px-4 py-3 -mt-1">
-              <p className="mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">プロファイル共有</p>
-              {/* 承認済み一覧 */}
-              {(p.accessItems ?? []).filter((a) => a.status === "accepted").length > 0 && (
-                <div className="mb-3">
-                  <p className="mb-1 text-xs text-gray-500">共有中:</p>
-                  <ul className="space-y-1">
-                    {(p.accessItems ?? []).filter((a) => a.status === "accepted").map((acc) => (
-                      <li key={acc.id} className="flex items-center justify-between gap-2">
-                        <span className="text-sm text-gray-700">{acc.user_name ?? "名前未設定"}</span>
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            if (!window.confirm(`${acc.user_name ?? "このユーザー"}との共有を解除しますか？`)) return;
-                            await supabase.from("member_profile_access").delete().eq("id", acc.id);
-                            await reloadMyProfiles(teamId, userId);
-                          }}
-                          className="rounded border border-red-200 px-2 py-0.5 text-xs text-red-500 hover:bg-red-50"
-                        >
-                          解除
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              {/* 承認待ち一覧 */}
-              {(p.accessItems ?? []).filter((a) => a.status === "pending").length > 0 && (
-                <div className="mb-3">
-                  <p className="mb-1 text-xs text-gray-500">承認待ち:</p>
-                  <ul className="space-y-1">
-                    {(p.accessItems ?? []).filter((a) => a.status === "pending").map((acc) => (
-                      <li key={acc.id} className="flex items-center justify-between gap-2">
-                        <span className="text-sm text-gray-400">{acc.user_name ?? "名前未設定"}</span>
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            if (!window.confirm("リクエストをキャンセルしますか？")) return;
-                            await supabase.from("member_profile_access").delete().eq("id", acc.id);
-                            await reloadMyProfiles(teamId, userId);
-                          }}
-                          className="rounded border border-gray-200 px-2 py-0.5 text-xs text-gray-400 hover:bg-gray-100"
-                        >
-                          取消
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              {/* リクエスト送信フォーム */}
-              {teamGuardianUsers.length > 0 ? (
-                <div>
-                  <p className="mb-1 text-xs text-gray-500">共有リクエストを送る:</p>
-                  <div className="flex gap-2">
-                    <div className="relative flex-1 min-w-0">
-                      <input
-                        type="text"
-                        value={shareSearchText[p.member_profile_id] ?? ""}
-                        onChange={(e) => {
-                          setShareSearchText((prev) => ({ ...prev, [p.member_profile_id]: e.target.value }));
-                          setSelectedShareUserId((prev) => ({ ...prev, [p.member_profile_id]: "" }));
-                        }}
-                        placeholder="名前で検索..."
-                        className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
-                      />
-                      {(shareSearchText[p.member_profile_id] ?? "").length > 0 && !selectedShareUserId[p.member_profile_id] && (() => {
-                        const q = (shareSearchText[p.member_profile_id] ?? "").toLowerCase();
-                        const filtered = teamGuardianUsers.filter((u) =>
-                          (u.name ?? "").toLowerCase().includes(q) &&
-                          !(p.accessItems ?? []).some((a) => a.user_id === u.user_id && a.status !== "rejected")
-                        );
-                        if (filtered.length === 0) return null;
-                        return (
-                          <ul className="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg">
-                            {filtered.map((u) => (
-                              <li key={u.user_id}>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setSelectedShareUserId((prev) => ({ ...prev, [p.member_profile_id]: u.user_id }));
-                                    setShareSearchText((prev) => ({ ...prev, [p.member_profile_id]: u.name ?? "" }));
-                                  }}
-                                  className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
-                                >
-                                  {u.name ?? "名前未設定"}
-                                </button>
-                              </li>
-                            ))}
-                          </ul>
-                        );
-                      })()}
-                    </div>
-                    <button
-                      type="button"
-                      disabled={!selectedShareUserId[p.member_profile_id] || sendingShareRequest === p.member_profile_id}
-                      onClick={async () => {
-                        const targetUserId = selectedShareUserId[p.member_profile_id];
-                        if (!targetUserId) return;
-                        setSendingShareRequest(p.member_profile_id);
-                        setShareRequestMessage((prev) => ({ ...prev, [p.member_profile_id]: "" }));
-                        const { error } = await supabase.rpc("send_profile_share_request", {
-                          p_profile_id: p.member_profile_id,
-                          p_target_user_id: targetUserId,
-                        });
-                        if (error) {
-                          const msg = error.message.includes("already exists") ? "既にリクエスト済みです" : "送信に失敗しました";
-                          setShareRequestMessage((prev) => ({ ...prev, [p.member_profile_id]: msg }));
-                        } else {
-                          setShareSearchText((prev) => ({ ...prev, [p.member_profile_id]: "" }));
-                          setSelectedShareUserId((prev) => ({ ...prev, [p.member_profile_id]: "" }));
-                          setShareRequestMessage((prev) => ({ ...prev, [p.member_profile_id]: "リクエストを送りました" }));
-                          await reloadMyProfiles(teamId, userId);
-                        }
-                        setSendingShareRequest(null);
-                      }}
-                      className="shrink-0 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-40"
-                    >
-                      {sendingShareRequest === p.member_profile_id ? "送信中..." : "送信"}
-                    </button>
-                  </div>
-                  {shareRequestMessage[p.member_profile_id] && (
-                    <p className={`mt-1 text-xs ${shareRequestMessage[p.member_profile_id].includes("失敗") || shareRequestMessage[p.member_profile_id].includes("既に") ? "text-red-500" : "text-green-600"}`}>
-                      {shareRequestMessage[p.member_profile_id]}
-                    </p>
-                  )}
-                </div>
-              ) : (
-                <p className="text-xs text-gray-400">（チームに保護者メンバーがいません）</p>
-              )}
+            {/* 「共有」ボタン */}
+            <div className="flex justify-end mt-1">
+              <button
+                type="button"
+                onClick={() => setShareModalProfileId(p.member_profile_id)}
+                className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-medium text-blue-600 hover:bg-blue-100"
+              >
+                共有
+              </button>
             </div>
           </div>
         ))}
@@ -2069,7 +2162,9 @@ export default function SettingsPage() {
   const showGuardianTab = accountType === "guardian" || accountType === "coach";
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <>
+      {profileShareModalJsx}
+      <div className="mx-auto max-w-3xl">
 
       {/* タブナビゲーション */}
       {teamId && (
@@ -2800,5 +2895,6 @@ export default function SettingsPage() {
         </div>
       )}
     </div>
+    </>
   );
 }
