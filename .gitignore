@@ -46,6 +46,7 @@ supabase/.temp/
 
 # claude code
 .claude/
+!.claude/rules/
 
 # blueprint (local only, not for version control)
 blueprint/tasks/

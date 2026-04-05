@@ -3,6 +3,9 @@
 セットアップ手順・環境構成・コマンド一覧は [README.md](./README.md) を参照。
 ここには README に書かれていない AI 固有のルールと既知の地雷のみ記載する。
 
+> **このファイルは 200 行以内に保つこと。**
+> 超過したら `.claude/rules/` に切り出して `@.claude/rules/<name>.md` でインポートする。
+
 ---
 
 ## コマンドの注意
@@ -110,31 +113,7 @@
 8. 監督に完了を報告（commit/push は監督経由でGMに確認）
 ```
 
----
-
-## タスクファイル仕様
-
-- 配置: `blueprint/tasks/todo/` (着手予定) / `pending/` (バックログ) / `done/` (完了)
-- ファイル名: `task-YYYYMMDDNNN-<slug>.md`（例: `task-20260322001-inquiry-reply-templates.md`）
-- `blueprint/tasks/` は `.gitignore` によりソース管理対象外（ローカル専用）
-
-### 必須項目
-
-```markdown
----
-status: todo
-priority: high | medium | low
-conflict_risk: high | low
-depends_on: []
----
-
-# task-YYYYMMDDNNN — タイトル
-
-## 概要
-## 変更ファイル一覧
-## 実装手順
-## 注意
-```
+@.claude/rules/task-spec.md
 
 ---
 
@@ -154,34 +133,14 @@ depends_on: []
 - 「タスクファイルに書かれていない設計変更・リファクタは行わないこと」と明記して渡す
 - ビルド確認（`node_modules/.bin/next build`）まで実施させる
 - マイグレーションファイルの**作成は OK**、`supabase db push` の実行は**禁止**
+- **`conflict_risk: high` のタスクは `isolation: "worktree"` で起動する**（main ブランチへの影響をゼロにする）
 
 ### 品質ゲート（シューターが守る最低条件）
 
 1. **ビルドエラーがないこと** — `node_modules/.bin/next build` が成功すること
 2. **E2E テストが通っていること** — メジャーバージョンアップ時にシックスマンが確認
 
----
-
-## バージョン管理とテスト戦略
-
-### バージョン定義
-
-バージョンは `blueprint/milestones.md` で管理する。
-
-| 種別 | 定義 | E2E テスト |
-|---|---|---|
-| **メジャー** | `blueprint/milestones.md` のマイルストーン達成時 | **必須**（テストエージェントを呼び出す） |
-| **マイナー** | 個別機能の追加・改善 | 任意 |
-| **パッチ** | バグ修正・細部 UI 修正 | 不要 |
-
-### メジャーバージョンアップ時のフロー
-
-```
-1. blueprint/milestones.md のマイルストーンを達成したと判断
-2. コーチがシックスマンを呼び出す
-3. E2E テストが全件通過したらバージョンをインクリメントして commit/push
-4. テストが失敗した場合はシューターで修正してから再テスト
-```
+@.claude/rules/versioning.md
 
 ---
 
@@ -195,19 +154,16 @@ depends_on: []
 
 ---
 
-## 既知の地雷
+## Claude Code ベストプラクティス
 
-### `router.push()` + `router.refresh()` の競合
+### プランモード（コーチ向け）
 
-`router.push()` の直後に `router.refresh()` を呼ぶと遷移が中断される。
-遷移後のリフレッシュが必要に見えても `router.push()` のみにすること。
+複雑なタスク（複数ファイル変更・設計判断あり）は `EnterPlanMode` から始める。
+「何を・なぜ変えるか」が明確になるまでコードを書かない。
 
-### Supabase Auth — メール確認
+### コンテキスト管理
 
-クラウド環境はデフォルトでメール確認必須 (`mailer_autoconfirm: false`)。
-ログインエラー `Email not confirmed` は「パスワード誤り」ではなく専用メッセージで案内する。
+- コンテキスト使用量が 50% を超えたら `/compact` で圧縮する
+- 大量の修正をインラインで直すより `Esc+Esc`（/rewind）でやり直す方がクリーン
 
-### RLS — 自己参照による無限ループ
-
-`team_members` テーブルの SELECT ポリシーで同テーブルを参照すると `infinite recursion detected` になる。
-回避策: `SECURITY DEFINER` 関数 (`is_member_of_team()`) を経由する。
+@.claude/rules/pitfalls.md
