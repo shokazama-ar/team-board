@@ -64,22 +64,31 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "イベントが見つかりません" }, { status: 404 });
   }
 
-  // カテゴリ別同期設定チェック（event_type_idがある場合）
-  if (event?.event_type_id && action !== "delete") {
+  // カレンダーIDの決定（カテゴリのcalendar_idがあればそちらを使用、なければチームのcalendar_idにフォールバック）
+  let calendarId: string | null = team.google_calendar_id;
+
+  if (event?.event_type_id) {
     const { data: eventType } = await supabase
       .from("event_types")
-      .select("google_sync_enabled")
+      .select("google_sync_enabled, google_calendar_id")
       .eq("id", event.event_type_id)
       .single();
 
-    if (eventType?.google_sync_enabled === false) {
+    // deleteアクション以外は同期無効チェックを行う（削除は同期無効でも実行する）
+    if (action !== "delete" && eventType?.google_sync_enabled === false) {
       return NextResponse.json({ skipped: true, reason: "event_type sync disabled" });
     }
+    if (eventType?.google_calendar_id) {
+      calendarId = eventType.google_calendar_id;
+    }
+  }
+
+  if (!calendarId) {
+    return NextResponse.json({ skipped: true, reason: "no calendar configured" });
   }
 
   try {
     const accessToken = await getAccessToken(team.google_refresh_token);
-    const calendarId = team.google_calendar_id;
 
     if (action === "create") {
       const gcalEvent = toGoogleCalendarEvent(event!);

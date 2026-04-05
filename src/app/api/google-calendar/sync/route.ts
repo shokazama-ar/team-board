@@ -35,7 +35,7 @@ export async function POST() {
     .eq("id", teamMember.team_id)
     .single();
 
-  if (!team?.google_sync_enabled || !team.google_refresh_token || !team.google_calendar_id) {
+  if (!team?.google_sync_enabled || !team.google_refresh_token) {
     return NextResponse.json({ error: "Google連携が有効ではありません" }, { status: 400 });
   }
 
@@ -54,18 +54,23 @@ export async function POST() {
     return NextResponse.json({ synced: 0, message: "同期対象のイベントはありません" });
   }
 
-  // 同期設定が false になっているevent_type IDを取得
-  const { data: disabledTypes } = await supabase
+  // event_types の同期設定・カレンダーIDを取得
+  const { data: eventTypesData } = await supabase
     .from("event_types")
-    .select("id")
-    .eq("team_id", teamMember.team_id)
-    .eq("google_sync_enabled", false);
+    .select("id, google_sync_enabled, google_calendar_id")
+    .eq("team_id", teamMember.team_id);
 
-  const disabledTypeIds = new Set((disabledTypes ?? []).map((t) => t.id));
+  const disabledTypeIds = new Set(
+    (eventTypesData ?? []).filter((t) => t.google_sync_enabled === false).map((t) => t.id)
+  );
+  const calendarIdByTypeId = new Map(
+    (eventTypesData ?? [])
+      .filter((t) => t.google_calendar_id)
+      .map((t) => [t.id, t.google_calendar_id as string])
+  );
 
   try {
     const accessToken = await getAccessToken(team.google_refresh_token);
-    const calendarId = team.google_calendar_id;
 
     let synced = 0;
     let skipped = 0;
@@ -73,6 +78,16 @@ export async function POST() {
     for (const event of events) {
       // カテゴリ別同期設定チェック
       if (event.event_type_id && disabledTypeIds.has(event.event_type_id)) {
+        skipped++;
+        continue;
+      }
+
+      // カレンダーIDの決定（カテゴリのcalendar_idがあればそちら、なければチームのcalendar_idにフォールバック）
+      const calendarId =
+        (event.event_type_id && calendarIdByTypeId.get(event.event_type_id)) ||
+        team.google_calendar_id;
+
+      if (!calendarId) {
         skipped++;
         continue;
       }

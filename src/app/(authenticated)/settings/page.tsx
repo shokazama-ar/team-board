@@ -30,6 +30,7 @@ type EventType = {
   color: string;
   sort_order: number;
   kind: EventTypeKind;
+  google_calendar_id?: string | null;
 };
 
 const PRESET_COLORS = [
@@ -57,6 +58,9 @@ type SectionProps = {
   onDelete: (id: string) => Promise<void>;
   onAdd: (name: string, color: string) => Promise<string>;
   onUpdate: (id: string, name: string) => Promise<string>;
+  googleSyncEnabled?: boolean;
+  onCreateCalendar?: (id: string, name: string) => Promise<void>;
+  creatingCalendarFor?: string | null;
 };
 
 function EventTypeSection({
@@ -71,6 +75,9 @@ function EventTypeSection({
   onDelete,
   onAdd,
   onUpdate,
+  googleSyncEnabled,
+  onCreateCalendar,
+  creatingCalendarFor,
 }: SectionProps) {
   const [newName, setNewName] = useState("");
   const [newColor, setNewColor] = useState(colors[0].value);
@@ -178,6 +185,22 @@ function EventTypeSection({
             ) : (
               <>
                 <span className="flex-1 min-w-0 text-sm text-gray-900">{item.name}</span>
+                {onCreateCalendar && googleSyncEnabled && (
+                  <div className="ml-1">
+                    {item.google_calendar_id ? (
+                      <span className="text-xs text-green-600">カレンダー設定済み</span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => onCreateCalendar(item.id, item.name)}
+                        disabled={creatingCalendarFor === item.id}
+                        className="rounded border border-blue-300 px-2 py-0.5 text-xs text-blue-600 hover:bg-blue-50 disabled:opacity-50"
+                      >
+                        {creatingCalendarFor === item.id ? "作成中..." : "Googleカレンダーを作成"}
+                      </button>
+                    )}
+                  </div>
+                )}
                 <button
                   type="button"
                   onClick={() => { setEditingId(item.id); setEditingName(item.name); }}
@@ -1231,6 +1254,8 @@ export default function SettingsPage() {
   const [syncMessage, setSyncMessage] = useState("");
   const [googleEventTypeSync, setGoogleEventTypeSync] = useState<Record<string, boolean>>({});
   const [savingEventTypeSync, setSavingEventTypeSync] = useState<string | null>(null);
+  const [creatingCalendarFor, setCreatingCalendarFor] = useState<string | null>(null);
+  const [calendarCreateMessage, setCalendarCreateMessage] = useState("");
 
   // Tab state
   const [activeTab, setActiveTab] = useState<"coach" | "guardian" | "admin">("coach");
@@ -1421,7 +1446,7 @@ export default function SettingsPage() {
           { data: myMembershipsForKind },
         ] = await Promise.all([
           supabase.from("teams").select("name, slug, icon_url, google_calendar_id, google_refresh_token, google_sync_enabled").eq("id", membership.team_id).single(),
-          supabase.from("event_types").select("id, name, color, sort_order, kind, google_sync_enabled").eq("team_id", membership.team_id).order("sort_order"),
+          supabase.from("event_types").select("id, name, color, sort_order, kind, google_sync_enabled, google_calendar_id").eq("team_id", membership.team_id).order("sort_order"),
           reloadMyProfiles(membership.team_id, user.id),
           supabase.from("team_members").select("member_profile_id, member_profiles!inner(user_id, kind)").eq("team_id", membership.team_id).eq("member_profiles.user_id", user.id),
         ]);
@@ -1600,6 +1625,30 @@ export default function SettingsPage() {
       setGoogleSyncEnabled(false);
       setGoogleCalendars([]);
       setGoogleSettingsMessage("Google連携を解除しました");
+    }
+  };
+
+  const handleCreateCalendar = async (categoryId: string, categoryName: string) => {
+    setCreatingCalendarFor(categoryId);
+    setCalendarCreateMessage("");
+    try {
+      const res = await fetch("/api/google-calendar/create-calendar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ category_id: categoryId, calendar_name: categoryName }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "作成失敗");
+      setEventCategories((prev) =>
+        prev.map((c) =>
+          c.id === categoryId ? { ...c, google_calendar_id: data.calendar_id } : c
+        )
+      );
+      setCalendarCreateMessage("カレンダーを作成しました");
+    } catch (err) {
+      setCalendarCreateMessage(`エラー: ${err instanceof Error ? err.message : "作成失敗"}`);
+    } finally {
+      setCreatingCalendarFor(null);
     }
   };
 
@@ -2755,7 +2804,15 @@ export default function SettingsPage() {
             onDelete={(id) => deleteItem(id, setEventCategories)}
             onAdd={(name, color) => addItem("category", name, color, eventCategories, setEventCategories)}
             onUpdate={(id, name) => updateItem(id, name, setEventCategories)}
+            googleSyncEnabled={googleSyncEnabled}
+            onCreateCalendar={googleSyncEnabled ? handleCreateCalendar : undefined}
+            creatingCalendarFor={creatingCalendarFor}
           />
+          {calendarCreateMessage && (
+            <p className={`mt-1 text-xs ${calendarCreateMessage.startsWith("エラー") ? "text-red-500" : "text-green-600"}`}>
+              {calendarCreateMessage}
+            </p>
+          )}
 
           {/* セクション3: 問い合わせ設定 */}
           <h2 className="-mx-4 mt-8 mb-4 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-800">問い合わせ設定</h2>
@@ -2965,11 +3022,11 @@ export default function SettingsPage() {
                 </div>
 
                 {/* イベント種別ごとの同期設定 */}
-                {[...eventTypes, ...eventCategories].length > 0 && (
+                {eventTypes.length > 0 && (
                   <div>
                     <p className="mb-2 text-sm font-medium text-gray-700">イベント種別ごとの同期設定</p>
                     <div className="divide-y divide-gray-100 rounded-lg border border-gray-200">
-                      {[...eventTypes, ...eventCategories].map((et) => (
+                      {eventTypes.map((et) => (
                         <div key={et.id} className="flex items-center justify-between px-4 py-2">
                           <div className="flex items-center gap-2">
                             <span
@@ -2978,7 +3035,7 @@ export default function SettingsPage() {
                             />
                             <span className="text-sm text-gray-700">{et.name}</span>
                             <span className="text-xs text-gray-400">
-                              {et.kind === "type" ? "種別" : "カテゴリ"}
+                              種別
                             </span>
                           </div>
                           <label className="relative inline-flex cursor-pointer items-center">

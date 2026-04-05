@@ -40,6 +40,29 @@ export async function getAccessToken(refreshToken: string): Promise<string> {
   return data.access_token as string;
 }
 
+/** 新しいGoogleカレンダーを作成し、作成されたカレンダーIDを返す */
+export async function createCalendar(
+  accessToken: string,
+  summary: string
+): Promise<string> {
+  const res = await fetch(`${GOOGLE_CALENDAR_BASE}/calendars`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ summary }),
+  });
+
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`カレンダー作成失敗: ${body}`);
+  }
+
+  const data = await res.json();
+  return data.id as string;
+}
+
 /** カレンダー一覧を取得 */
 export async function listCalendars(
   accessToken: string
