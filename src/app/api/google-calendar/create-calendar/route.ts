@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { getAccessToken, createCalendar } from "@/lib/google-calendar";
+import { getAccessToken, createCalendar, setCalendarPublic } from "@/lib/google-calendar";
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient();
@@ -70,6 +70,9 @@ export async function POST(req: NextRequest) {
   try {
     const accessToken = await getAccessToken(team.google_refresh_token);
     const calendarId = await createCalendar(accessToken, calendar_name);
+
+    // カレンダーを一般公開（iCal購読可能レベル）に設定
+    await setCalendarPublic(accessToken, calendarId);
 
     // event_types の google_calendar_id を更新
     const { error: updateError } = await supabase

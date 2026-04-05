@@ -131,6 +131,29 @@ export async function updateGoogleEvent(
   }
 }
 
+/** カレンダーを一般公開（iCal購読可能レベル）に設定 */
+export async function setCalendarPublic(
+  accessToken: string,
+  calendarId: string
+): Promise<void> {
+  const res = await fetch(
+    `${GOOGLE_CALENDAR_BASE}/calendars/${encodeURIComponent(calendarId)}/acl`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ role: "reader", scope: { type: "default" } }),
+    }
+  );
+
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`カレンダー公開設定失敗: ${body}`);
+  }
+}
+
 /** Googleカレンダーのイベントを削除 */
 export async function deleteGoogleEvent(
   accessToken: string,

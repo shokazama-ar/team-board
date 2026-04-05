@@ -2514,6 +2514,43 @@ export default function SettingsPage() {
       {/* 保護者タブ */}
       {activeTab === "guardian" && showGuardianTab && (
         <>
+          {/* iCal 購読リンク */}
+          {eventCategories.filter((c) => c.google_calendar_id).length > 0 && (
+            <div className="mb-6 rounded-lg border border-gray-200 bg-white p-6">
+              <h2 className="mb-1 text-base font-semibold">カレンダー購読リンク</h2>
+              <p className="mb-4 text-sm text-gray-500">
+                以下の URL をカレンダーアプリに登録すると、スケジュールを自動で同期できます。
+              </p>
+              <div className="space-y-3">
+                {eventCategories
+                  .filter((c) => c.google_calendar_id)
+                  .map((c) => {
+                    const icalUrl = `https://calendar.google.com/calendar/ical/${encodeURIComponent(c.google_calendar_id!)}/public/basic.ics`;
+                    return (
+                      <div key={c.id} className="flex items-center gap-3">
+                        <span
+                          className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
+                          style={{ backgroundColor: c.color }}
+                        />
+                        <span className="w-24 shrink-0 truncate text-sm font-medium text-gray-700">
+                          {c.name}
+                        </span>
+                        <span className="min-w-0 flex-1 truncate rounded bg-gray-50 px-2 py-1 font-mono text-xs text-gray-500">
+                          {icalUrl}
+                        </span>
+                        <button
+                          type="button"
+                          className="shrink-0 rounded px-2 py-1 text-xs text-blue-600 hover:bg-blue-50"
+                          onClick={() => navigator.clipboard.writeText(icalUrl)}
+                        >
+                          コピー
+                        </button>
+                      </div>
+                    );
+                  })}
+              </div>
+            </div>
+          )}
           {profileFormJsx}
           {memberProfilesJsx}
           {/* 共有リクエスト（受信側） */}
