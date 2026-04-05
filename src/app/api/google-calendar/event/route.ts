@@ -38,14 +38,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  // チーム設定取得
+  // チーム設定取得（google_calendar_id は使用しない）
   const { data: team } = await supabase
     .from("teams")
-    .select("google_refresh_token, google_calendar_id, google_sync_enabled")
+    .select("google_refresh_token, google_sync_enabled")
     .eq("id", teamMember.team_id)
     .single();
 
-  if (!team?.google_sync_enabled || !team.google_refresh_token || !team.google_calendar_id) {
+  if (!team?.google_sync_enabled || !team.google_refresh_token) {
     // 連携が無効なためスキップ
     return NextResponse.json({ skipped: true });
   }
@@ -64,8 +64,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "イベントが見つかりません" }, { status: 404 });
   }
 
-  // カレンダーIDの決定（カテゴリのcalendar_idがあればそちらを使用、なければチームのcalendar_idにフォールバック）
-  let calendarId: string | null = team.google_calendar_id;
+  // カレンダーIDの決定（カテゴリの google_calendar_id のみ使用。なければスキップ）
+  let calendarId: string | null = null;
 
   if (event?.event_type_id) {
     const { data: eventType } = await supabase
@@ -78,13 +78,11 @@ export async function POST(req: NextRequest) {
     if (action !== "delete" && eventType?.google_sync_enabled === false) {
       return NextResponse.json({ skipped: true, reason: "event_type sync disabled" });
     }
-    if (eventType?.google_calendar_id) {
-      calendarId = eventType.google_calendar_id;
-    }
+    calendarId = eventType?.google_calendar_id ?? null;
   }
 
   if (!calendarId) {
-    return NextResponse.json({ skipped: true, reason: "no calendar configured" });
+    return NextResponse.json({ skipped: true, reason: "no calendar configured for this event" });
   }
 
   try {
@@ -118,7 +116,7 @@ export async function POST(req: NextRequest) {
 
     if (action === "delete") {
       // eventがない場合でも google_event_id をDBから直接取得して削除
-      let googleEventId: string | null = event?.google_event_id ?? null;
+      const googleEventId: string | null = event?.google_event_id ?? null;
 
       if (!googleEventId) {
         // すでにDBから消えている可能性があるため、スキップ

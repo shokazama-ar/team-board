@@ -1244,10 +1244,7 @@ export default function SettingsPage() {
 
   // Google Calendar state
   const [googleConnected, setGoogleConnected] = useState(false);
-  const [googleCalendarId, setGoogleCalendarId] = useState<string | null>(null);
   const [googleSyncEnabled, setGoogleSyncEnabled] = useState(false);
-  const [googleCalendars, setGoogleCalendars] = useState<{ id: string; summary: string; primary?: boolean }[]>([]);
-  const [loadingCalendars, setLoadingCalendars] = useState(false);
   const [savingGoogleSettings, setSavingGoogleSettings] = useState(false);
   const [googleSettingsMessage, setGoogleSettingsMessage] = useState("");
   const [syncing, setSyncing] = useState(false);
@@ -1445,7 +1442,7 @@ export default function SettingsPage() {
           ,
           { data: myMembershipsForKind },
         ] = await Promise.all([
-          supabase.from("teams").select("name, slug, icon_url, google_calendar_id, google_refresh_token, google_sync_enabled").eq("id", membership.team_id).single(),
+          supabase.from("teams").select("name, slug, icon_url, google_refresh_token, google_sync_enabled").eq("id", membership.team_id).single(),
           supabase.from("event_types").select("id, name, color, sort_order, kind, google_sync_enabled, google_calendar_id").eq("team_id", membership.team_id).order("sort_order"),
           reloadMyProfiles(membership.team_id, user.id),
           supabase.from("team_members").select("member_profile_id, member_profiles!inner(user_id, kind)").eq("team_id", membership.team_id).eq("member_profiles.user_id", user.id),
@@ -1456,7 +1453,6 @@ export default function SettingsPage() {
           setSlug(team.slug ?? "");
           setTeamIconUrl(team.icon_url ?? null);
           setGoogleConnected(!!(team as unknown as { google_refresh_token: string | null }).google_refresh_token);
-          setGoogleCalendarId((team as unknown as { google_calendar_id: string | null }).google_calendar_id ?? null);
           setGoogleSyncEnabled(!!(team as unknown as { google_sync_enabled: boolean | null }).google_sync_enabled);
         }
 
@@ -1566,26 +1562,6 @@ export default function SettingsPage() {
     }
   }, []);
 
-  // Google連携済みならカレンダー一覧を取得
-  useEffect(() => {
-    if (!googleConnected || !isAdmin) return;
-    const fetchCalendars = async () => {
-      setLoadingCalendars(true);
-      try {
-        const res = await fetch("/api/google-calendar/calendars");
-        if (res.ok) {
-          const data = await res.json();
-          setGoogleCalendars(data.calendars ?? []);
-        }
-      } catch {
-        // サイレントエラー
-      } finally {
-        setLoadingCalendars(false);
-      }
-    };
-    fetchCalendars();
-  }, [googleConnected, isAdmin]);
-
   // ── Google Calendar helpers ──────────────────────────────────────────────
 
   const handleSaveGoogleSettings = async () => {
@@ -1595,7 +1571,6 @@ export default function SettingsPage() {
     const { error } = await supabase
       .from("teams")
       .update({
-        google_calendar_id: googleCalendarId,
         google_sync_enabled: googleSyncEnabled,
       })
       .eq("id", teamId);
@@ -1615,15 +1590,12 @@ export default function SettingsPage() {
       .from("teams")
       .update({
         google_refresh_token: null,
-        google_calendar_id: null,
         google_sync_enabled: false,
       })
       .eq("id", teamId);
     if (!error) {
       setGoogleConnected(false);
-      setGoogleCalendarId(null);
       setGoogleSyncEnabled(false);
-      setGoogleCalendars([]);
       setGoogleSettingsMessage("Google連携を解除しました");
     }
   };
@@ -2975,37 +2947,6 @@ export default function SettingsPage() {
                   </label>
                 </div>
 
-                {/* カレンダー選択 */}
-                <div>
-                  <p className="mb-2 text-sm font-medium text-gray-700">同期先カレンダー</p>
-                  {loadingCalendars ? (
-                    <p className="text-sm text-gray-400">読み込み中...</p>
-                  ) : googleCalendars.length === 0 ? (
-                    <p className="text-sm text-gray-400">カレンダーが見つかりません</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {googleCalendars.map((cal) => (
-                        <label key={cal.id} className="flex cursor-pointer items-center gap-2">
-                          <input
-                            type="radio"
-                            name="google-calendar"
-                            value={cal.id}
-                            checked={googleCalendarId === cal.id}
-                            onChange={() => setGoogleCalendarId(cal.id)}
-                            className="accent-blue-600"
-                          />
-                          <span className="text-sm text-gray-700">
-                            {cal.summary}
-                            {cal.primary && (
-                              <span className="ml-1 text-xs text-gray-400">(メイン)</span>
-                            )}
-                          </span>
-                        </label>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
                 {/* 保存ボタン */}
                 <div className="flex items-center gap-3">
                   <button
@@ -3064,7 +3005,7 @@ export default function SettingsPage() {
                     <button
                       type="button"
                       onClick={handleBulkSync}
-                      disabled={syncing || !googleCalendarId || !googleSyncEnabled}
+                      disabled={syncing || !googleSyncEnabled}
                       className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
                     >
                       {syncing ? "同期中..." : "一括同期を実行"}
@@ -3073,11 +3014,6 @@ export default function SettingsPage() {
                       <p className="text-sm text-gray-600">{syncMessage}</p>
                     )}
                   </div>
-                  {!googleCalendarId && (
-                    <p className="mt-2 text-xs text-amber-600">
-                      同期先カレンダーを選択して設定を保存してください
-                    </p>
-                  )}
                 </div>
               </div>
             )}

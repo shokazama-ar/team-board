@@ -28,10 +28,10 @@ export async function POST() {
     return NextResponse.json({ error: "管理者権限が必要です" }, { status: 403 });
   }
 
-  // チーム設定取得
+  // チーム設定取得（google_calendar_id は使用しない）
   const { data: team } = await supabase
     .from("teams")
-    .select("google_refresh_token, google_calendar_id, google_sync_enabled")
+    .select("google_refresh_token, google_sync_enabled")
     .eq("id", teamMember.team_id)
     .single();
 
@@ -82,10 +82,10 @@ export async function POST() {
         continue;
       }
 
-      // カレンダーIDの決定（カテゴリのcalendar_idがあればそちら、なければチームのcalendar_idにフォールバック）
-      const calendarId =
-        (event.event_type_id && calendarIdByTypeId.get(event.event_type_id)) ||
-        team.google_calendar_id;
+      // カテゴリの google_calendar_id のみ使用。フォールバックなし
+      const calendarId = event.event_type_id
+        ? calendarIdByTypeId.get(event.event_type_id) ?? null
+        : null;
 
       if (!calendarId) {
         skipped++;
