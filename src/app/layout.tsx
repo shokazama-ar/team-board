@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Noto_Sans_JP } from "next/font/google";
 import NextTopLoader from "nextjs-toploader";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { ViewportZoomReset } from "@/components/ViewportZoomReset";
 import "./globals.css";
 
@@ -29,6 +30,7 @@ export default function RootLayout({
         <NextTopLoader color="#2563eb" showSpinner={false} height={3} />
         <ViewportZoomReset />
         {children}
+        <SpeedInsights />
       </body>
     </html>
   );
