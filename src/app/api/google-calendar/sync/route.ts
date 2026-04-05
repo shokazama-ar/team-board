@@ -42,7 +42,7 @@ export async function POST() {
   // まだ同期されていないイベントを取得（google_event_id が NULL のもの）
   const { data: events, error: eventsError } = await supabase
     .from("events")
-    .select("id, title, date, end_at, location, memo, event_type_id")
+    .select("id, title, date, end_at, location, memo")
     .eq("team_id", teamMember.team_id)
     .is("google_event_id", null);
 
@@ -54,20 +54,27 @@ export async function POST() {
     return NextResponse.json({ synced: 0, message: "同期対象のイベントはありません" });
   }
 
-  // event_types の同期設定・カレンダーIDを取得
-  const { data: eventTypesData } = await supabase
-    .from("event_types")
-    .select("id, google_sync_enabled, google_calendar_id")
-    .eq("team_id", teamMember.team_id);
+  // event_event_types 中間テーブル経由でカテゴリ（kind='category'）を取得
+  const eventIds = events.map((e) => e.id);
+  const { data: eventTypesLinks } = await supabase
+    .from("event_event_types")
+    .select("event_id, event_type_id, event_types(id, kind, google_sync_enabled, google_calendar_id)")
+    .in("event_id", eventIds);
 
-  const disabledTypeIds = new Set(
-    (eventTypesData ?? []).filter((t) => t.google_sync_enabled === false).map((t) => t.id)
-  );
-  const calendarIdByTypeId = new Map(
-    (eventTypesData ?? [])
-      .filter((t) => t.google_calendar_id)
-      .map((t) => [t.id, t.google_calendar_id as string])
-  );
+  // event_id → 最初に見つかった category の情報 をマップ化
+  type CategoryInfo = { google_sync_enabled: boolean | null; google_calendar_id: string | null };
+  const categoryByEventId = new Map<string, CategoryInfo>();
+
+  for (const link of eventTypesLinks ?? []) {
+    const et = Array.isArray(link.event_types) ? link.event_types[0] : link.event_types;
+    if (!et || et.kind !== "category") continue;
+    // 既にカテゴリ情報が設定済みの場合はスキップ（最初のカテゴリを優先）
+    if (categoryByEventId.has(link.event_id)) continue;
+    categoryByEventId.set(link.event_id, {
+      google_sync_enabled: et.google_sync_enabled,
+      google_calendar_id: et.google_calendar_id,
+    });
+  }
 
   try {
     const accessToken = await getAccessToken(team.google_refresh_token);
@@ -76,16 +83,16 @@ export async function POST() {
     let skipped = 0;
 
     for (const event of events) {
-      // カテゴリ別同期設定チェック
-      if (event.event_type_id && disabledTypeIds.has(event.event_type_id)) {
+      const category = categoryByEventId.get(event.id);
+
+      // カテゴリが存在しない、または同期無効の場合はスキップ
+      if (!category || category.google_sync_enabled === false) {
         skipped++;
         continue;
       }
 
       // カテゴリの google_calendar_id のみ使用。フォールバックなし
-      const calendarId = event.event_type_id
-        ? calendarIdByTypeId.get(event.event_type_id) ?? null
-        : null;
+      const calendarId = category.google_calendar_id ?? null;
 
       if (!calendarId) {
         skipped++;
