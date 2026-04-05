@@ -61,6 +61,7 @@ type SectionProps = {
   googleSyncEnabled?: boolean;
   onCreateCalendar?: (id: string, name: string) => Promise<void>;
   creatingCalendarFor?: string | null;
+  googleGroupEmail?: string;
 };
 
 function EventTypeSection({
@@ -78,6 +79,7 @@ function EventTypeSection({
   googleSyncEnabled,
   onCreateCalendar,
   creatingCalendarFor,
+  googleGroupEmail,
 }: SectionProps) {
   const [newName, setNewName] = useState("");
   const [newColor, setNewColor] = useState(colors[0].value);
@@ -193,7 +195,8 @@ function EventTypeSection({
                       <button
                         type="button"
                         onClick={() => onCreateCalendar(item.id, item.name)}
-                        disabled={creatingCalendarFor === item.id}
+                        disabled={creatingCalendarFor === item.id || !googleGroupEmail}
+                        title={!googleGroupEmail ? "Googleグループを設定してからカレンダーを作成してください" : undefined}
                         className="rounded border border-blue-300 px-2 py-0.5 text-xs text-blue-600 hover:bg-blue-50 disabled:opacity-50"
                       >
                         {creatingCalendarFor === item.id ? "作成中..." : "Googleカレンダーを作成"}
@@ -1253,6 +1256,9 @@ export default function SettingsPage() {
   const [savingEventTypeSync, setSavingEventTypeSync] = useState<string | null>(null);
   const [creatingCalendarFor, setCreatingCalendarFor] = useState<string | null>(null);
   const [calendarCreateMessage, setCalendarCreateMessage] = useState("");
+  const [googleGroupEmail, setGoogleGroupEmail] = useState("");
+  const [savingGoogleGroupEmail, setSavingGoogleGroupEmail] = useState(false);
+  const [googleGroupEmailMessage, setGoogleGroupEmailMessage] = useState("");
 
   // Tab state
   const [activeTab, setActiveTab] = useState<"coach" | "guardian" | "admin">("coach");
@@ -1442,7 +1448,7 @@ export default function SettingsPage() {
           ,
           { data: myMembershipsForKind },
         ] = await Promise.all([
-          supabase.from("teams").select("name, slug, icon_url, google_refresh_token, google_sync_enabled").eq("id", membership.team_id).single(),
+          supabase.from("teams").select("name, slug, icon_url, google_refresh_token, google_sync_enabled, google_group_email").eq("id", membership.team_id).single(),
           supabase.from("event_types").select("id, name, color, sort_order, kind, google_sync_enabled, google_calendar_id").eq("team_id", membership.team_id).order("sort_order"),
           reloadMyProfiles(membership.team_id, user.id),
           supabase.from("team_members").select("member_profile_id, member_profiles!inner(user_id, kind)").eq("team_id", membership.team_id).eq("member_profiles.user_id", user.id),
@@ -1454,6 +1460,7 @@ export default function SettingsPage() {
           setTeamIconUrl(team.icon_url ?? null);
           setGoogleConnected(!!(team as unknown as { google_refresh_token: string | null }).google_refresh_token);
           setGoogleSyncEnabled(!!(team as unknown as { google_sync_enabled: boolean | null }).google_sync_enabled);
+          setGoogleGroupEmail((team as unknown as { google_group_email: string | null }).google_group_email ?? "");
         }
 
         if (allTypes) {
@@ -1640,6 +1647,22 @@ export default function SettingsPage() {
     } finally {
       setSyncing(false);
     }
+  };
+
+  const handleSaveGoogleGroupEmail = async () => {
+    if (!teamId) return;
+    setSavingGoogleGroupEmail(true);
+    setGoogleGroupEmailMessage("");
+    const { error } = await supabase
+      .from("teams")
+      .update({ google_group_email: googleGroupEmail.trim() || null })
+      .eq("id", teamId);
+    if (error) {
+      setGoogleGroupEmailMessage("保存に失敗しました");
+    } else {
+      setGoogleGroupEmailMessage("保存しました");
+    }
+    setSavingGoogleGroupEmail(false);
   };
 
   const handleToggleEventTypeSync = async (typeId: string, value: boolean) => {
@@ -2514,43 +2537,6 @@ export default function SettingsPage() {
       {/* 保護者タブ */}
       {activeTab === "guardian" && showGuardianTab && (
         <>
-          {/* iCal 購読リンク */}
-          {eventCategories.filter((c) => c.google_calendar_id).length > 0 && (
-            <div className="mb-6 rounded-lg border border-gray-200 bg-white p-6">
-              <h2 className="mb-1 text-base font-semibold">カレンダー購読リンク</h2>
-              <p className="mb-4 text-sm text-gray-500">
-                以下の URL をカレンダーアプリに登録すると、スケジュールを自動で同期できます。
-              </p>
-              <div className="space-y-3">
-                {eventCategories
-                  .filter((c) => c.google_calendar_id)
-                  .map((c) => {
-                    const icalUrl = `https://calendar.google.com/calendar/ical/${encodeURIComponent(c.google_calendar_id!)}/public/basic.ics`;
-                    return (
-                      <div key={c.id} className="flex items-center gap-3">
-                        <span
-                          className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
-                          style={{ backgroundColor: c.color }}
-                        />
-                        <span className="w-24 shrink-0 truncate text-sm font-medium text-gray-700">
-                          {c.name}
-                        </span>
-                        <span className="min-w-0 flex-1 truncate rounded bg-gray-50 px-2 py-1 font-mono text-xs text-gray-500">
-                          {icalUrl}
-                        </span>
-                        <button
-                          type="button"
-                          className="shrink-0 rounded px-2 py-1 text-xs text-blue-600 hover:bg-blue-50"
-                          onClick={() => navigator.clipboard.writeText(icalUrl)}
-                        >
-                          コピー
-                        </button>
-                      </div>
-                    );
-                  })}
-              </div>
-            </div>
-          )}
           {profileFormJsx}
           {memberProfilesJsx}
           {/* 共有リクエスト（受信側） */}
@@ -2646,6 +2632,57 @@ export default function SettingsPage() {
                   </div>
                 </div>
               )}
+            </>
+          )}
+          {/* iCal 購読リンク */}
+          {googleGroupEmail && eventCategories.filter((c) => c.google_calendar_id).length > 0 && (
+            <>
+              <hr className="my-8 border-gray-200" />
+              <div className="mb-6 rounded-lg border border-gray-200 bg-white p-6">
+                <h2 className="mb-1 text-base font-semibold">カレンダー購読リンク</h2>
+                <p className="mb-3 text-sm text-gray-500">
+                  以下の URL をカレンダーアプリに登録すると、スケジュールを自動で同期できます。
+                </p>
+                <div className="mb-4 rounded-lg border border-blue-100 bg-blue-50 p-3">
+                  <p className="text-xs text-blue-700">
+                    カレンダーを購読するには、事前にこのグループへの参加申請が必要です。
+                  </p>
+                  <p className="mt-1 text-xs font-medium text-blue-800 break-all">
+                    {googleGroupEmail}
+                  </p>
+                  <p className="mt-0.5 text-xs text-blue-600">
+                    上記アドレスへメールを送ってこのグループへ参加申請してください。
+                  </p>
+                </div>
+                <div className="space-y-3">
+                  {eventCategories
+                    .filter((c) => c.google_calendar_id)
+                    .map((c) => {
+                      const icalUrl = `https://calendar.google.com/calendar/ical/${encodeURIComponent(c.google_calendar_id!)}/public/basic.ics`;
+                      return (
+                        <div key={c.id} className="flex items-center gap-3">
+                          <span
+                            className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
+                            style={{ backgroundColor: c.color }}
+                          />
+                          <span className="w-24 shrink-0 truncate text-sm font-medium text-gray-700">
+                            {c.name}
+                          </span>
+                          <span className="min-w-0 flex-1 truncate rounded bg-gray-50 px-2 py-1 font-mono text-xs text-gray-500">
+                            {icalUrl}
+                          </span>
+                          <button
+                            type="button"
+                            className="shrink-0 rounded px-2 py-1 text-xs text-blue-600 hover:bg-blue-50"
+                            onClick={() => copyToClipboard(icalUrl)}
+                          >
+                            コピー
+                          </button>
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
             </>
           )}
           {/* 機能説明 */}
@@ -2816,6 +2853,7 @@ export default function SettingsPage() {
             googleSyncEnabled={googleSyncEnabled}
             onCreateCalendar={googleSyncEnabled ? handleCreateCalendar : undefined}
             creatingCalendarFor={creatingCalendarFor}
+            googleGroupEmail={googleGroupEmail}
           />
           {calendarCreateMessage && (
             <p className={`mt-1 text-xs ${calendarCreateMessage.startsWith("エラー") ? "text-red-500" : "text-green-600"}`}>
@@ -2996,6 +3034,37 @@ export default function SettingsPage() {
                   </button>
                   {googleSettingsMessage && (
                     <p className="text-sm text-gray-600">{googleSettingsMessage}</p>
+                  )}
+                </div>
+
+                {/* カレンダー共有用 Google グループ */}
+                <div className="rounded-lg border border-gray-200 p-4">
+                  <p className="mb-1 text-sm font-medium text-gray-700">カレンダー共有用 Google グループ</p>
+                  <p className="mb-3 text-xs text-gray-500">
+                    カテゴリカレンダーを共有する Google グループのメールアドレスを設定してください。
+                    カレンダー作成時にこのグループへ自動的に読み取り権限が付与されます。
+                  </p>
+                  <div className="flex gap-2">
+                    <input
+                      type="email"
+                      value={googleGroupEmail}
+                      onChange={(e) => setGoogleGroupEmail(e.target.value)}
+                      placeholder="example-group@googlegroups.com"
+                      className="flex-1 min-w-0 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleSaveGoogleGroupEmail}
+                      disabled={savingGoogleGroupEmail}
+                      className="shrink-0 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                    >
+                      {savingGoogleGroupEmail ? "保存中..." : "保存"}
+                    </button>
+                  </div>
+                  {googleGroupEmailMessage && (
+                    <p className={`mt-2 text-xs ${googleGroupEmailMessage.includes("失敗") ? "text-red-500" : "text-green-600"}`}>
+                      {googleGroupEmailMessage}
+                    </p>
                   )}
                 </div>
 

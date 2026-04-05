@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { getAccessToken, createCalendar, setCalendarPublic } from "@/lib/google-calendar";
+import { getAccessToken, createCalendar, setCalendarGroupAccess } from "@/lib/google-calendar";
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient();
@@ -40,13 +40,21 @@ export async function POST(req: NextRequest) {
   // チーム設定取得
   const { data: team } = await supabase
     .from("teams")
-    .select("google_refresh_token, google_sync_enabled")
+    .select("google_refresh_token, google_sync_enabled, google_group_email")
     .eq("id", teamMember.team_id)
     .single();
 
   if (!team?.google_sync_enabled || !team.google_refresh_token) {
     return NextResponse.json(
       { error: "Google連携が有効ではありません" },
+      { status: 400 }
+    );
+  }
+
+  const googleGroupEmail = (team as unknown as { google_group_email: string | null }).google_group_email;
+  if (!googleGroupEmail) {
+    return NextResponse.json(
+      { error: "Googleグループが設定されていません" },
       { status: 400 }
     );
   }
@@ -71,8 +79,8 @@ export async function POST(req: NextRequest) {
     const accessToken = await getAccessToken(team.google_refresh_token);
     const calendarId = await createCalendar(accessToken, calendar_name);
 
-    // カレンダーを一般公開（iCal購読可能レベル）に設定
-    await setCalendarPublic(accessToken, calendarId);
+    // Google グループにカレンダーの読み取り権限を付与
+    await setCalendarGroupAccess(accessToken, calendarId, googleGroupEmail);
 
     // event_types の google_calendar_id を更新
     const { error: updateError } = await supabase

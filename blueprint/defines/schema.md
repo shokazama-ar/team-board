@@ -29,6 +29,7 @@ Supabase (PostgreSQL) のテーブル構成。RLSはすべて有効。
 | google_calendar_id | text | 同期先GoogleカレンダーID（Googleカレンダー連携） |
 | google_refresh_token | text | OAuth2リフレッシュトークン（管理者）（Googleカレンダー連携） |
 | google_sync_enabled | bool | 連携ON/OFF（デフォルトfalse）（Googleカレンダー連携） |
+| google_group_email | text | カレンダー共有用GoogleグループのメールアドレスNullable（Googleカレンダー連携） |
 
 ---
 
