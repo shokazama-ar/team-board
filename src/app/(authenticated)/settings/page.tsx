@@ -1217,6 +1217,41 @@ function ReplyTemplateSection({ teamId }: ReplyTemplateSectionProps) {
   );
 }
 
+// ── 折りたたみセクション ──────────────────────────────────────────────────────
+function CollapsibleSection({
+  title,
+  summary,
+  children,
+  defaultOpen = false,
+}: {
+  title: string;
+  summary: React.ReactNode;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="mt-6">
+      <div className="-mx-4 flex items-center justify-between bg-blue-50 px-4 py-2">
+        <h2 className="text-sm font-semibold text-blue-800">{title}</h2>
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          className="text-xs text-blue-600 hover:underline"
+        >
+          {open ? "閉じる" : "編集"}
+        </button>
+      </div>
+      {!open && (
+        <div className="mt-3 text-sm text-gray-600">{summary}</div>
+      )}
+      {open && (
+        <div className="mt-4">{children}</div>
+      )}
+    </div>
+  );
+}
+
 // ── メインページ ────────────────────────────────────────────────────────────
 export default function SettingsPage() {
   const supabase = createClient();
@@ -1249,7 +1284,6 @@ export default function SettingsPage() {
   const [googleConnected, setGoogleConnected] = useState(false);
   const [googleSyncEnabled, setGoogleSyncEnabled] = useState(false);
   const [savingGoogleSettings, setSavingGoogleSettings] = useState(false);
-  const [googleSettingsMessage, setGoogleSettingsMessage] = useState("");
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState("");
   const [googleEventTypeSync, setGoogleEventTypeSync] = useState<Record<string, boolean>>({});
@@ -1556,13 +1590,11 @@ export default function SettingsPage() {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     if (params.get("google_success")) {
-      setGoogleSettingsMessage("Googleアカウントと連携しました");
       // URL クリーンアップ
       const url = new URL(window.location.href);
       url.searchParams.delete("google_success");
       window.history.replaceState({}, "", url.toString());
     } else if (params.get("google_error")) {
-      setGoogleSettingsMessage("Google連携に失敗しました。もう一度お試しください。");
       const url = new URL(window.location.href);
       url.searchParams.delete("google_error");
       window.history.replaceState({}, "", url.toString());
@@ -1570,24 +1602,6 @@ export default function SettingsPage() {
   }, []);
 
   // ── Google Calendar helpers ──────────────────────────────────────────────
-
-  const handleSaveGoogleSettings = async () => {
-    if (!teamId) return;
-    setSavingGoogleSettings(true);
-    setGoogleSettingsMessage("");
-    const { error } = await supabase
-      .from("teams")
-      .update({
-        google_sync_enabled: googleSyncEnabled,
-      })
-      .eq("id", teamId);
-    if (error) {
-      setGoogleSettingsMessage("保存に失敗しました");
-    } else {
-      setGoogleSettingsMessage("保存しました");
-    }
-    setSavingGoogleSettings(false);
-  };
 
   const handleDisconnectGoogle = async () => {
     if (!teamId) return;
@@ -1603,7 +1617,6 @@ export default function SettingsPage() {
     if (!error) {
       setGoogleConnected(false);
       setGoogleSyncEnabled(false);
-      setGoogleSettingsMessage("Google連携を解除しました");
     }
   };
 
@@ -2734,249 +2747,233 @@ export default function SettingsPage() {
       {activeTab === "admin" && isAdmin && teamId && (
         <>
           {/* セクション1: チーム設定 */}
-          <h2 className="-mx-4 mb-4 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-800">チーム設定</h2>
-
-          <div className="mb-4 flex items-center gap-4">
-            <AvatarUpload
-              currentUrl={teamIconUrl}
-              bucket="team-icons"
-              folderPath={teamId}
-              size={72}
-              onUploaded={handleTeamIconUploaded}
-            />
-            <div>
-              <p className="text-sm font-medium text-gray-700">チームアイコン</p>
-              <p className="text-xs text-gray-400">クリックして変更</p>
-            </div>
-          </div>
-
-          <form onSubmit={handleSaveTeam}>
-            <label
-              htmlFor="teamName"
-              className="mb-1 block text-sm font-medium text-gray-700"
-            >
-              チーム名
-            </label>
-            <div className="flex gap-2">
-              <input
-                id="teamName"
-                type="text"
-                value={teamName}
-                onChange={(e) => setTeamName(e.target.value)}
-                className="flex-1 min-w-0 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          <CollapsibleSection
+            title="チーム設定"
+            summary={<span>{teamName || "未設定"}</span>}
+          >
+            <div className="mb-4 flex items-center gap-4">
+              <AvatarUpload
+                currentUrl={teamIconUrl}
+                bucket="team-icons"
+                folderPath={teamId}
+                size={72}
+                onUploaded={handleTeamIconUploaded}
               />
-              <button
-                type="submit"
-                disabled={savingTeam || !teamName.trim()}
-                className="shrink-0 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-              >
-                {savingTeam ? "保存中..." : "保存"}
-              </button>
-            </div>
-            {teamMessage && (
-              <div
-                className={`mt-2 rounded-md p-3 text-sm ${
-                  teamMessage.includes("失敗")
-                    ? "bg-red-50 text-red-600"
-                    : "bg-green-50 text-green-600"
-                }`}
-              >
-                {teamMessage}
+              <div>
+                <p className="text-sm font-medium text-gray-700">チームアイコン</p>
+                <p className="text-xs text-gray-400">クリックして変更</p>
               </div>
-            )}
-          </form>
+            </div>
 
-          <div className="mt-4">
-            <label className="mb-1 block text-sm font-medium text-gray-700">
-              メンバーを招待
-            </label>
-            <p className="mb-1.5 text-xs text-gray-400">メンバーに招待メールを送ります</p>
-            {inviteSuccess && (
-              <p className="mb-2 text-sm text-green-600">
-                招待メールを送信しました。
-                <button onClick={() => setInviteSuccess(false)} className="ml-2 text-blue-600 underline">
-                  別のアドレスを招待
-                </button>
-              </p>
-            )}
-            {!inviteSuccess && (
+            <form onSubmit={handleSaveTeam}>
+              <label
+                htmlFor="teamName"
+                className="mb-1 block text-sm font-medium text-gray-700"
+              >
+                チーム名
+              </label>
               <div className="flex gap-2">
                 <input
-                  type="email"
-                  placeholder="メールアドレス"
-                  value={inviteEmail}
-                  onChange={(e) => setInviteEmail(e.target.value)}
-                  className="flex-1 min-w-0 rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                  id="teamName"
+                  type="text"
+                  value={teamName}
+                  onChange={(e) => setTeamName(e.target.value)}
+                  className="flex-1 min-w-0 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
                 <button
-                  type="button"
-                  onClick={handleInvite}
-                  disabled={inviting || !inviteEmail}
-                  className="shrink-0 flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                  type="submit"
+                  disabled={savingTeam || !teamName.trim()}
+                  className="shrink-0 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
                 >
-                  {inviting ? <Loader2 size={14} className="animate-spin" /> : "送信"}
+                  {savingTeam ? "保存中..." : "保存"}
                 </button>
               </div>
-            )}
-            {inviteError && <p className="mt-2 text-xs text-red-500">{inviteError}</p>}
-          </div>
+              {teamMessage && (
+                <div
+                  className={`mt-2 rounded-md p-3 text-sm ${
+                    teamMessage.includes("失敗")
+                      ? "bg-red-50 text-red-600"
+                      : "bg-green-50 text-green-600"
+                  }`}
+                >
+                  {teamMessage}
+                </div>
+              )}
+            </form>
+
+            <div className="mt-4">
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                メンバーを招待
+              </label>
+              <p className="mb-1.5 text-xs text-gray-400">メンバーに招待メールを送ります</p>
+              {inviteSuccess && (
+                <p className="mb-2 text-sm text-green-600">
+                  招待メールを送信しました。
+                  <button onClick={() => setInviteSuccess(false)} className="ml-2 text-blue-600 underline">
+                    別のアドレスを招待
+                  </button>
+                </p>
+              )}
+              {!inviteSuccess && (
+                <div className="flex gap-2">
+                  <input
+                    type="email"
+                    placeholder="メールアドレス"
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    className="flex-1 min-w-0 rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleInvite}
+                    disabled={inviting || !inviteEmail}
+                    className="shrink-0 flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    {inviting ? <Loader2 size={14} className="animate-spin" /> : "送信"}
+                  </button>
+                </div>
+              )}
+              {inviteError && <p className="mt-2 text-xs text-red-500">{inviteError}</p>}
+            </div>
+          </CollapsibleSection>
 
           {/* セクション2: カテゴリ設定 */}
-          <h2 className="-mx-4 mt-8 mb-4 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-800">カテゴリ設定</h2>
+          <CollapsibleSection
+            title="カテゴリ設定"
+            summary={<span>イベント種別 {eventTypes.length}件 / カテゴリ {eventCategories.length}件</span>}
+          >
+            <EventTypeSection
+              title="イベント種別"
+              description="予定作成時に選択できる種別（例: 練習・試合）を管理します"
+              addLabel="例: 合宿"
+              addButtonLabel="イベント種別を追加"
+              items={eventTypes}
+              colors={PRESET_COLORS}
+              onMoveUp={(i) => moveItem(eventTypes, setEventTypes, i, "up")}
+              onMoveDown={(i) => moveItem(eventTypes, setEventTypes, i, "down")}
+              onDelete={(id) => deleteItem(id, setEventTypes)}
+              onAdd={(name, color) => addItem("type", name, color, eventTypes, setEventTypes)}
+              onUpdate={(id, name) => updateItem(id, name, setEventTypes)}
+            />
 
-          <EventTypeSection
-            title="イベント種別"
-            description="予定作成時に選択できる種別（例: 練習・試合）を管理します"
-            addLabel="例: 合宿"
-            addButtonLabel="イベント種別を追加"
-            items={eventTypes}
-            colors={PRESET_COLORS}
-            onMoveUp={(i) => moveItem(eventTypes, setEventTypes, i, "up")}
-            onMoveDown={(i) => moveItem(eventTypes, setEventTypes, i, "down")}
-            onDelete={(id) => deleteItem(id, setEventTypes)}
-            onAdd={(name, color) => addItem("type", name, color, eventTypes, setEventTypes)}
-            onUpdate={(id, name) => updateItem(id, name, setEventTypes)}
-          />
-
-          <EventTypeSection
-            title="対象カテゴリ"
-            description="予定の対象（例: 全体・男子・女子）を管理します"
-            addLabel="例: OB"
-            addButtonLabel="カテゴリを追加"
-            items={eventCategories}
-            colors={PRESET_COLORS}
-            onMoveUp={(i) => moveItem(eventCategories, setEventCategories, i, "up")}
-            onMoveDown={(i) => moveItem(eventCategories, setEventCategories, i, "down")}
-            onDelete={(id) => deleteItem(id, setEventCategories)}
-            onAdd={(name, color) => addItem("category", name, color, eventCategories, setEventCategories)}
-            onUpdate={(id, name) => updateItem(id, name, setEventCategories)}
-            googleSyncEnabled={googleSyncEnabled}
-            onCreateCalendar={googleSyncEnabled ? handleCreateCalendar : undefined}
-            creatingCalendarFor={creatingCalendarFor}
-            googleGroupEmail={googleGroupEmail}
-          />
-          {calendarCreateMessage && (
-            <p className={`mt-1 text-xs ${calendarCreateMessage.startsWith("エラー") ? "text-red-500" : "text-green-600"}`}>
-              {calendarCreateMessage}
-            </p>
-          )}
+            <EventTypeSection
+              title="対象カテゴリ"
+              description="予定の対象（例: 全体・男子・女子）を管理します"
+              addLabel="例: OB"
+              addButtonLabel="カテゴリを追加"
+              items={eventCategories}
+              colors={PRESET_COLORS}
+              onMoveUp={(i) => moveItem(eventCategories, setEventCategories, i, "up")}
+              onMoveDown={(i) => moveItem(eventCategories, setEventCategories, i, "down")}
+              onDelete={(id) => deleteItem(id, setEventCategories)}
+              onAdd={(name, color) => addItem("category", name, color, eventCategories, setEventCategories)}
+              onUpdate={(id, name) => updateItem(id, name, setEventCategories)}
+              googleSyncEnabled={googleSyncEnabled}
+              onCreateCalendar={googleSyncEnabled ? handleCreateCalendar : undefined}
+              creatingCalendarFor={creatingCalendarFor}
+              googleGroupEmail={googleGroupEmail}
+            />
+            {calendarCreateMessage && (
+              <p className={`mt-1 text-xs ${calendarCreateMessage.startsWith("エラー") ? "text-red-500" : "text-green-600"}`}>
+                {calendarCreateMessage}
+              </p>
+            )}
+          </CollapsibleSection>
 
           {/* セクション3: 問い合わせ設定 */}
-          <h2 className="-mx-4 mt-8 mb-4 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-800">問い合わせ設定</h2>
-
-          <form onSubmit={handleSaveSlug}>
-            <label htmlFor="teamSlug" className="mb-1 block text-sm font-medium text-gray-700">
-              問い合わせフォームID
-            </label>
-            {/* 行1: 入力欄 + 保存ボタン */}
-            <div className="flex items-center gap-2">
-              <span className="shrink-0 text-sm text-gray-400">contact-</span>
-              <input
-                id="teamSlug"
-                type="text"
-                value={slug}
-                onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
-                placeholder="team-name"
-                className="flex-1 min-w-0 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              />
-              <button
-                type="submit"
-                disabled={savingSlug}
-                className="shrink-0 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-              >
-                {savingSlug ? "保存中..." : "保存"}
-              </button>
-            </div>
-            {/* 行2: 実際のメールアドレス（slug がある場合のみ表示） */}
-            {slug && (
-              <p className="mt-1 text-xs text-gray-400">
-                メールアドレス: <span className="font-mono">contact-{slug}@minibas.ballershub.net</span>
-              </p>
-            )}
-            {!slug && (
-              <p className="mt-1 text-xs text-gray-400">
-                小文字英数字とハイフンのみ使用可。設定するとお問い合わせフォームが有効になります。
-              </p>
-            )}
-            {slugMessage && (
-              <div
-                className={`mt-2 rounded-md p-3 text-sm ${
-                  slugMessage.includes("失敗")
-                    ? "bg-red-50 text-red-600"
-                    : "bg-green-50 text-green-600"
-                }`}
-              >
-                {slugMessage}
+          <CollapsibleSection
+            title="問い合わせ設定"
+            summary={slug ? <span>contact-{slug}</span> : <span className="text-gray-400">未設定</span>}
+          >
+            <form onSubmit={handleSaveSlug}>
+              <label htmlFor="teamSlug" className="mb-1 block text-sm font-medium text-gray-700">
+                問い合わせフォームID
+              </label>
+              {/* 行1: 入力欄 + 保存ボタン */}
+              <div className="flex items-center gap-2">
+                <span className="shrink-0 text-sm text-gray-400">contact-</span>
+                <input
+                  id="teamSlug"
+                  type="text"
+                  value={slug}
+                  onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+                  placeholder="team-name"
+                  className="flex-1 min-w-0 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+                <button
+                  type="submit"
+                  disabled={savingSlug}
+                  className="shrink-0 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {savingSlug ? "保存中..." : "保存"}
+                </button>
               </div>
-            )}
-          </form>
+              {/* 行2: 実際のメールアドレス（slug がある場合のみ表示） */}
+              {slug && (
+                <p className="mt-1 text-xs text-gray-400">
+                  メールアドレス: <span className="font-mono">contact-{slug}@minibas.ballershub.net</span>
+                </p>
+              )}
+              {!slug && (
+                <p className="mt-1 text-xs text-gray-400">
+                  小文字英数字とハイフンのみ使用可。設定するとお問い合わせフォームが有効になります。
+                </p>
+              )}
+              {slugMessage && (
+                <div
+                  className={`mt-2 rounded-md p-3 text-sm ${
+                    slugMessage.includes("失敗")
+                      ? "bg-red-50 text-red-600"
+                      : "bg-green-50 text-green-600"
+                  }`}
+                >
+                  {slugMessage}
+                </div>
+              )}
+            </form>
 
-          <InquiryTypeSection teamId={teamId} />
+            <InquiryTypeSection teamId={teamId} />
 
-          <ReplyTemplateSection teamId={teamId} />
+            <ReplyTemplateSection teamId={teamId} />
 
-          <div className="mt-6">
-            <label className="mb-1 block text-sm font-medium text-gray-700">
-              問い合わせページ
-            </label>
-            <p className="mb-1.5 text-xs text-gray-400">外部公開用の問い合わせフォームです。未ログインでもアクセスできます</p>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  const url = `${window.location.origin}/contact/${teamId}`;
-                  copyToClipboard(url).then(() => {
-                    setContactUrlCopied(true);
-                    setTimeout(() => setContactUrlCopied(false), 1500);
-                  });
-                }}
-                className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
-              >
-                {contactUrlCopied ? <Check size={16} strokeWidth={1.5} aria-hidden="true" /> : <Copy size={16} strokeWidth={1.5} aria-hidden="true" />}
-                {contactUrlCopied ? "コピー済み" : "URLをコピー"}
-              </button>
-              <a
-                href={`/contact/${teamId}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
-              >
-                <ExternalLink size={16} strokeWidth={1.5} aria-hidden="true" />
-                開く
-              </a>
-            </div>
-          </div>
-
-          {/* セクション4: 機能説明 */}
-          <h2 className="-mx-4 mt-8 mb-4 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-800">機能説明</h2>
-          <p className="mb-4 text-sm text-gray-500">各機能の使い方を確認できます。</p>
-          <ul className="space-y-2">
-            {[
-              { href: "/help",               label: "ヘルプ一覧" },
-              { href: "/help/events",        label: "予定と出欠管理" },
-              { href: "/help/announcements", label: "お知らせ" },
-              { href: "/help/categories",    label: "カテゴリ機能" },
-              { href: "/help/invite",        label: "招待コード" },
-              { href: "/help/members",       label: "メンバー管理" },
-            ].map(({ href, label }) => (
-              <li key={href}>
+            <div className="mt-6">
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                問い合わせページ
+              </label>
+              <p className="mb-1.5 text-xs text-gray-400">外部公開用の問い合わせフォームです。未ログインでもアクセスできます</p>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const url = `${window.location.origin}/contact/${teamId}`;
+                    copyToClipboard(url).then(() => {
+                      setContactUrlCopied(true);
+                      setTimeout(() => setContactUrlCopied(false), 1500);
+                    });
+                  }}
+                  className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
+                >
+                  {contactUrlCopied ? <Check size={16} strokeWidth={1.5} aria-hidden="true" /> : <Copy size={16} strokeWidth={1.5} aria-hidden="true" />}
+                  {contactUrlCopied ? "コピー済み" : "URLをコピー"}
+                </button>
                 <a
-                  href={href}
+                  href={`/contact/${teamId}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-sm text-blue-600 hover:underline"
+                  className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
                 >
-                  <ExternalLink size={14} strokeWidth={1.5} aria-hidden="true" />
-                  {label}
+                  <ExternalLink size={16} strokeWidth={1.5} aria-hidden="true" />
+                  開く
                 </a>
-              </li>
-            ))}
-          </ul>
+              </div>
+            </div>
+          </CollapsibleSection>
 
           {/* Google Calendar連携セクション */}
-          <div className="mt-8">
-            <h2 className="-mx-4 mb-4 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-800">Googleカレンダー連携</h2>
-
+          <CollapsibleSection
+            title="Googleカレンダー連携"
+            summary={googleConnected ? <span className="text-green-700">連携済み</span> : <span className="text-gray-400">未連携</span>}
+          >
             {!googleConnected ? (
               <div>
                 <p className="mb-3 text-sm text-gray-600">
@@ -3016,25 +3013,18 @@ export default function SettingsPage() {
                       type="checkbox"
                       className="peer sr-only"
                       checked={googleSyncEnabled}
-                      onChange={(e) => setGoogleSyncEnabled(e.target.checked)}
+                      onChange={async (e) => {
+                        const checked = e.target.checked;
+                        setGoogleSyncEnabled(checked);
+                        // 即時保存
+                        if (!teamId) return;
+                        setSavingGoogleSettings(true);
+                        await supabase.from("teams").update({ google_sync_enabled: checked }).eq("id", teamId);
+                        setSavingGoogleSettings(false);
+                      }}
                     />
                     <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none" />
                   </label>
-                </div>
-
-                {/* 保存ボタン */}
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={handleSaveGoogleSettings}
-                    disabled={savingGoogleSettings}
-                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-                  >
-                    {savingGoogleSettings ? "保存中..." : "設定を保存"}
-                  </button>
-                  {googleSettingsMessage && (
-                    <p className="text-sm text-gray-600">{googleSettingsMessage}</p>
-                  )}
                 </div>
 
                 {/* カレンダー共有用 Google グループ */}
@@ -3123,6 +3113,38 @@ export default function SettingsPage() {
                 </div>
               </div>
             )}
+          </CollapsibleSection>
+
+          {/* セクション4: 機能説明 */}
+          <div className="mt-6">
+            <div className="-mx-4 bg-blue-50 px-4 py-2">
+              <h2 className="text-sm font-semibold text-blue-800">機能説明</h2>
+            </div>
+            <div className="mt-4">
+              <p className="mb-4 text-sm text-gray-500">各機能の使い方を確認できます。</p>
+              <ul className="space-y-2">
+                {[
+                  { href: "/help",               label: "ヘルプ一覧" },
+                  { href: "/help/events",        label: "予定と出欠管理" },
+                  { href: "/help/announcements", label: "お知らせ" },
+                  { href: "/help/categories",    label: "カテゴリ機能" },
+                  { href: "/help/invite",        label: "招待コード" },
+                  { href: "/help/members",       label: "メンバー管理" },
+                ].map(({ href, label }) => (
+                  <li key={href}>
+                    <a
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 text-sm text-blue-600 hover:underline"
+                    >
+                      <ExternalLink size={14} strokeWidth={1.5} aria-hidden="true" />
+                      {label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
 
           <div className="mt-8 rounded-lg border border-red-200 bg-red-50 p-4">
