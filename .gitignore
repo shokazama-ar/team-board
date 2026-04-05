@@ -47,6 +47,15 @@ supabase/.temp/
 # claude code
 .claude/
 !.claude/rules/
+!.claude/rules/**
+!.claude/commands/
+!.claude/commands/**
+!.claude/SKILL/agent-rules/
+!.claude/SKILL/agent-rules/**
+!.claude/SKILL/nextjs/
+!.claude/SKILL/nextjs/**
+!.claude/SKILL/supabase/
+!.claude/SKILL/supabase/**
 
 # blueprint (local only, not for version control)
 blueprint/tasks/
