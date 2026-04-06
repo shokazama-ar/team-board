@@ -1237,9 +1237,10 @@ function CollapsibleSection({
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
-          className="text-xs text-blue-600 hover:underline"
+          className="text-blue-600 hover:text-blue-800 transition-colors"
+          aria-label={open ? "閉じる" : "開く"}
         >
-          {open ? "閉じる" : "編集"}
+          {open ? <ChevronUp size={18} strokeWidth={2} /> : <ChevronDown size={18} strokeWidth={2} />}
         </button>
       </div>
       {!open && (
