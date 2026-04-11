@@ -122,12 +122,12 @@ export function EventCard({
                 )}
           </div>
           {/* 2行目: 日時 */}
-          <p className="mt-1 text-xs text-gray-500">
+          <p className="mt-1 text-xs text-gray-500 whitespace-nowrap">
             {formatEventDateTime(date, end_at)}
           </p>
           {/* 場所 */}
           {location && (
-            <p className="mt-0.5 flex items-center gap-1 text-xs text-gray-400">
+            <p className="mt-0.5 flex items-center gap-1 text-xs text-gray-400 whitespace-nowrap">
               <MapPin size={12} strokeWidth={1.5} aria-hidden="true" />
               {location}
             </p>
