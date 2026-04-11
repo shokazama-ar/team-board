@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { AlertTriangle, ChevronRight, MapPin } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { AlertTriangle, ChevronRight } from "lucide-react";
+import { EventCard } from "@/components/events/EventCard";
 
 type AnnouncementCategory = {
   id: string;
@@ -15,8 +17,9 @@ export type EventWithCategories = {
   title: string;
   event_type: string;
   date: string;
+  end_at: string | null;
   location: string | null;
-  categories: { id: string; name: string; color: string; sort_order: number }[];
+  eventTypes: { id: string; name: string; color: string; kind: string; sort_order: number }[];
 };
 
 export type AnnouncementWithCategories = {
@@ -25,18 +28,6 @@ export type AnnouncementWithCategories = {
   body: string;
   created_at: string;
   categories: AnnouncementCategory[];
-};
-
-const EVENT_TYPE_LABELS: Record<string, string> = {
-  practice: "練習",
-  game: "試合",
-  other: "その他",
-};
-
-const EVENT_TYPE_STYLES: Record<string, string> = {
-  practice: "bg-green-50 text-green-700",
-  game: "bg-red-50 text-red-700",
-  other: "bg-gray-100 text-gray-600",
 };
 
 type Props = {
@@ -53,6 +44,7 @@ export default function DashboardFilteredContent({
   userCategoryIds,
 }: Props) {
   const [showAll, setShowAll] = useState(false);
+  const router = useRouter();
 
   const hasCategories = userCategoryIds.length > 0;
 
@@ -60,8 +52,8 @@ export default function DashboardFilteredContent({
     if (showAll || !hasCategories) return events;
     return events.filter(
       (e) =>
-        e.categories.length === 0 ||
-        e.categories.some((cat) => userCategoryIds.includes(cat.id))
+        e.eventTypes.filter(et => et.kind === "category").length === 0 ||
+        e.eventTypes.filter(et => et.kind === "category").some((cat) => userCategoryIds.includes(cat.id))
     );
   };
 
@@ -121,7 +113,7 @@ export default function DashboardFilteredContent({
                 >
                   <div className="flex flex-wrap items-center gap-1.5">
                     <span className="font-medium">{event.title}</span>
-                    {event.categories.map((cat) => (
+                    {event.eventTypes.filter(et => et.kind === "category").map((cat) => (
                       <span
                         key={cat.id}
                         className="rounded border px-2 py-0.5 text-xs font-medium"
@@ -167,48 +159,16 @@ export default function DashboardFilteredContent({
             <ul className="space-y-3">
               {upcomingEvents.map((ev) => (
                 <li key={ev.id}>
-                  <Link
-                    href={`/events/${ev.id}`}
-                    className="block rounded-lg border border-gray-100 p-3 hover:border-gray-300 hover:bg-gray-50"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <span className="text-sm font-medium">{ev.title}</span>
-                          <span
-                            className={`rounded-full px-2 py-0.5 text-xs font-medium ${EVENT_TYPE_STYLES[ev.event_type] ?? EVENT_TYPE_STYLES.other}`}
-                          >
-                            {EVENT_TYPE_LABELS[ev.event_type] ?? ev.event_type}
-                          </span>
-                          {ev.categories.map((cat) => (
-                            <span
-                              key={cat.id}
-                              className="rounded border px-2 py-0.5 text-xs font-medium"
-                              style={{ borderColor: cat.color, color: cat.color }}
-                            >
-                              {cat.name}
-                            </span>
-                          ))}
-                        </div>
-                        <p className="mt-1 text-xs text-gray-500">
-                          {new Date(ev.date).toLocaleDateString("ja-JP", {
-                            month: "long",
-                            day: "numeric",
-                            weekday: "short",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                            timeZone: "Asia/Tokyo",
-                          })}
-                        </p>
-                        {ev.location && (
-                          <p className="mt-0.5 flex items-center gap-1 text-xs text-gray-400">
-                            <MapPin size={12} strokeWidth={1.5} aria-hidden="true" />
-                            {ev.location}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </Link>
+                  <EventCard
+                    id={ev.id}
+                    title={ev.title}
+                    event_type={ev.event_type}
+                    date={ev.date}
+                    end_at={ev.end_at}
+                    location={ev.location}
+                    eventTypes={ev.eventTypes}
+                    onClick={() => router.push(`/events/${ev.id}`)}
+                  />
                 </li>
               ))}
             </ul>

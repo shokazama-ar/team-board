@@ -170,6 +170,17 @@ function copyToClipboard(text: string): Promise<void> {
 - `link_profile_by_share_code(code)` RPC でリンク作成。
 - RLS関数 `owns_member_profile(profile_id)` はオーナーまたは `member_profile_access` 経由のアクセス権保持者を「所有者扱い」にする。
 
+## EventCard 共通コンポーネント（`src/components/events/EventCard.tsx`）
+
+予定一覧・ダッシュボード・カレンダーモーダルで共通使用する予定カード。
+
+- インポート: `import { EventCard, type EventCardType } from "@/components/events/EventCard"`
+- `eventTypes` には `kind === "type"` と `kind === "category"` を **全件**渡す（フィルタ不要）
+- バッジ順: `kind === "type"` が先頭、以降は `sort_order` 昇順
+- 色は `event_types.color` をそのまま使用（`EVENT_TYPE_STYLES` ハードコードは廃止）
+- `onClick` で遷移処理を渡す（`useRouter` は呼び出し側で持つ）
+- `summary` / `isLoading` はオプション（ダッシュボードでは渡さない）
+
 ## タイムゾーン
 
 日付表示には必ず `timeZone: "Asia/Tokyo"` を指定すること：

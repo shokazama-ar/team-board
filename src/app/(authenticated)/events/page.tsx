@@ -6,7 +6,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { ImportModal } from "@/components/events/ImportModal";
-import { List, CalendarDays, Plus, MapPin, Download, Upload, LayoutList, Loader2 } from "lucide-react";
+import { List, CalendarDays, Plus, Download, Upload, LayoutList } from "lucide-react";
+import { EventCard, type EventCardType } from "@/components/events/EventCard";
 
 const CalendarView = dynamic(
   () => import("@/components/events/CalendarView").then((mod) => mod.CalendarView),
@@ -427,76 +428,27 @@ export default function EventsPage() {
                 <p className="text-sm text-gray-500">この日の予定はありません</p>
               ) : (
                 <div className="space-y-2">
-                  {selectedDateEvents.map((event) => {
-                    const summary = summaries[event.id];
-                    const types = event.event_event_types
-                      .map((e) => e.event_types)
-                      .filter(Boolean) as EventType[];
-                    const sortedTypes = [...types].sort((a, b) => {
-                      if (a.kind !== b.kind) return a.kind === "type" ? -1 : 1;
-                      return a.sort_order - b.sort_order;
-                    });
-                    const isLoading = loadingId === event.id;
-                    return (
-                      <div
-                        key={event.id}
-                        onClick={() => {
-                          setLoadingId(event.id);
-                          setSelectedDate(null);
-                          router.push(`/events/${event.id}`);
-                        }}
-                        className={`rounded-lg border border-gray-200 bg-white p-4 hover:border-gray-300 hover:shadow-sm cursor-pointer ${isLoading ? "opacity-60" : ""}`}
-                      >
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <div className="flex flex-wrap items-center gap-2">
-                              <h2 className="text-sm font-semibold text-gray-900">{event.title}</h2>
-                              {sortedTypes.length > 0
-                                ? sortedTypes.map((et) => (
-                                    <span
-                                      key={et.id}
-                                      className={et.kind === "category"
-                                        ? "rounded border px-2 py-0.5 text-xs font-medium"
-                                        : "rounded-full px-2 py-0.5 text-xs font-medium"}
-                                      style={et.kind === "category"
-                                        ? { borderColor: et.color, color: et.color }
-                                        : { backgroundColor: et.color + "20", color: et.color }}
-                                    >
-                                      {et.name}
-                                    </span>
-                                  ))
-                                : event.event_type && (
-                                    <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500">
-                                      {event.event_type}
-                                    </span>
-                                  )}
-                            </div>
-                            <p className="mt-1 text-xs text-gray-500">
-                              {formatEventDateTime(event.date, event.end_at)}
-                            </p>
-                            {event.location && (
-                              <p className="mt-0.5 flex items-center gap-1 text-xs text-gray-400">
-                                <MapPin size={12} strokeWidth={1.5} aria-hidden="true" />
-                                {event.location}
-                              </p>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {summary && (
-                              <div className="flex gap-2 text-xs">
-                                <span className="text-green-700">{summary.present}</span>
-                                <span className="text-gray-400">/</span>
-                                <span className="text-red-700">{summary.absent}</span>
-                                <span className="text-gray-400">/</span>
-                                <span className="text-yellow-700">{summary.undecided}</span>
-                              </div>
-                            )}
-                            {isLoading && <Loader2 size={14} className="animate-spin text-gray-400" />}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
+                  {selectedDateEvents.map((event) => (
+                    <EventCard
+                      key={event.id}
+                      id={event.id}
+                      title={event.title}
+                      event_type={event.event_type}
+                      date={event.date}
+                      end_at={event.end_at}
+                      location={event.location}
+                      eventTypes={event.event_event_types
+                        .map((e) => e.event_types)
+                        .filter(Boolean) as EventCardType[]}
+                      summary={summaries[event.id]}
+                      isLoading={loadingId === event.id}
+                      onClick={() => {
+                        setLoadingId(event.id);
+                        setSelectedDate(null);
+                        router.push(`/events/${event.id}`);
+                      }}
+                    />
+                  ))}
                 </div>
               )}
             </div>
@@ -669,75 +621,26 @@ export default function EventsPage() {
         </div>
       ) : (
         <div className="space-y-3">
-          {filteredEvents.map((event) => {
-            const summary = summaries[event.id];
-            const types = event.event_event_types
-              .map((e) => e.event_types)
-              .filter(Boolean) as EventType[];
-            const sortedTypes = [...types].sort((a, b) => {
-              if (a.kind !== b.kind) return a.kind === "type" ? -1 : 1;
-              return a.sort_order - b.sort_order;
-            });
-            const isLoading = loadingId === event.id;
-            return (
-              <div
-                key={event.id}
-                onClick={() => {
-                  setLoadingId(event.id);
-                  router.push(`/events/${event.id}`);
-                }}
-                className={`block rounded-lg border border-gray-200 bg-white p-4 hover:border-gray-300 hover:shadow-sm cursor-pointer ${isLoading ? "opacity-60" : ""}`}
-              >
-                <div className="flex items-start justify-between">
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h2 className="text-sm font-semibold text-gray-900">
-                        {event.title}
-                      </h2>
-                      {sortedTypes.length > 0
-                        ? sortedTypes.map((et) => (
-                            <span
-                              key={et.id}
-                              className={et.kind === "category" ? "rounded border px-2 py-0.5 text-xs font-medium" : "rounded-full px-2 py-0.5 text-xs font-medium"}
-                              style={et.kind === "category"
-                                ? { borderColor: et.color, color: et.color }
-                                : { backgroundColor: et.color + "20", color: et.color }}
-                            >
-                              {et.name}
-                            </span>
-                          ))
-                        : event.event_type && (
-                            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500">
-                              {event.event_type}
-                            </span>
-                          )}
-                    </div>
-                    <p className="mt-1 text-xs text-gray-500">
-                      {formatEventDateTime(event.date, event.end_at)}
-                    </p>
-                    {event.location && (
-                      <p className="mt-0.5 flex items-center gap-1 text-xs text-gray-400">
-                        <MapPin size={12} strokeWidth={1.5} aria-hidden="true" />
-                        {event.location}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {summary && (
-                      <div className="flex gap-2 text-xs">
-                        <span className="text-green-700">{summary.present}</span>
-                        <span className="text-gray-400">/</span>
-                        <span className="text-red-700">{summary.absent}</span>
-                        <span className="text-gray-400">/</span>
-                        <span className="text-yellow-700">{summary.undecided}</span>
-                      </div>
-                    )}
-                    {isLoading && <Loader2 size={14} className="animate-spin text-gray-400" />}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+          {filteredEvents.map((event) => (
+            <EventCard
+              key={event.id}
+              id={event.id}
+              title={event.title}
+              event_type={event.event_type}
+              date={event.date}
+              end_at={event.end_at}
+              location={event.location}
+              eventTypes={event.event_event_types
+                .map((e) => e.event_types)
+                .filter(Boolean) as EventCardType[]}
+              summary={summaries[event.id]}
+              isLoading={loadingId === event.id}
+              onClick={() => {
+                setLoadingId(event.id);
+                router.push(`/events/${event.id}`);
+              }}
+            />
+          ))}
         </div>
       )}
     </div>
